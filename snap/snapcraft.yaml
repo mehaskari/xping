@@ -1,0 +1,34 @@
+name: xping
+title: xping
+
+base: core24
+version: '1.3.0'
+
+summary: Network diagnostic toolkit
+
+description: |
+  xping is a modern network troubleshooting tool
+  that provides ping, traceroute, DNS lookup,
+  port checking and other diagnostics.
+
+license: MIT
+
+contact: https://github.com/mehaskari/xping/discussions
+website: https://github.com/mehaskari/xping
+source-code: https://github.com/mehaskari/xping
+issues: https://github.com/mehaskari/xping/issues
+
+grade: stable
+confinement: strict
+
+apps:
+  xping:
+    command: bin/xping
+    plugs:
+      - network
+      - network-bind
+
+parts:
+  xping:
+    plugin: python
+    source: .
