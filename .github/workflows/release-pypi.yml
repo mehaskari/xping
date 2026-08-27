@@ -62,7 +62,7 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f'notes<<NOTES_EOF\n{entry}\nNOTES_EOF\n')
           PYEOF
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           name: "xping ${{ github.ref_name }}"
           body: ${{ steps.notes.outputs.notes }}
