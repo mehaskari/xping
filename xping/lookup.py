@@ -9,6 +9,7 @@ from xping.diagnostics.lookup import (
     _parse_dig_ns,
     _parse_dig_txt,
     _socket_resolve,
+    _raw_query,
 )
 
 __all__ = [
@@ -21,4 +22,5 @@ __all__ = [
     "_parse_dig_ns",
     "_parse_dig_txt",
     "_socket_resolve",
+    "_raw_query",
 ]

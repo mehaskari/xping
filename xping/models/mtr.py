@@ -73,4 +73,9 @@ class MtrResult:
     error: str | None = None
 
     def to_dict(self, *, include_computed: bool = True) -> dict:
-        return model_to_dict(self, include_computed=include_computed)
+        d = model_to_dict(self, include_computed=include_computed)
+        # Re-serialize hops with their computed properties (asdict misses them)
+        if "hops" in d:
+            d["hops"] = [h.to_dict(include_computed=include_computed)
+                         for h in self.hops]
+        return d

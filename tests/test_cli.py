@@ -47,7 +47,7 @@ def test_main_handles_keyboard_interrupt(capsys):
     from xping.cli.main import main
 
     with patch("sys.argv", ["xping", "ping", "1.1.1.1"]):
-        with patch("xping.cli.main.cmd_ping", side_effect=KeyboardInterrupt):
+        with patch("xping.cli.commands.cmd_ping", side_effect=KeyboardInterrupt):
             with pytest.raises(SystemExit) as exc:
                 main()
     assert exc.value.code == 130
@@ -57,7 +57,7 @@ def test_main_handles_generic_error(capsys):
     from xping.cli.main import main
 
     with patch("sys.argv", ["xping", "ping", "1.1.1.1"]):
-        with patch("xping.cli.main.cmd_ping", side_effect=RuntimeError("boom")):
+        with patch("xping.cli.commands.cmd_ping", side_effect=RuntimeError("boom")):
             with pytest.raises(SystemExit) as exc:
                 main()
     assert exc.value.code == 1

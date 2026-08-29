@@ -57,6 +57,9 @@ _COMPUTED: dict[type, tuple[str, ...]] = {
 
 def _nested_to_dict(value: Any) -> Any:
     if is_dataclass(value) and not isinstance(value, type):
+        # Use to_dict (with computed props) if available, else fall back
+        if hasattr(value, 'to_dict'):
+            return value.to_dict()
         return to_dict(value)
     if isinstance(value, list):
         return [_nested_to_dict(item) for item in value]

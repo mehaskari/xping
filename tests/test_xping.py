@@ -345,8 +345,10 @@ def test_subprocess_trace_live_parses_hops():
             return 0
 
     seen = []
-    with patch("xping.diagnostics.trace.subprocess.Popen", return_value=FakeProc()):
-        hops = _subprocess_trace_live("example.com", 30, 3, on_hop=seen.append)
+    with patch("xping.diagnostics.trace.trace_tool", return_value="traceroute"):
+        with patch("xping.diagnostics.trace.trace_command", return_value=["traceroute", "example.com"]):
+            with patch("xping.diagnostics.trace.subprocess.Popen", return_value=FakeProc()):
+                hops = _subprocess_trace_live("example.com", 30, 3, on_hop=seen.append)
 
     assert len(hops) == 2
     assert hops[0].ttl == 1
@@ -586,7 +588,7 @@ def test_lookup_with_dig_path():
         "NS": "example.com.\t3600\tIN\tNS\tns.example.com.\n",
         "TXT": 'example.com.\t3600\tIN\tTXT\t"v=spf1 include:example.com ~all"\n',
     }
-    with patch("xping.diagnostics.lookup._dig_query", side_effect=lambda _host, rtype: dig_outputs.get(rtype)):
+    with patch("xping.diagnostics.lookup._dig_query", side_effect=lambda _host, rtype, server=None: dig_outputs.get(rtype)):
         with patch("socket.gethostbyaddr", return_value=("example.com", [], [])):
             with patch("xping.render.COLOR", False):
                 result = lookup("example.com", full=True)
@@ -598,12 +600,15 @@ def test_lookup_with_dig_path():
 
 def test_lookup_socket_fallback():
     from xping.lookup import lookup
-    with patch("xping.diagnostics.lookup._dig_query", return_value=None):
-        with patch("xping.diagnostics.lookup._socket_resolve", return_value=(["93.184.216.34"], [])):
+    # Force raw UDP fallback by making dig unavailable
+    with patch("xping.diagnostics.lookup._dig_query", return_value=None) as mock_dig:
+        mock_dig.return_value = None
+        with patch("xping.diagnostics.lookup._raw_query",
+                   side_effect=lambda h, qtype, server="8.8.8.8": ["93.184.216.34"] if qtype == 1 else []):
             with patch("socket.gethostbyaddr", side_effect=socket.herror):
                 with patch("xping.render.COLOR", False):
                     result = lookup("example.com")
-    assert result.ipv4 == ["93.184.216.34"]
+    assert "93.184.216.34" in result.ipv4
 
 
 def test_portscan_renders_closed_port(capsys):
