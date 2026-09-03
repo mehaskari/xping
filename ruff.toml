@@ -1,0 +1,21 @@
+[lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "E501",   # line too long — formatter handles
+    "BLE001", # blind exception — intentional in network code
+    "UP041",  # socket.timeout — compatibility
+    "B008",   # function calls in defaults
+    "F401",   # unused import — shim modules export intentionally
+]
+line-length = 100
+target-version = "py310"
+
+[lint.per-file-ignores]
+"tests/*" = ["S101", "F401"]
+"xping/ping.py" = ["F401"]
+"xping/trace.py" = ["F401"]
+"xping/lookup.py" = ["F401"]
+"xping/tcp.py" = ["F401"]
+"xping/portscan.py" = ["F401"]
+"xping/sweep.py" = ["F401"]
+"xping/ipscan.py" = ["F401"]
