@@ -1,0 +1,14 @@
+xping (1.3.3-1) unstable; urgency=medium
+
+  * Remove pybuild-plugin-pyproject (unavailable on Ubuntu 22.04)
+  * Add setup.py shim for pybuild compatibility
+  * Fix debian/rules to use distutils buildsystem
+  * Fix snap/snapcraft.yaml stage-packages and override-build
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Wed, 09 Sep 2026 08:00:00 +0000
+
+xping (1.3.0-2ubuntu1~ppa1) noble; urgency=medium
+
+  * PPA release.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Fri, 10 Jul 2026 20:22:47 +0000

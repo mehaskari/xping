@@ -1,0 +1,49 @@
+name: Release — Launchpad PPA
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+jobs:
+  upload-ppa:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            devscripts debhelper dh-python python3-all \
+            python3-setuptools python3-certifi gnupg dput
+
+      - name: Import GPG key
+        run: |
+          echo "${{ secrets.LAUNCHPAD_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          gpg --list-secret-keys
+
+      - name: Build source package
+        run: |
+          VERSION=$(python3 -c "import re; print(re.search(r'version = \"(.+?)\"', open('pyproject.toml').read()).group(1))")
+          echo "Building xping $VERSION"
+          tar \
+            --exclude='.git' --exclude='debian' --exclude='dist' \
+            --exclude='build' --exclude='*.egg-info' --exclude='.venv' \
+            --exclude='__pycache__' \
+            -czf "../xping_${VERSION}.orig.tar.gz" .
+          debuild -S -sa -k"${{ secrets.LAUNCHPAD_GPG_KEY_ID }}"
+
+      - name: Upload to PPA
+        run: |
+          cat > ~/.dput.cf << 'DPUTEOF'
+          [ppa-xping]
+          fqdn = ppa.launchpad.net
+          method = ftp
+          incoming = ~mehdiaskari/ubuntu/xping/
+          login = anonymous
+          allow_unsigned_uploads = 0
+          DPUTEOF
+          dput ppa:mehdiaskari/xping ../xping_*.changes
+          echo "✔ Uploaded — check: https://launchpad.net/~mehdiaskari/+archive/ubuntu/xping"
