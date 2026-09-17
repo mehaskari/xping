@@ -1,0 +1,828 @@
+.\" xping manual page
+.\" Created by Mehdi Askari <iorganamis@gmail.com>
+.TH XPING 1 "2026-09-13" "xping 1.3.4" "Network Diagnostics"
+.
+.SH NAME
+xping \- beautiful CLI network diagnostics
+.
+.SH SYNOPSIS
+.B xping
+.RI [ \-V ]
+.I COMMAND
+.I HOST
+.RI [ OPTIONS ]
+.PP
+.B xping
+.I HOST
+.RS
+(shorthand: auto-pings HOST and shows next-step suggestions)
+.RE
+.
+.SH DESCRIPTION
+.B xping
+is a command-line network diagnostics tool that provides live,
+colour-coded, animated output for ICMP ping, traceroute, MTR,
+DNS lookup, TLS inspection, HTTP diagnostics, WHOIS, port scanning,
+IP discovery, network health scoring, speed testing, local port
+listing, OS fingerprinting, and more.
+.PP
+Each packet and each hop is displayed the moment it is received \(em
+results are never buffered and shown all at once.
+True-colour ANSI graphics, animated spinners, latency bars,
+sparkline charts, and histogram distributions make network behaviour
+instantly readable.
+.PP
+.B xping
+uses raw ICMP sockets when possible and automatically falls back to the
+system
+.BR ping (8)
+and
+.BR traceroute (8)
+binaries when raw-socket access is unavailable.
+It requires only the
+.B certifi
+package (auto-installed); all other functionality uses the Python
+standard library (Python \(>= 3.10).
+.PP
+Running
+.B xping HOST
+without a subcommand auto-pings the target and then prints a
+list of suggested follow-up commands.
+.PP
+Created by
+.B Mehdi Askari
+.RI < iorganamis@gmail.com >.
+Any fork or redistribution must visibly credit the original author
+per the license terms.
+.
+.SH COMMANDS
+.SS Basic diagnostics
+.TP
+.BR ping " \fIHOST\fR [\fIOPTIONS\fR]"
+Send ICMP echo requests to
+.IR HOST .
+Each reply is printed immediately showing a colour-coded latency bar
+and RTT value. The summary reports sent/received counts, packet loss,
+min/avg/max/jitter RTT, a sparkline timeline, and a latency histogram.
+Use
+.B \-\-watch
+for continuous live mode with running statistics (Ctrl-C to stop).
+Use
+.B \-\-alarm MS
+to trigger a terminal bell and red highlight when RTT exceeds the
+threshold.
+.TP
+.BR trace " \fIHOST\fR [\fIOPTIONS\fR]"
+Perform a hop-by-hop traceroute to
+.IR HOST .
+Each hop is printed in real time. RTT values are colour-coded:
+green < 30 ms, amber < 100 ms, yellow < 300 ms, red otherwise.
+The summary includes total hops, responding hops, final-hop RTT,
+and an ASCII path tree showing the network topology.
+.TP
+.BR mtr " \fIHOST\fR [\fIOPTIONS\fR]"
+Combined live traceroute and per-hop ping (My Traceroute).
+Discovers the path to
+.IR HOST ,
+then pings every hop repeatedly and redraws a live table showing
+per-hop loss%, last/avg/best/worst RTT, standard deviation, and a
+sparkline. Falls back to system
+.B traceroute
+when raw sockets are unavailable.
+.TP
+.BR lookup " \fIHOST\fR [\fIOPTIONS\fR]"
+Query DNS records for
+.IR HOST :
+A (IPv4), AAAA (IPv6), CNAME, MX mail servers, NS nameservers,
+and optionally TXT records (SPF, DMARC, DKIM).
+Reverse-DNS hostnames are resolved for every address found.
+Use
+.B \-\-server IP
+to query a specific resolver (e.g.
+.BR \-\-server\ 8.8.8.8 )
+like
+.BR "dig @8.8.8.8" .
+Falls back to raw UDP DNS when
+.B dig
+is absent.
+.TP
+.BR dnscheck " \fIDOMAIN\fR [\fIOPTIONS\fR]"
+Full DNS health check for
+.IR DOMAIN :
+A/AAAA records, NS redundancy, MX backup, SPF policy (strict/soft/none),
+DMARC policy (reject/quarantine/none), and DKIM key presence.
+Reports a 0-100 score with pass/warn/fail per check.
+.TP
+.BR rdns " \fIIP\fR [\fIOPTIONS\fR]"
+Reverse-DNS (PTR) lookup for
+.IR IP .
+Queries the system resolver first; falls back to a direct UDP query
+to 8.8.8.8 when the system resolver has no PTR support.
+.TP
+.BR tcp " \fIHOST\fR \fIPORT\fR [\fIOPTIONS\fR]"
+Open TCP connections to
+.I HOST
+on
+.IR PORT .
+Each attempt is printed immediately with open/failed status and
+connect timing. The summary reports success rate and min/avg/max times.
+.TP
+.BR tls " \fIHOST\fR [\fIOPTIONS\fR]"
+Inspect the TLS/SSL certificate presented by
+.I HOST
+on port 443 (or
+.BR \-\-port ).
+Shows protocol version, cipher suite, subject, issuer, SAN list,
+expiry date, days remaining, a lifetime progress bar, and (on Python
+3.13+) the full certificate chain from leaf to root CA.
+.TP
+.BR http " \fIURL\fR [\fIOPTIONS\fR]"
+Perform an HTTP GET to
+.IR URL ,
+following redirects automatically.
+Reports HTTP version (including HTTP/2 detection via ALPN), status
+code, redirect chain, response headers, and a full timing breakdown:
+DNS resolve time \(· TCP connect time \(· TTFB \(· total request time.
+.TP
+.BR whois " \fIDOMAIN\fR [\fIOPTIONS\fR]"
+Look up WHOIS registration data for
+.IR DOMAIN .
+Queries the authoritative registry WHOIS server on port 43, following
+up to two referrals (IANA \(→ registry \(→ registrar), with up to two
+retries per server. Falls back automatically to RDAP over HTTPS when
+port 43 is blocked or firewalled.
+.SS Network scanning
+.TP
+.BR portscan " \fIHOST\fR [\fIOPTIONS\fR]"
+Scan TCP ports on
+.IR HOST
+concurrently.
+Use
+.B \-\-banners
+to grab service banners from open ports (SSH version, HTTP server,
+FTP greeting, Redis ping, PostgreSQL greeting, etc.).
+.TP
+.BR ipscan " \fIRANGE\fR [\fIOPTIONS\fR]"
+Discover live hosts in a CIDR block or start-end IP range using ICMP
+echo probes through the system
+.BR ping (8)
+binary.
+.TP
+.BR sweep " \fIRANGE\fR [\fIOPTIONS\fR]"
+Probe a CIDR block or start-end IP range for hosts with open TCP ports.
+Useful for finding HTTP servers or SSH gateways on a local network.
+.TP
+.BR mtu " \fIHOST\fR [\fIOPTIONS\fR]"
+Discover the Path MTU to
+.I HOST
+via binary search using DF-flagged (Don't Fragment) ping probes.
+Identifies the largest unfragmented packet size along the path;
+useful for diagnosing VPN or tunnel fragmentation issues.
+.SS Local machine
+.TP
+.B listen [\fIOPTIONS\fR]
+List locally listening TCP/UDP ports with process names and PIDs.
+Uses
+.BR ss (8)
+on Linux,
+.BR netstat (8)
+on macOS and Windows.
+Filter with
+.B \-\-proto tcp
+or
+.BR \-\-proto udp .
+.TP
+.BR osdetect " \fIHOST\fR"
+Guess the operating system of a remote host by analysing the
+TTL value in the ICMP echo reply.
+Common signatures: TTL\~\(>=\~114 and \(<=\~128 \(-> Windows;
+TTL\~\(>=\~57 and \(<=\~64 \(-> Linux/macOS/FreeBSD;
+TTL\~\(>=\~241 \(-> Linux kernel/Cisco IOS/Solaris.
+This is a heuristic \(em VPNs and tunnels can change the observed TTL.
+.TP
+.B speedtest
+Measure download and upload throughput using Cloudflare's public speed
+endpoint (
+.IR speed.cloudflare.com ).
+Runs a single HTTP connection transferring 25 MB down and 5 MB up.
+No
+.B iperf3
+required.
+.SS Health and profiles
+.TP
+.BR health " \fIHOST\fR [\fIOPTIONS\fR]"
+Measure DNS resolve time, packet loss, average latency, and jitter
+for
+.I HOST
+and compute a 0-100 Network Health Score
+(Excellent / Good / Fair / Poor / Critical).
+Each subsequent run is saved to
+.IR ~/.xping/health_history.json ;
+the score history and trend arrow are displayed on every run.
+.TP
+.B profile \fISUBCOMMAND\fR
+Manage saved target profiles stored in
+.IR ~/.xping/profiles.json .
+Any command that accepts a HOST transparently resolves a profile name
+to its stored target.
+.RS
+.TP
+.BI "add " "NAME TARGET " "[\-\-port \fIN\fR] [\-\-note \fITEXT\fR]"
+Save a profile.
+.TP
+.BI "remove " NAME
+Delete a profile.
+.TP
+.B list
+List all saved profiles.
+.TP
+.BI "show " NAME
+Display a single profile.
+.RE
+.SS Bundles and utilities
+.TP
+.BR all " \fIHOST\fR [\fIOPTIONS\fR]"
+Run a full diagnostic bundle: lookup (full DNS), ping (4 packets),
+trace, and TCP checks on ports 443 and 80.
+Finishes with a unified one-page summary table.
+.TP
+.B deps
+Check whether the optional system binaries
+.RB ( ping ,
+.BR traceroute ,
+.BR dig ,
+.BR ss / netstat )
+are installed, and print the correct package-manager install command
+for the detected Linux distribution or macOS.
+.TP
+.BR completion " \fISHELL\fR"
+Generate a shell tab-completion script for
+.I SHELL
+.RB ( bash ,
+.BR zsh ,
+or
+.BR fish ).
+See
+.B SHELL COMPLETION
+below.
+.TP
+.B about
+Display author name, version, license, source URL, and attribution
+notice.
+.
+.SH OPTIONS
+.SS Global
+.TP
+.BR \-V ", " \-\-version
+Print
+.I "xping <version>  by Mehdi Askari"
+and exit.
+.TP
+.BR \-h ", " \-\-help
+Show a help message for the selected command and exit.
+.SS Export flags (all diagnostic commands)
+.TP
+.B \-\-json
+Emit machine-readable JSON instead of interactive terminal output.
+.TP
+.B \-\-csv
+Emit CSV output instead of interactive terminal output.
+.TP
+.B \-\-markdown
+Emit Markdown output instead of interactive terminal output.
+.TP
+.BI \-\-output " FILE"
+Write export output to
+.I FILE
+instead of stdout.
+The file extension is appended automatically
+.RB ( .json ,
+.BR .csv ,
+or
+.BR .md )
+if
+.I FILE
+has no extension.
+.SS ping
+.TP
+.BI \-c " N" ", \-\-count " N
+Number of ICMP echo packets.
+Default:
+.BR 5 .
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Per-packet timeout in seconds.
+Default:
+.BR 2.0 .
+.TP
+.BI \-i " SEC" ", \-\-interval " SEC
+Interval between packets in seconds.
+Default:
+.BR 0.5 .
+.TP
+.B \-\-watch ", " \-w
+Continuous live ping mode. Displays a live sparkline with running
+min/avg/max statistics. Press Ctrl-C to stop and print a final summary.
+.TP
+.BI \-\-alarm " MS"
+Ring the terminal bell and highlight the current line in red whenever
+RTT exceeds
+.I MS
+milliseconds. Designed for use with
+.BR \-\-watch .
+.SS trace
+.TP
+.BI \-m " N" ", \-\-max\-hops " N
+Maximum number of hops.
+Default:
+.BR 30 .
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Per-hop timeout in seconds.
+Default:
+.BR 2.0 .
+.TP
+.BI \-p " N" ", \-\-probes " N
+UDP probe packets per TTL value.
+Default:
+.BR 3 .
+.SS mtr
+.TP
+.BI \-c " N" ", \-\-cycles " N
+Number of ping cycles per hop.
+Default:
+.BR 10 .
+.TP
+.BI \-m " N" ", \-\-max\-hops " N
+Maximum number of hops.
+Default:
+.BR 30 .
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Per-probe timeout in seconds.
+Default:
+.BR 2.0 .
+.TP
+.BI \-i " SEC" ", \-\-interval " SEC
+Interval between cycles in seconds.
+Default:
+.BR 0.3 .
+.SS lookup
+.TP
+.BR \-f ", " \-\-full
+Also query TXT records (SPF, DMARC, DKIM).
+.TP
+.BI \-s " IP" ", \-\-server " IP
+Query a specific DNS resolver instead of the system default.
+Equivalent to
+.BI "dig @" IP " RECORD HOST" .
+Example:
+.BR \-\-server\ 1.1.1.1 .
+.SS tcp
+.TP
+.BI \-c " N" ", \-\-count " N
+Number of TCP connection attempts.
+Default:
+.BR 3 .
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Per-attempt connection timeout in seconds.
+Default:
+.BR 2.0 .
+.TP
+.BI \-i " SEC" ", \-\-interval " SEC
+Interval between attempts in seconds.
+Default:
+.BR 0.5 .
+.SS tls
+.TP
+.BI \-\-port " N"
+TCP port to connect to.
+Default:
+.BR 443 .
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Connection timeout in seconds.
+Default:
+.BR 5.0 .
+.SS http
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Request timeout in seconds.
+Default:
+.BR 8.0 .
+.SS portscan
+.TP
+.BI \-p " LIST" ", \-\-ports " LIST
+Comma-separated TCP ports and ranges.
+Example:
+.BR 22,80,443,8000-8010 .
+Default:
+.BR 1-1024 .
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Per-port connection timeout.
+Default:
+.BR 0.5 .
+.TP
+.BI \-w " N" ", \-\-workers " N
+Concurrent port workers.
+Default:
+.BR 100 .
+.TP
+.B \-\-banners
+Grab service banners from open ports.
+Sends protocol-appropriate probes and fingerprints the response
+against known signatures (SSH, HTTP, FTP, SMTP, Redis, PostgreSQL, etc.).
+.SS ipscan
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Per-IP ping timeout in seconds.
+Default:
+.BR 1.0 .
+.TP
+.BI \-w " N" ", \-\-workers " N
+Concurrent IP workers.
+Default:
+.BR 128 .
+.TP
+.BI \-\-limit " N"
+Maximum IPs accepted from a CIDR or range.
+Default:
+.BR 4096 .
+.SS sweep
+.TP
+.BI \-p " LIST" ", \-\-ports " LIST
+TCP ports to probe on each host.
+Default:
+.BR 22,80,443 .
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Per host-port timeout.
+Default:
+.BR 0.5 .
+.TP
+.BI \-w " N" ", \-\-workers " N
+Concurrent host workers.
+Default:
+.BR 128 .
+.TP
+.BI \-\-limit " N"
+Maximum hosts from a CIDR or range.
+Default:
+.BR 4096 .
+.SS mtu
+.TP
+.BI \-\-max\-mtu " BYTES"
+Search ceiling for path MTU (bytes).
+Default:
+.BR 1500 .
+Use
+.B 9000
+for jumbo-frame networks.
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Per-probe timeout.
+Default:
+.BR 2.0 .
+.SS mtu
+.TP
+.BI \-\-max\-mtu " BYTES"
+Search ceiling for path MTU (bytes).
+Default:
+.BR 1500 .
+Use
+.B 9000
+for jumbo-frame networks.
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Per-probe timeout.
+Default:
+.BR 2.0 .
+.TP
+.BI \-c " N" ", \-\-count " N
+ICMP ping packets used for scoring.
+Default:
+.BR 8 .
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Per-packet timeout.
+Default:
+.BR 2.0 .
+.SS listen
+.TP
+.BI \-\-proto " PROTO"
+Filter by protocol.
+Must be
+.B tcp
+or
+.BR udp .
+.
+.SH OUTPUT COLOURS
+.TP
+.B Green
+RTT < 30 ms \(em excellent latency.
+.TP
+.B Teal / Cyan
+Informational labels and hostnames.
+.TP
+.B Amber / Yellow
+RTT 30\(en300 ms \(em acceptable; or warnings in health/DNS checks.
+.TP
+.B Red
+RTT > 300 ms, packet loss, certificate expired, or check failed.
+.TP
+.B Dim / Grey
+Timeouts, closed ports, or informational context text.
+.
+.SH LIVE OUTPUT
+Every ping reply, traceroute hop, TCP attempt, port result, and IP
+scan result is printed immediately upon receipt \(em xping never
+buffers results.
+An animated spinner indicates an in-flight probe; it disappears and
+is replaced by the result line the moment the response (or timeout)
+is confirmed.
+.PP
+.B ping \-\-watch
+redraws the current line in place (using ANSI cursor movement) so
+the terminal does not scroll.
+.B mtr
+similarly redraws its hop table in place on every cycle.
+.
+.SH SHELL COMPLETION
+Tab-completion scripts are generated with the
+.B completion
+subcommand.
+.PP
+.B Bash
+.RS
+.nf
+echo 'source <(xping completion bash)' >> ~/.bashrc
+source ~/.bashrc
+.fi
+.RE
+.PP
+.B Zsh
+.RS
+.nf
+echo 'source <(xping completion zsh)' >> ~/.zshrc
+source ~/.zshrc
+.fi
+.RE
+.PP
+.B Fish
+.RS
+.nf
+xping completion fish > ~/.config/fish/completions/xping.fish
+.fi
+.RE
+.PP
+After installation, pressing
+.B <Tab>
+after
+.B xping
+lists all commands; pressing
+.B <Tab>
+after a command lists its flags.
+.
+.SH SAVED PROFILES
+Profiles are stored in
+.IR ~/.xping/profiles.json .
+Any host-accepting command resolves a profile name transparently:
+.PP
+.RS
+.nf
+xping profile add prod-db 10.0.0.5 --port 5432 --note "Production DB"
+xping ping prod-db
+xping health prod-db
+xping portscan prod-db --banners
+.fi
+.RE
+.
+.SH HEALTH HISTORY
+Each run of
+.B xping health HOST
+appends a timestamped score entry to
+.IR ~/.xping/health_history.json .
+The last 10 scores are displayed as a sparkline with a trend arrow
+(\(ua better, \(da worse, \(-> stable).
+.
+.SH PERMISSIONS
+Raw ICMP sockets require one of:
+.IP \(bu 4
+Running as
+.BR root .
+.IP \(bu 4
+The
+.B cap_net_raw
+Linux capability set on the binary.
+.PP
+Without elevated permissions xping falls back to the system
+.BR ping (8)
+and
+.BR traceroute (8)
+binaries automatically.
+To grant the capability without requiring root:
+.PP
+.RS
+.nf
+sudo setcap cap_net_raw+ep $(which xping)
+.fi
+.RE
+.
+.SH ENVIRONMENT
+.TP
+.B NO_COLOR
+Disable all ANSI colour and style codes (see no-color.org).
+.TP
+.B XPING_DEBUG
+Print full Python tracebacks on errors instead of the short
+human-readable message.
+.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Error: host unresolvable, network failure, or unexpected exception.
+.TP
+.B 130
+Interrupted by the user (Ctrl-C / SIGINT).
+.
+.SH EXAMPLES
+.TP
+.B xping 8.8.8.8
+Auto-ping Google DNS and display follow-up command suggestions.
+.TP
+.B xping google.com
+Auto-ping google.com (same shorthand, works with hostnames too).
+.TP
+.B xping ping google.com
+Explicit ping with 5 packets.
+.TP
+.B xping ping 1.1.1.1 \-c 20 \-i 0.1
+Twenty rapid-fire pings to Cloudflare DNS.
+.TP
+.B xping ping google.com \-\-watch \-\-alarm 50
+Continuous live ping; bell + red highlight when RTT exceeds 50 ms.
+.TP
+.B xping trace 8.8.8.8 \-\-max\-hops 15
+Trace the path to Google DNS, up to 15 hops, with ASCII path tree.
+.TP
+.B xping mtr 1.1.1.1 \-\-cycles 20
+MTR: per-hop live ping for 20 cycles with stdev and sparkline.
+.TP
+.B xping lookup github.com \-\-full
+All DNS records including TXT/SPF/DMARC/DKIM for GitHub.
+.TP
+.B xping lookup github.com \-\-server 1.1.1.1
+DNS lookup via Cloudflare instead of the system resolver.
+.TP
+.B xping dnscheck github.com
+Full DNS health check: SPF, DMARC, DKIM, NS redundancy, MX backup.
+.TP
+.B xping rdns 8.8.8.8
+Reverse-DNS lookup: resolve 8.8.8.8 to dns.google.
+.TP
+.B xping tls github.com
+TLS certificate details, chain, expiry countdown, and lifetime bar.
+.TP
+.B xping http https://example.com
+HTTP/2 detection, status, headers, redirect chain, DNS+TCP+TTFB timing.
+.TP
+.B xping whois cloudflare.com
+WHOIS lookup with automatic RDAP fallback if port 43 is blocked.
+.TP
+.B xping tcp example.com 443 \-c 5
+Five TCP connections to example.com on HTTPS port 443.
+.TP
+.B xping portscan example.com \-\-ports 22,80,443,8080 \-\-banners
+Port scan with service banner grabbing on open ports.
+.TP
+.B xping ipscan 192.168.1.0/24
+Discover live hosts in a local subnet.
+.TP
+.B xping sweep 192.168.1.0/24 \-\-ports 22,80,443
+Find hosts exposing SSH/HTTP/HTTPS on a local network.
+.TP
+.B xping mtu 8.8.8.8
+Binary-search the path MTU to 8.8.8.8.
+.TP
+.B xping health google.com \-c 16
+Health score with 16 ping packets and trend history.
+.TP
+.B xping speedtest
+Download/upload speed measurement via Cloudflare (no iperf3 needed).
+.TP
+.B xping listen \-\-proto tcp
+All locally listening TCP ports with process names and PIDs.
+.TP
+.B xping osdetect 192.168.1.1
+Guess the OS of a local router from its ICMP TTL.
+.TP
+.B xping all cloudflare.com
+Full bundle: lookup + ping + trace + TCP + unified summary.
+.TP
+.B xping profile add prod-db 10.0.0.5 \-\-port 5432
+Save a profile named prod-db.
+.TP
+.B xping ping prod-db
+Ping using the saved profile.
+.TP
+.B xping lookup github.com \-\-json \-\-output dns-report
+Save DNS lookup results to dns-report.json.
+.TP
+.B xping completion bash
+Print the bash tab-completion script.
+.TP
+.B xping deps
+Check which system tools are installed.
+.
+.SH FILES
+.TP
+.I ~/.xping/profiles.json
+Saved target profiles (created automatically by
+.BR "xping profile add" ).
+.TP
+.I ~/.xping/health_history.json
+Health score history per host (appended by
+.BR "xping health" ).
+.TP
+.I /usr/share/man/man1/xping.1.gz
+This manual page (installed by package managers).
+.
+.SH DEPENDENCIES
+.B certifi
+is the only required Python package and is installed automatically
+with xping.
+.PP
+Optional system packages for full functionality:
+.RS
+.TP
+.BR iputils-ping " (Debian/Ubuntu)  /  " iputils " (Fedora/Arch)"
+Provides
+.BR ping (8):
+required fallback when raw ICMP sockets are unavailable.
+.TP
+.B traceroute
+Provides
+.BR traceroute (8):
+required fallback for
+.B trace
+and
+.B mtr
+when raw sockets are unavailable.
+.br
+Install:
+.B sudo apt install traceroute
+or
+.BR "sudo dnf install traceroute" .
+.TP
+.BR dnsutils " (Debian/Ubuntu)  /  " bind-utils " (Fedora/Arch)"
+Provides
+.BR dig (1):
+enables MX, NS, TXT, and custom-server DNS queries.
+.TP
+.BR iproute2 " (Linux)"
+Provides
+.BR ss (8):
+used by
+.B xping listen
+to list open ports with process names.
+.RE
+.
+.SH SEE ALSO
+.BR ping (8),
+.BR traceroute (8),
+.BR mtr (8),
+.BR dig (1),
+.BR ss (8),
+.BR netstat (8),
+.BR nmap (1),
+.BR host (1),
+.BR whois (1),
+.BR openssl (1),
+.BR curl (1)
+.
+.SH BUGS
+Report bugs at:
+.UR https://github.com/mehdiaskari/xping/issues
+.UE
+.
+.SH AUTHOR
+.B Mehdi Askari
+.RI < iorganamis@gmail.com >
+.PP
+Source: https://github.com/mehdiaskari/xping
+.PP
+Any fork, derivative work, or redistribution of this software must
+visibly credit the original author per the license terms.
+.
+.SH COPYRIGHT
+Copyright \(co 2026 Mehdi Askari.
+Licensed under the MIT License with Mandatory Attribution.
+See
+.I /usr/share/doc/xping/LICENSE
+or https://github.com/mehdiaskari/xping/blob/main/LICENSE
+for the full text.

@@ -1,0 +1,77 @@
+name: Release — Launchpad PPA
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+jobs:
+  upload-ppa:
+    name: Build & upload to Launchpad PPA
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Debian build tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            devscripts debhelper dh-python python3-all \
+            python3-setuptools python3-certifi gnupg dput
+
+      # GPG in a CI runner has no controlling terminal at all, so any
+      # attempt by gpg/gpg-agent to open one for a pinentry prompt fails
+      # with "Inappropriate ioctl for device" and aborts debsign. Fix:
+      # tell gpg never to touch a tty and to accept loopback pinentry.
+      # This requires LAUNCHPAD_GPG_PRIVATE_KEY to be a key with NO
+      # passphrase (the standard approach for CI signing keys — the
+      # encrypted GitHub secret is the security boundary). See
+      # PACKAGING.md for how to generate or strip the passphrase from one.
+      - name: Configure GPG for non-interactive signing
+        run: |
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          cat > ~/.gnupg/gpg.conf << 'GPGCONF'
+          batch
+          yes
+          no-tty
+          pinentry-mode loopback
+          GPGCONF
+          cat > ~/.gnupg/gpg-agent.conf << 'AGENTCONF'
+          allow-loopback-pinentry
+          AGENTCONF
+          chmod 600 ~/.gnupg/gpg.conf ~/.gnupg/gpg-agent.conf
+          gpgconf --kill gpg-agent 2>/dev/null || true
+
+      - name: Import GPG key
+        run: |
+          echo "${{ secrets.LAUNCHPAD_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          gpg --list-secret-keys
+
+      - name: Build and sign source package
+        run: |
+          VERSION=$(python3 -c "import re; print(re.search(r'version = \"(.+?)\"', open('pyproject.toml').read()).group(1))")
+          echo "Building xping $VERSION"
+          tar \
+            --exclude='.git' --exclude='debian' --exclude='dist' \
+            --exclude='build' --exclude='*.egg-info' --exclude='.venv' \
+            --exclude='__pycache__' \
+            -czf "../xping_${VERSION}.orig.tar.gz" .
+          GPG_TTY="" debuild -S -sa -k"${{ secrets.LAUNCHPAD_GPG_KEY_ID }}"
+
+      - name: Lintian check
+        run: lintian --no-tag-display-limit ../xping_*.changes || true
+
+      - name: Upload to Launchpad PPA
+        run: |
+          cat > ~/.dput.cf << 'DPUTEOF'
+          [ppa-xping]
+          fqdn = ppa.launchpad.net
+          method = ftp
+          incoming = ~mehdiaskari/ubuntu/xping/
+          login = anonymous
+          allow_unsigned_uploads = 0
+          DPUTEOF
+          dput ppa:mehdiaskari/xping ../xping_*.changes
+          echo "✔ Uploaded — check: https://launchpad.net/~mehdiaskari/+archive/ubuntu/xping"

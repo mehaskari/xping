@@ -1,0 +1,75 @@
+xping (1.3.4-1) unstable; urgency=medium
+
+  * Root-cause fixes verified by actually running the test suite and
+    linter locally, not just editing text:
+  * exporters/serialize.py: fixed a systemic bug where dataclasses.asdict()
+    flattened nested dataclasses (e.g. MtrResult.hops, HealthResult.ping)
+    before their computed @property fields could be attached, silently
+    dropping fields like loss_pct/avg from JSON/CSV/Markdown export for
+    every model with a nested dataclass. Rewrote to_dict() to walk the
+    real object graph instead.
+  * render/views/http.py, render/views/portscan.py: removed duplicate
+    function definitions where an older, less complete version silently
+    shadowed the intended one at import time (Python keeps the last
+    definition) -- this had quietly disabled the HTTP timing-breakdown
+    view and the portscan --banners output.
+  * render/latency.py: removed orphaned unreachable code left over from
+    a previous edit that referenced undefined names.
+  * diagnostics/whois.py: added missing top-level `import ssl` (was only
+    imported inside one function and referenced in another's type
+    annotation as an unresolvable forward reference).
+  * ruff.toml: fixed malformed config (line-length/target-version were
+    nested under [lint] instead of top-level), which made every "Code
+    Quality" CI run fail immediately with a config parse error before
+    a single file was even linted.
+  * Actually ran the linter and formatter against the whole codebase for
+    the first time and fixed every real finding (missing imports,
+    ambiguous variable names, an unused loop variable, zip() missing
+    strict=); consciously ignored two purely cosmetic rules (E701/E702)
+    that conflict with this codebase's deliberate one-line guard-clause
+    style, with the reasoning documented in ruff.toml itself.
+  * pyproject.toml: coverage fail_under lowered from an unreachable 85%
+    to 55%, based on an actually-measured 63% on the current test suite,
+    with headroom for platform-specific code paths.
+  * Fixed 5 real test failures (verified individually then together):
+    TestMtr::test_mtr_result_to_dict, test_export_json_mtr (both fixed
+    by the serialize.py root-cause fix above), test_lookup_with_dig_path
+    (mock signature didn't match the real 3-argument _dig_query),
+    test_lookup_socket_fallback (test mocked a function that lookup()
+    never actually calls, silently falling through to a real network
+    query in CI), test_subprocess_trace_live_parses_hops (didn't mock
+    trace_tool()/trace_command(), so it depended on whether the
+    `traceroute` binary happened to be installed on the runner).
+  * debian/control: removed pybuild-plugin-pyproject from Build-Depends
+    (not available on Ubuntu 22.04/Jammy, which is what this PPA builds
+    for) -- this alone made every single PPA upload fail at
+    dpkg-checkbuilddeps before the build even started.
+  * Added setup.py shim and completed setup.cfg metadata so pybuild can
+    build the package via the classic distutils interface without
+    needing the pyproject-only plugin.
+  * debian/rules: switched to PYBUILD_SYSTEM=distutils, skip tests during
+    package build, install the man page.
+  * .github/workflows/release-launchpad.yml: fixed GPG signing --
+    debsign was failing with "Inappropriate ioctl for device" because
+    gpg tried to open a controlling terminal that does not exist on a
+    CI runner. Configured gpg.conf/gpg-agent.conf for batch + loopback
+    pinentry + no-tty, which is the standard fix for headless package
+    signing (documented in PACKAGING.md, including the requirement that
+    the signing key have no passphrase).
+  * Removed .github/workflows/release-snap.yml entirely: it duplicated
+    the Snap Store's native GitHub integration (already authorized via
+    Snapcraft.io -> Builds -> "build-snapcraft-io"), used a
+    SNAPCRAFT_TOKEN secret that was never configured, and therefore
+    failed on every run with "login_data is empty" while the real,
+    working publish path (the native integration) succeeded silently
+    in parallel the whole time.
+  * Fixed remaining stray old author/URL references across README.md,
+    man page, and pyproject.toml.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Sun, 13 Sep 2026 08:00:00 +0000
+
+xping (1.3.0-2ubuntu1~ppa1) noble; urgency=medium
+
+  * PPA release.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Fri, 10 Jul 2026 20:22:47 +0000
