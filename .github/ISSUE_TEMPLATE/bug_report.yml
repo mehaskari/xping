@@ -1,0 +1,41 @@
+name: Bug Report
+description: Report a bug or unexpected behaviour
+labels: ["bug", "triage"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: xping version
+      placeholder: "Run: xping --version"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Linux (Ubuntu/Debian)
+        - Linux (Fedora/Arch/other)
+        - macOS
+        - Windows
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command that triggered the bug
+      placeholder: "e.g. xping ping google.com --watch"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour — paste full output including any traceback
+    validations:
+      required: true

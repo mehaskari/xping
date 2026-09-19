@@ -1,0 +1,51 @@
+name: xping
+title: xping
+base: core22
+version: '1.3.5'
+summary: Beautiful CLI network diagnostics
+description: |
+  xping is a command-line network diagnostics tool with live,
+  colour-coded, animated output.
+
+  Quick start: xping 8.8.8.8
+  Commands: ping, trace, mtr, lookup, dnscheck, rdns, tcp, tls,
+  http, whois, portscan, ipscan, sweep, mtu, health, speedtest,
+  listen, osdetect, profile, all, completion
+
+  Tab completion: source <(xping completion bash)
+  Every command supports --json --csv --markdown --output
+
+license: MIT
+contact: iorganamis@gmail.com
+website: https://github.com/mehdiaskari/xping
+source-code: https://github.com/mehdiaskari/xping
+issues: https://github.com/mehdiaskari/xping/issues
+
+grade: stable
+confinement: strict
+
+apps:
+  xping:
+    command: bin/xping
+    plugs:
+      - network
+      - network-observe
+      - home
+    environment:
+      LC_ALL: C.UTF-8
+
+parts:
+  xping:
+    plugin: python
+    source: .
+    python-packages:
+      - certifi
+    stage-packages:
+      - iputils-ping
+      - traceroute
+      - iproute2
+    override-build: |
+      craftctl default
+      install -D -m 644 man/xping.1 \
+        "$CRAFT_PART_INSTALL/share/man/man1/xping.1"
+      gzip -9f "$CRAFT_PART_INSTALL/share/man/man1/xping.1"
