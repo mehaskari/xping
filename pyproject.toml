@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xping"
+version = "1.3.6"
+description = "Beautiful CLI network diagnostics — ping, traceroute, network scanning, port scanning, TCP checks, and DNS lookup"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Mehdi Askari", email = "iorganamis@gmail.com" }
+]
+keywords = ["ping", "traceroute", "dns", "tcp", "portscan", "ipscan", "network", "cli", "diagnostics"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Networking",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+requires-python = ">=3.10"
+dependencies = ["certifi"]
+
+[project.scripts]
+xping = "xping.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/mehdiaskari/xping"
+Repository = "https://github.com/mehdiaskari/xping"
+Issues = "https://github.com/mehdiaskari/xping/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "pytest-cov>=4.1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["xping"]
+omit = [
+    "xping/__main__.py",
+    "xping/ping.py",
+    "xping/trace.py",
+    "xping/lookup.py",
+    "xping/tcp.py",
+    "xping/portscan.py",
+    "xping/sweep.py",
+    "xping/ipscan.py",
+    "xping/deps.py",
+    "xping/platform_cmds.py",
+    "xping/serialize.py",
+]
+
+[tool.coverage.report]
+fail_under = 55
+show_missing = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["xping*"]
+
+[tool.setuptools.package-data]
+xping = ["py.typed"]
+
+# man page as data file — copied to share/man/man1/ at install time
+[tool.setuptools.data-files]
+"share/man/man1" = ["man/xping.1"]

@@ -1,0 +1,36 @@
+# xping ruff configuration
+# NOTE: line-length and target-version are TOP-LEVEL settings in ruff.toml,
+# NOT nested under [lint]. Putting them under [lint] causes ruff to fail
+# immediately with "unknown field `line-length`" before it even runs.
+line-length = 100
+target-version = "py310"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "E501",   # line too long — long URLs/strings in diagnostics output
+    "E701",   # `if x: y` one-liner guard clauses — used deliberately and
+    "E702",   # pervasively throughout this codebase for compact parsing/
+              # cleanup code (e.g. `except ValueError: pass`); rewriting
+              # ~50 call sites has no functional benefit and risks typos
+    "BLE001", # blind `except Exception` — intentional in network code
+              # (a single failed probe must not crash the whole scan)
+    "UP041",  # socket.timeout alias — kept for clarity in some call sites
+    "B008",   # function calls in argument defaults
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["F401"]
+# Compatibility shim modules re-export names for backwards compatibility;
+# the "unused" imports are the whole point of these files.
+"xping/ping.py" = ["F401"]
+"xping/trace.py" = ["F401"]
+"xping/lookup.py" = ["F401"]
+"xping/tcp.py" = ["F401"]
+"xping/portscan.py" = ["F401"]
+"xping/sweep.py" = ["F401"]
+"xping/ipscan.py" = ["F401"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
