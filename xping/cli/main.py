@@ -108,8 +108,6 @@ def main() -> None:
     bare = _is_bare_host(raw_argv)
     if bare is not None:
         is_tty = sys.stdout.isatty()
-        if is_tty:
-            print(banner())
         try:
             from xping.diagnostics import profile as profile_diag
             from xping.diagnostics.ping import ping
@@ -133,13 +131,6 @@ def main() -> None:
         print(banner())
         parser.print_help()
         sys.exit(0)
-
-    if sys.stdout.isatty() and not (
-        getattr(args, "json", False)
-        or getattr(args, "csv", False)
-        or getattr(args, "markdown", False)
-    ):
-        print(banner())
 
     dispatch = {
         "ping": cmd_ping,

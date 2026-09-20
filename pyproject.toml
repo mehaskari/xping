@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xping"
-version = "1.3.6"
+version = "1.3.7"
 description = "Beautiful CLI network diagnostics — ping, traceroute, network scanning, port scanning, TCP checks, and DNS lookup"
 readme = "README.md"
 license = { file = "LICENSE" }

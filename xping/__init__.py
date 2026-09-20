@@ -3,7 +3,7 @@ xping — Beautiful CLI network diagnostics.
 Created by Mehdi Askari <iorganamis@gmail.com>
 """
 
-__version__ = "1.3.6"
+__version__ = "1.3.7"
 __author__ = "Mehdi Askari"
 __email__ = "iorganamis@gmail.com"
 __license__ = "MIT with Mandatory Attribution"

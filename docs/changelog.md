@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.3.7] - 2026-09-21
+
+### Changed
+- The ASCII-art banner now prints only when `xping` is run with no
+  arguments at all. It no longer appears before the bare-host
+  shorthand (`xping 8.8.8.8`) or before any explicit subcommand
+  (`xping ping ...`, `xping trace ...`, etc.) — every real command now
+  starts straight with its own output.
+
+---
+
 ## [1.3.6] - 2026-09-20
 
 ### Fixed
