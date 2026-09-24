@@ -69,6 +69,13 @@ Commands:
   health <host>        Network health score (DNS + loss + latency + jitter)
   mtr    <host>        Combined traceroute + live per-hop ping
   mtu    <host>        Path MTU discovery (binary search)
+  dnscheck <domain>    DNS health check — SPF, DMARC, DKIM, NS, MX
+  osdetect <host>      Guess remote OS from TTL fingerprint
+  speedtest            Download/upload speed via Cloudflare
+  listen               Show locally listening TCP/UDP ports
+  deps                 Check system dependency status
+  completion <shell>   Generate bash/zsh/fish tab-completion script
+  about                Show author, license, and attribution info
   profile              Manage saved target profiles
     add <name> <target>   Save a profile
     remove <name>         Delete a profile
@@ -91,6 +98,8 @@ Examples:
   xping health google.com
   xping mtr 1.1.1.1 --cycles 15
   xping mtu 8.8.8.8
+  xping dnscheck github.com
+  xping speedtest --json
   xping profile add prod-db 10.0.0.5 --port 5432 --note "Production DB"
   xping profile list
   xping ping prod-db
@@ -412,7 +421,11 @@ Examples:
 
     profile_sub.add_parser("list", help="List all saved profiles")
 
-    sub.add_parser("speedtest", help="Measure download/upload speed via Cloudflare")
+    sub.add_parser(
+        "speedtest",
+        parents=[export_parent],
+        help="Measure download/upload speed via Cloudflare",
+    )
 
     p_completion = sub.add_parser("completion", help="Generate shell tab-completion script")
     p_completion.add_argument(
@@ -426,7 +439,9 @@ Examples:
         "--proto", choices=["tcp", "udp"], default=None, help="Filter by protocol (default: both)"
     )
 
-    p_osdetect = sub.add_parser("osdetect", help="Guess remote OS from TTL fingerprint")
+    p_osdetect = sub.add_parser(
+        "osdetect", parents=[export_parent], help="Guess remote OS from TTL fingerprint"
+    )
     p_osdetect.add_argument("host", help="Hostname or IP address")
 
     sub.add_parser("deps", help="Check system dependency status")

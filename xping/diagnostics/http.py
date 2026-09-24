@@ -30,6 +30,21 @@ def _ssl_context() -> ssl.SSLContext:
     return ctx
 
 
+def _supports_h2(host: str, port: int, timeout: float) -> bool | None:
+    """Separate ALPN-only handshake: does the server offer HTTP/2?
+
+    Returns None when the probe itself fails (the main request already
+    succeeded, so this is informational only)."""
+    ctx = _ssl_context()
+    ctx.set_alpn_protocols(["h2", "http/1.1"])
+    try:
+        with socket.create_connection((host, port), timeout=timeout) as sock:
+            with ctx.wrap_socket(sock, server_hostname=host) as tls_sock:
+                return tls_sock.selected_alpn_protocol() == "h2"
+    except (OSError, ssl.SSLError):
+        return None
+
+
 def _one_request(url: str, timeout: float) -> dict:
     """Issue a single GET and return a timing + metadata dict."""
     parts = urlsplit(url)
@@ -47,27 +62,18 @@ def _one_request(url: str, timeout: float) -> dict:
     socket.gethostbyname(host)
     dns_ms = (time.perf_counter() - t0) * 1000
 
-    # TCP connect + optional TLS
+    # TCP connect + optional TLS. Only HTTP/1.1 is offered via ALPN:
+    # http.client cannot speak HTTP/2, so letting the server pick "h2" here
+    # would make it reject our HTTP/1.1 request as a malformed h2 preface.
     t1 = time.perf_counter()
     if is_https:
         ctx = _ssl_context()
-        ctx.set_alpn_protocols(["h2", "http/1.1"])
+        ctx.set_alpn_protocols(["http/1.1"])
         conn = http.client.HTTPSConnection(host, port, timeout=timeout, context=ctx)
     else:
         conn = http.client.HTTPConnection(host, port, timeout=timeout)
     conn.connect()
     tcp_ms = (time.perf_counter() - t1) * 1000
-
-    # HTTP version via ALPN
-    http_version = "HTTP/1.1"
-    if is_https:
-        raw_sock = getattr(conn.sock, "_sslobj", None) or conn.sock
-        try:
-            proto = raw_sock.selected_alpn_protocol()
-            if proto == "h2":
-                http_version = "HTTP/2"
-        except AttributeError:
-            pass
 
     try:
         t2 = time.perf_counter()
@@ -83,6 +89,7 @@ def _one_request(url: str, timeout: float) -> dict:
         resp = conn.getresponse()
         ttfb_ms = (time.perf_counter() - t2) * 1000
         body = resp.read()
+        http_version = "HTTP/1.0" if resp.version == 10 else "HTTP/1.1"
         total_ms = (time.perf_counter() - t1) * 1000
         return dict(
             status=resp.status,
@@ -160,6 +167,11 @@ def http_diagnose(url: str, timeout: float = 8.0, quiet: bool = False) -> HttpRe
             result.dns_ms = d["dns_ms"]  # type: ignore[attr-defined]
             result.tcp_ms = d["tcp_ms"]  # type: ignore[attr-defined]
             result.http_version = d["http_version"]  # type: ignore[attr-defined]
+            final = urlsplit(current)
+            if final.scheme == "https" and final.hostname:
+                result.h2_supported = _supports_h2(  # type: ignore[attr-defined]
+                    final.hostname, final.port or 443, timeout
+                )
             break
         else:
             result.error = f"Too many redirects (> {MAX_REDIRECTS})"

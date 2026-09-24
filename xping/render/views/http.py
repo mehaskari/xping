@@ -55,8 +55,11 @@ def print_result(result) -> None:
     http_ver = getattr(result, "http_version", "HTTP/1.1")
     ttfb = latency_color(result.ttfb_ms) if result.ttfb_ms is not None else c("—", DIM)
     total = latency_color(result.total_ms) if result.total_ms is not None else c("—", DIM)
-    ver_color = BRAND_MINT if http_ver == "HTTP/2" else BWHITE
-    print(f"  {c('HTTP version', DIM):<28}  {c(http_ver, ver_color, BOLD)}")
+    h2 = getattr(result, "h2_supported", None)
+    print(f"  {c('HTTP version', DIM):<28}  {c(http_ver, BWHITE, BOLD)}")
+    if h2 is not None:
+        h2_str = c("yes", BRAND_MINT, BOLD) if h2 else c("no", DIM)
+        print(f"  {c('HTTP/2 support', DIM):<28}  {h2_str}")
     if dns_ms is not None:
         print(f"  {c('DNS resolve', DIM):<28}  {latency_color(dns_ms)}")
     if tcp_ms is not None:

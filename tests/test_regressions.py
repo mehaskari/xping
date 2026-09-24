@@ -1,0 +1,346 @@
+"""
+Regression tests for: HTTP/2 ALPN mismatch, DMARC/DKIM lookup location,
+macOS/Linux/Windows `listen` parsing, raw-DNS qtype filtering, DNS query
+failures vs. absent records, and speedtest/osdetect export flags.
+"""
+
+import struct
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from xping.models.lookup import DnsResult
+
+# ── http: ALPN ────────────────────────────────────────────────────────────────
+
+
+class TestHttpAlpn:
+    def test_request_connection_offers_only_http11(self):
+        from xping.diagnostics import http as http_diag
+
+        ctx = MagicMock()
+        conn = MagicMock()
+        resp = MagicMock(status=200, reason="OK", version=11)
+        resp.getheaders.return_value = []
+        resp.getheader.return_value = None
+        resp.read.return_value = b""
+        conn.getresponse.return_value = resp
+
+        with (
+            patch.object(http_diag, "_ssl_context", return_value=ctx),
+            patch.object(http_diag.http.client, "HTTPSConnection", return_value=conn),
+            patch.object(http_diag.socket, "gethostbyname", return_value="1.2.3.4"),
+        ):
+            d = http_diag._one_request("https://example.com/", timeout=1.0)
+
+        ctx.set_alpn_protocols.assert_called_once_with(["http/1.1"])
+        assert d["status"] == 200
+        assert d["http_version"] == "HTTP/1.1"
+
+    def test_http10_response_version(self):
+        from xping.diagnostics import http as http_diag
+
+        conn = MagicMock()
+        resp = MagicMock(status=200, reason="OK", version=10)
+        resp.getheaders.return_value = []
+        resp.getheader.return_value = None
+        resp.read.return_value = b"x"
+        conn.getresponse.return_value = resp
+        with (
+            patch.object(http_diag.http.client, "HTTPConnection", return_value=conn),
+            patch.object(http_diag.socket, "gethostbyname", return_value="1.2.3.4"),
+        ):
+            d = http_diag._one_request("http://example.com/", timeout=1.0)
+        assert d["http_version"] == "HTTP/1.0"
+
+
+# ── dnscheck: DMARC / DKIM / query failures ───────────────────────────────────
+
+
+def _run_dnscheck(dns: DnsResult, txt_answers: dict):
+    """Run dnscheck with lookup() and query_txt() mocked.
+
+    *txt_answers* maps a queried name to (records, error)."""
+    from xping.diagnostics import dnscheck as dc
+
+    def fake_query_txt(name, server=None):
+        return txt_answers.get(name, ([], None))
+
+    with (
+        patch.object(dc, "lookup", return_value=dns),
+        patch.object(dc, "query_txt", side_effect=fake_query_txt),
+    ):
+        return dc.dnscheck("example.com", quiet=True)
+
+
+def _check(result, name):
+    return next(item for item in result.checks if item.name == name)
+
+
+def _healthy_dns() -> DnsResult:
+    return DnsResult(
+        host="example.com",
+        ipv4=["93.184.216.34"],
+        ns=["a.ns", "b.ns"],
+        mx=[(10, "mx1"), (20, "mx2")],
+        txt=["v=spf1 -all"],
+    )
+
+
+class TestDnsCheck:
+    def test_dmarc_read_from_dmarc_subdomain(self):
+        result = _run_dnscheck(
+            _healthy_dns(),
+            {"_dmarc.example.com": (["v=DMARC1; p=reject; rua=mailto:x@example.com"], None)},
+        )
+        assert _check(result, "DMARC").status == "ok"
+
+    def test_apex_dmarc_text_is_not_used(self):
+        dns = _healthy_dns()
+        dns.txt.append("v=DMARC1; p=reject")
+        result = _run_dnscheck(dns, {})
+        assert _check(result, "DMARC").status == "fail"
+
+    def test_subdomain_policy_does_not_mask_main_policy(self):
+        result = _run_dnscheck(
+            _healthy_dns(), {"_dmarc.example.com": (["v=DMARC1; p=none; sp=reject"], None)}
+        )
+        dmarc = _check(result, "DMARC")
+        assert dmarc.status == "warn"
+        assert "none" in dmarc.detail
+
+    def test_dkim_found_at_common_selector(self):
+        result = _run_dnscheck(
+            _healthy_dns(),
+            {"google._domainkey.example.com": (["v=DKIM1; k=rsa; p=MIIBIjAN"], None)},
+        )
+        dkim = _check(result, "DKIM")
+        assert dkim.status == "ok"
+        assert "google._domainkey" in dkim.detail
+
+    def test_dkim_not_found_is_informational(self):
+        result = _run_dnscheck(_healthy_dns(), {})
+        assert _check(result, "DKIM").status == "info"
+
+    def test_servfail_is_unknown_not_fail(self):
+        dns = _healthy_dns()
+        dns.txt = []
+        dns.query_errors = {"TXT": "SERVFAIL"}
+        result = _run_dnscheck(dns, {"_dmarc.example.com": ([], "SERVFAIL")})
+        assert _check(result, "SPF").status == "unknown"
+        assert _check(result, "DMARC").status == "unknown"
+        assert result.unknown_count == 2
+        assert result.fail_count == 0
+
+    def test_unknown_checks_excluded_from_score(self):
+        dns = _healthy_dns()
+        dns.txt = []
+        dns.query_errors = {"TXT": "SERVFAIL"}
+        result = _run_dnscheck(dns, {"_dmarc.example.com": ([], "TIMEOUT")})
+        # remaining scored checks: A, NS, MX — all ok
+        assert result.score == 100
+
+
+# ── raw DNS parsing ───────────────────────────────────────────────────────────
+
+
+def _name(labels: str) -> bytes:
+    out = b""
+    for label in labels.split("."):
+        out += bytes([len(label)]) + label.encode()
+    return out + b"\x00"
+
+
+def _cname_then_a_response(rcode: int = 0) -> bytes:
+    header = struct.pack("!HHHHHH", 0xAB12, 0x8180 | rcode, 1, 2, 0, 0)
+    question = _name("www.example.com") + struct.pack("!HH", 1, 1)
+    cname_target = _name("example.com")
+    cname = b"\xc0\x0c" + struct.pack("!HHIH", 5, 1, 60, len(cname_target)) + cname_target
+    a = b"\xc0\x0c" + struct.pack("!HHIH", 1, 1, 60, 4) + bytes([93, 184, 216, 34])
+    return header + question + cname + a
+
+
+class TestRawDns:
+    def test_a_query_skips_cname_answers(self):
+        from xping.diagnostics.lookup import _parse_dns_response
+
+        assert _parse_dns_response(_cname_then_a_response(), 1) == ["93.184.216.34"]
+
+    def test_response_status(self):
+        from xping.diagnostics.lookup import _response_status
+
+        assert _response_status(_cname_then_a_response(0)) == "NOERROR"
+        assert _response_status(_cname_then_a_response(2)) == "SERVFAIL"
+        assert _response_status(_cname_then_a_response(3)) == "NXDOMAIN"
+
+
+# ── lookup: failed queries vs absent records ──────────────────────────────────
+
+
+class TestLookupStatus:
+    def test_servfail_reported_as_query_failure(self):
+        from xping.diagnostics.lookup import lookup
+
+        with patch("xping.diagnostics.lookup._dig_query", return_value=("SERVFAIL", "")):
+            result = lookup("example.com", quiet=True)
+        assert result.error.startswith("DNS query failed")
+        assert result.query_errors["A"] == "SERVFAIL"
+
+    def test_nxdomain_reported_as_no_records(self):
+        from xping.diagnostics.lookup import lookup
+
+        with patch("xping.diagnostics.lookup._dig_query", return_value=("NXDOMAIN", "")):
+            result = lookup("example.invalid", quiet=True)
+        assert result.error == "No DNS records found"
+        assert result.query_errors == {}
+
+    def test_query_txt_distinguishes_failure(self):
+        from xping.diagnostics.lookup import query_txt
+
+        with patch("xping.diagnostics.lookup._dig_query", return_value=("SERVFAIL", "")):
+            assert query_txt("_dmarc.example.com") == ([], "SERVFAIL")
+        with patch("xping.diagnostics.lookup._dig_query", return_value=("NXDOMAIN", "")):
+            assert query_txt("_dmarc.example.com") == ([], None)
+
+    def test_dig_status_parsing(self):
+        from xping.diagnostics.lookup import _dig_query
+
+        out = (
+            ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 1\n"
+            ";; ANSWER SECTION:\n"
+            "example.com.\t60\tIN\tA\t93.184.216.34\n"
+        )
+        proc = MagicMock(stdout=out)
+        with patch("xping.diagnostics.lookup.subprocess.run", return_value=proc):
+            status, answer = _dig_query("example.com", "A")
+        assert status == "NOERROR"
+        assert answer == "example.com.\t60\tIN\tA\t93.184.216.34"
+
+    def test_dig_timeout_status(self):
+        from xping.diagnostics.lookup import _dig_query
+
+        proc = MagicMock(stdout=";; connection timed out; no servers could be reached\n")
+        with patch("xping.diagnostics.lookup.subprocess.run", return_value=proc):
+            assert _dig_query("example.com", "A", "10.255.255.1") == ("TIMEOUT", "")
+
+
+# ── listen parsing ────────────────────────────────────────────────────────────
+
+MACOS_NETSTAT = """\
+Active Internet connections (including servers)
+Proto Recv-Q Send-Q  Local Address          Foreign Address        (state)
+tcp4       0      0  127.0.0.1.53535        *.*                    LISTEN
+tcp46      0      0  *.62563                *.*                    LISTEN
+tcp6       0      0  ::1.631                *.*                    LISTEN
+tcp4       0      0  192.168.1.5.50000      17.57.144.1.443        ESTABLISHED
+udp4       0      0  *.5353                 *.*
+udp4       0      0  192.168.1.5.60000      8.8.8.8.53
+"""
+
+LINUX_NETSTAT = """\
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      812/sshd
+tcp6       0      0 :::80                   :::*                    LISTEN      901/nginx: master
+udp        0      0 0.0.0.0:68              0.0.0.0:*                           655/dhclient
+"""
+
+WINDOWS_NETSTAT = """\
+  Proto  Local Address          Foreign Address        State
+  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING
+  TCP    [::]:445               [::]:0                 LISTENING
+  TCP    10.0.0.2:50000         1.1.1.1:443            ESTABLISHED
+  UDP    0.0.0.0:123            *:*
+"""
+
+
+class TestListenParsing:
+    def test_macos(self):
+        from xping.diagnostics.listen import _parse_netstat_unix
+
+        entries = _parse_netstat_unix(MACOS_NETSTAT)
+        got = {(e.proto, e.local_addr, e.local_port) for e in entries}
+        assert got == {
+            ("tcp", "127.0.0.1", 53535),
+            ("tcp", "*", 62563),
+            ("tcp", "::1", 631),
+            ("udp", "*", 5353),
+        }
+
+    def test_linux(self):
+        from xping.diagnostics.listen import _parse_netstat_unix
+
+        entries = {(e.proto, e.local_port): e for e in _parse_netstat_unix(LINUX_NETSTAT)}
+        assert entries[("tcp", 22)].local_addr == "0.0.0.0"
+        assert entries[("tcp", 22)].pid == 812
+        assert entries[("tcp", 22)].process == "sshd"
+        assert entries[("tcp", 80)].local_addr == "::"
+        assert entries[("udp", 68)].process == "dhclient"
+
+    def test_windows(self):
+        from xping.diagnostics.listen import _parse_netstat_windows
+
+        got = {(e.proto, e.local_addr, e.local_port) for e in _parse_netstat_windows(WINDOWS_NETSTAT)}
+        assert got == {("tcp", "0.0.0.0", 135), ("tcp", "::", 445), ("udp", "0.0.0.0", 123)}
+
+    def test_non_linux_uses_netstat_an(self):
+        from xping.diagnostics import listen as listen_mod
+
+        calls = []
+
+        def fake_run(*cmd):
+            calls.append(cmd)
+            return None if cmd[0] == "ss" else MACOS_NETSTAT
+
+        with (
+            patch.object(listen_mod, "_run", side_effect=fake_run),
+            patch.object(listen_mod.sys, "platform", "darwin"),
+        ):
+            result = listen_mod.listen(quiet=True)
+        assert ("netstat", "-an") in calls
+        assert result.count == 4
+
+
+# ── export flags ──────────────────────────────────────────────────────────────
+
+
+class TestExportFlags:
+    @pytest.mark.parametrize(
+        "argv", [["speedtest", "--json"], ["osdetect", "example.com", "--csv"]]
+    )
+    def test_parser_accepts_export_flags(self, argv):
+        from xping.cli.parser import build_parser
+
+        args = build_parser().parse_args(argv)
+        assert args.json or args.csv
+
+    def test_osdetect_exports_model(self, capsys):
+        import json
+
+        from xping.cli.commands import cmd_osdetect
+        from xping.cli.parser import build_parser
+
+        args = build_parser().parse_args(["osdetect", "example.com", "--json"])
+        proc = MagicMock(stdout="64 bytes from 1.2.3.4: icmp_seq=0 ttl=57 time=10 ms", stderr="")
+        with (
+            patch("xping.diagnostics.osdetect.socket.gethostbyname", return_value="1.2.3.4"),
+            patch("xping.diagnostics.osdetect.subprocess.run", return_value=proc),
+        ):
+            cmd_osdetect(args)
+        data = json.loads(capsys.readouterr().out)
+        assert data["ttl"] == 57
+        assert data["os_guess"].startswith("Linux")
+
+    def test_speedtest_exports(self, capsys):
+        import json
+
+        from xping.cli.commands import cmd_speedtest
+        from xping.cli.parser import build_parser
+        from xping.models.speedtest import SpeedResult
+
+        args = build_parser().parse_args(["speedtest", "--json"])
+        with patch(
+            "xping.cli.commands.speedtest", return_value=SpeedResult(download_mbps=50.0)
+        ) as fake:
+            cmd_speedtest(args)
+        fake.assert_called_once_with(quiet=True)
+        assert json.loads(capsys.readouterr().out)["grade"] == "Good"

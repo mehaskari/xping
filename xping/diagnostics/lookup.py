@@ -3,6 +3,7 @@ xping.lookup — DNS lookup with optional custom server (like dig @8.8.8.8).
 Falls back to raw UDP when dig is unavailable.
 """
 
+import re
 import socket
 import struct
 import subprocess
@@ -16,16 +17,37 @@ from xping.render.views import lookup as lookup_view
 # ── dig-based queries ──────────────────────────────────────────────────────────
 
 
-def _dig_query(host: str, rtype: str, server: str | None = None) -> str | None:
-    cmd = ["dig", "+noall", "+answer", "+ttl"]
+# Response codes that genuinely mean "this record does not exist". Anything
+# else (SERVFAIL, REFUSED, TIMEOUT, …) means the query failed and the record
+# may well exist — callers must not report it as absent.
+_ABSENT_STATUSES = {"NOERROR", "NXDOMAIN"}
+
+_DIG_STATUS_RE = re.compile(r"status:\s*([A-Z]+)")
+
+
+def _dig_query(host: str, rtype: str, server: str | None = None) -> tuple[str, str] | None:
+    """Run dig. Returns (status, answer_text), or None if dig can't be run."""
+    cmd = ["dig", "+noall", "+answer", "+comments", "+ttl", "+time=2", "+tries=2"]
     if server:
         cmd.append(f"@{server}")
     cmd += [rtype, host]
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
-        return r.stdout.strip() or None
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+    except FileNotFoundError:
         return None
+    except subprocess.TimeoutExpired:
+        return "TIMEOUT", ""
+    match = _DIG_STATUS_RE.search(r.stdout)
+    if match:
+        status = match.group(1)
+    elif "timed out" in r.stdout or "no servers could be reached" in r.stdout:
+        status = "TIMEOUT"
+    else:
+        status = "ERROR"
+    answer = "\n".join(
+        line for line in r.stdout.splitlines() if line.strip() and not line.startswith(";")
+    )
+    return status, answer
 
 
 def _parse_dig_a(output: str) -> tuple[list[str], int | None]:
@@ -97,7 +119,20 @@ def _build_dns_packet(qname: str, qtype: int) -> bytes:
     return header + q
 
 
+_RCODES = {0: "NOERROR", 1: "FORMERR", 2: "SERVFAIL", 3: "NXDOMAIN", 4: "NOTIMP", 5: "REFUSED"}
+
+
+def _response_status(data: bytes) -> str:
+    """Map the RCODE in a raw DNS response header to its mnemonic."""
+    if len(data) < 12:
+        return "ERROR"
+    rcode = struct.unpack("!H", data[2:4])[0] & 0x000F
+    return _RCODES.get(rcode, f"RCODE{rcode}")
+
+
 def _parse_dns_response(data: bytes, qtype: int) -> list[str]:
+    """Extract answers of type *qtype* only (e.g. skip the CNAME records a
+    resolver includes when answering an A query for an alias)."""
     if len(data) < 12:
         return []
     ancount = struct.unpack("!H", data[6:8])[0]
@@ -144,6 +179,8 @@ def _parse_dns_response(data: bytes, qtype: int) -> list[str]:
         rdata = data[pos : pos + rdlen]
         pos += rdlen
 
+        if rtype != qtype:
+            continue
         if rtype == 1 and len(rdata) == 4:
             results.append(socket.inet_ntoa(rdata))
         elif rtype == 28 and len(rdata) == 16:
@@ -166,16 +203,44 @@ def _parse_dns_response(data: bytes, qtype: int) -> list[str]:
     return results
 
 
-def _raw_query(host: str, qtype: int, server: str = "8.8.8.8", timeout: float = 4.0) -> list[str]:
+def _raw_query(
+    host: str, qtype: int, server: str = "8.8.8.8", timeout: float = 4.0
+) -> tuple[str, list[str]]:
+    """Raw UDP DNS query. Returns (status, records)."""
     packet = _build_dns_packet(host, qtype)
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.settimeout(timeout)
             sock.sendto(packet, (server, 53))
             resp, _ = sock.recvfrom(4096)
-        return _parse_dns_response(resp, qtype)
+    except (TimeoutError, socket.timeout):
+        return "TIMEOUT", []
     except Exception:
-        return []
+        return "ERROR", []
+    status = _response_status(resp)
+    if status != "NOERROR":
+        return status, []
+    return status, _parse_dns_response(resp, qtype)
+
+
+_QTYPES = {"A": 1, "NS": 2, "CNAME": 5, "MX": 15, "TXT": 16, "AAAA": 28}
+
+
+def query_txt(name: str, server: str | None = None) -> tuple[list[str], str | None]:
+    """Fetch TXT records for *name* (dig, falling back to raw UDP).
+
+    Returns (records, error). *error* is the failing DNS status (e.g.
+    "SERVFAIL") when the query itself failed, None when it succeeded —
+    including when the name simply has no TXT records."""
+    dig = _dig_query(name, "TXT", server)
+    if dig is not None:
+        status, answer = dig
+        records = _parse_dig_txt(answer)
+    else:
+        status, records = _raw_query(name, _QTYPES["TXT"], server or "8.8.8.8")
+    if status not in _ABSENT_STATUSES:
+        return records, status
+    return records, None
 
 
 def _socket_resolve(host: str) -> tuple[list[str], list[str]]:
@@ -210,46 +275,67 @@ def lookup(
             print(kv("Server", c(f"@{server}", BRAND_INDIGO, BOLD)))
         print()
 
-    # Try dig first
-    test = _dig_query(host, "A", server)
-    has_dig = test is not None or _dig_query(host, "A") is not None
+    def track(rtype: str, status: str) -> None:
+        if status not in _ABSENT_STATUSES:
+            result.query_errors[rtype] = status
 
-    if has_dig:
-        a_out = _dig_query(host, "A", server) or ""
+    # Try dig first
+    a_dig = _dig_query(host, "A", server)
+
+    if a_dig is not None:
+
+        def dig(rtype: str) -> str:
+            if rtype == "A":
+                status, answer = a_dig
+            else:
+                status, answer = _dig_query(host, rtype, server) or ("ERROR", "")
+            track(rtype, status)
+            return answer
+
+        a_out = dig("A")
         if a_out:
             result.ipv4, result.ttl = _parse_dig_a(a_out)
-            cname_out = _dig_query(host, "CNAME", server) or ""
+            cname_out = dig("CNAME")
             result.cname = _parse_dig_cname(a_out + "\n" + cname_out)
-        aaaa_out = _dig_query(host, "AAAA", server) or ""
-        result.ipv6 = _parse_dig_aaaa(aaaa_out)
-        mx_out = _dig_query(host, "MX", server) or ""
-        result.mx = _parse_dig_mx(mx_out)
-        ns_out = _dig_query(host, "NS", server) or ""
-        result.ns = _parse_dig_ns(ns_out)
+        result.ipv6 = _parse_dig_aaaa(dig("AAAA"))
+        result.mx = _parse_dig_mx(dig("MX"))
+        result.ns = _parse_dig_ns(dig("NS"))
         if full:
-            txt_out = _dig_query(host, "TXT", server) or ""
-            result.txt = _parse_dig_txt(txt_out)
+            result.txt = _parse_dig_txt(dig("TXT"))
     else:
         # Fallback: raw UDP to requested server or 8.8.8.8
         dns_server = server or "8.8.8.8"
         if not quiet:
             warn_missing("dig", f"using raw UDP DNS → {dns_server}")
-        result.ipv4 = _raw_query(host, 1, dns_server)
-        result.ipv6 = _raw_query(host, 28, dns_server)
-        mx_raw = _raw_query(host, 15, dns_server)
-        for entry in mx_raw:
+
+        def raw(rtype: str) -> list[str]:
+            status, records = _raw_query(host, _QTYPES[rtype], dns_server)
+            track(rtype, status)
+            return records
+
+        result.ipv4 = raw("A")
+        result.ipv6 = raw("AAAA")
+        for entry in raw("MX"):
             parts = entry.split(" ", 1)
             if len(parts) == 2:
                 try:
                     result.mx.append((int(parts[0]), parts[1].rstrip(".")))
                 except ValueError:
                     pass
-        result.ns = [n.rstrip(".") for n in _raw_query(host, 2, dns_server)]
+        result.ns = [n.rstrip(".") for n in raw("NS")]
         if full:
-            result.txt = _raw_query(host, 16, dns_server)
+            result.txt = raw("TXT")
 
     if not result.ipv4 and not result.ipv6:
-        result.error = "No DNS records found"
+        failed = [
+            f"{rtype} {result.query_errors[rtype]}"
+            for rtype in ("A", "AAAA")
+            if rtype in result.query_errors
+        ]
+        if failed:
+            result.error = f"DNS query failed ({', '.join(failed)})"
+        else:
+            result.error = "No DNS records found"
         if not quiet:
             error(f"{result.error} for '{host}'")
         return result

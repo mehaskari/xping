@@ -1,5 +1,38 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- **`http` failed on every HTTP/2-capable HTTPS site**: the request
+  connection offered `h2` via ALPN, but `http.client` only speaks
+  HTTP/1.1, so servers that picked h2 rejected the request. The request
+  now negotiates HTTP/1.1 only; HTTP/2 support is detected with a
+  separate ALPN probe and shown as "HTTP/2 support".
+- **`dnscheck` always failed DMARC**: it looked for the record at the
+  apex instead of `_dmarc.<domain>`. The policy is now read from the
+  `p=` tag (so `sp=reject` no longer masks `p=none`). DKIM is detected
+  by probing common selectors at `<selector>._domainkey.<domain>`.
+- **`listen` found nothing on macOS**, and the netstat fallback
+  mis-parsed Linux (`0.0.0.0:22`, state vs PID column) and dropped
+  Windows UDP rows. macOS/BSD now use `netstat -an` with `tcp4`/`tcp46`
+  and dot-separated ports supported.
+- **Raw-UDP DNS fallback returned CNAME targets as IP addresses**:
+  answers are now filtered by the queried record type.
+- **DNS query failures were reported as missing records**: SERVFAIL,
+  REFUSED and timeouts are now tracked separately (`query_errors` in
+  `lookup` output). `dnscheck` marks those checks "not verified" and
+  leaves them out of the score instead of failing them.
+- `speedtest` and `osdetect` now accept `--json` / `--csv` /
+  `--markdown` (`osdetect` returns a proper result model).
+
+### Docs
+- Removed the nonexistent `--alarm` and `--output` flags from the man
+  page, shell completion and snap description. README now names the
+  `certifi` dependency and the correct PPA package (`xping`).
+  `--help` lists every command.
+
+---
+
 ## [1.3.7] - 2026-09-21
 
 ### Changed

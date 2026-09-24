@@ -134,7 +134,7 @@ def test_lookup_bad_host():
     from xping.lookup import lookup
     with patch("socket.gethostbyname", side_effect=socket.gaierror):
         with patch("xping.diagnostics.lookup._dig_query", return_value=None):
-            with patch("xping.diagnostics.lookup._socket_resolve", return_value=([], [])):
+            with patch("xping.diagnostics.lookup._raw_query", return_value=("NXDOMAIN", [])):
                 with patch("builtins.print"):  # suppress output
                     result = lookup("this.host.totally.invalid")
     assert result.error is not None
@@ -594,7 +594,7 @@ def test_lookup_with_dig_path():
         "TXT": 'example.com.\t3600\tIN\tTXT\t"v=spf1 include:example.com ~all"\n',
     }
     with patch("xping.diagnostics.lookup._dig_query",
-               side_effect=lambda _host, rtype, server=None: dig_outputs.get(rtype)):
+               side_effect=lambda _host, rtype, server=None: ("NOERROR", dig_outputs.get(rtype, ""))):
         with patch("socket.gethostbyaddr", return_value=("example.com", [], [])):
             with patch("xping.render.COLOR", False):
                 result = lookup("example.com", full=True)
@@ -613,7 +613,7 @@ def test_lookup_socket_fallback():
     # wrong function let this test silently fall through to a real network
     # call in CI. Mock what is actually called, keyed by qtype.
     def fake_raw_query(host, qtype, server="8.8.8.8", timeout=4.0):
-        return ["93.184.216.34"] if qtype == 1 else []
+        return "NOERROR", (["93.184.216.34"] if qtype == 1 else [])
 
     with patch("xping.diagnostics.lookup._dig_query", return_value=None):
         with patch("xping.diagnostics.lookup._raw_query", side_effect=fake_raw_query):

@@ -9,6 +9,7 @@ import socket
 import subprocess
 
 from xping.diagnostics.platform_cmds import ping_command
+from xping.models.osdetect import OsDetectResult
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 from xping.render.errors import resolve_error
 
@@ -55,24 +56,17 @@ def _guess_os(ttl: int) -> tuple[str, str]:
     return mapping.get(closest, ("Unknown", f"TTL {ttl} — no match"))
 
 
-def osdetect(host: str, quiet: bool = False) -> dict:
+def osdetect(host: str, quiet: bool = False) -> OsDetectResult:
     """Guess target OS from ping TTL."""
-    result = {
-        "host": host,
-        "ip": None,
-        "ttl": None,
-        "os_guess": None,
-        "reasoning": None,
-        "error": None,
-    }
+    result = OsDetectResult(host=host)
 
     try:
         ip = socket.gethostbyname(host)
-        result["ip"] = ip
+        result.ip = ip
     except socket.gaierror:
         if not quiet:
             resolve_error(host)
-        result["error"] = f"Cannot resolve '{host}'"
+        result.error = f"Cannot resolve '{host}'"
         return result
 
     if not quiet:
@@ -91,17 +85,17 @@ def osdetect(host: str, quiet: bool = False) -> dict:
         ttl = None
 
     if ttl is None:
-        result["error"] = "No ICMP reply — host may be unreachable or ICMP is blocked"
+        result.error = "No ICMP reply — host may be unreachable or ICMP is blocked"
         if not quiet:
             from xping.render.errors import error
 
-            error(result["error"])
+            error(result.error)
         return result
 
-    result["ttl"] = ttl
+    result.ttl = ttl
     os_guess, reasoning = _guess_os(ttl)
-    result["os_guess"] = os_guess
-    result["reasoning"] = reasoning
+    result.os_guess = os_guess
+    result.reasoning = reasoning
 
     if not quiet:
         from xping.render import BRAND_MINT, BWHITE, DIM

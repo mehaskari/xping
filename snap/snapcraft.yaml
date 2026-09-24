@@ -13,7 +13,7 @@ description: |
   listen, osdetect, profile, all, completion
 
   Tab completion: source <(xping completion bash)
-  Every command supports --json --csv --markdown --output
+  Every diagnostic command supports --json --csv --markdown
 
 license: MIT
 contact: iorganamis@gmail.com

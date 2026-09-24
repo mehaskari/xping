@@ -230,11 +230,11 @@ def cmd_profile(args: argparse.Namespace) -> None:
         profile_diag.list_profiles()
 
 
-def cmd_speedtest(_args: argparse.Namespace) -> None:
-    quiet = export_requested(_args)
+def cmd_speedtest(args: argparse.Namespace) -> None:
+    quiet = export_requested(args)
     result = speedtest(quiet=quiet)
     if quiet:
-        emit_export(result, _args)
+        emit_export(result, args)
 
 
 def cmd_completion(args: argparse.Namespace) -> None:
@@ -256,7 +256,10 @@ def cmd_listen(args: argparse.Namespace) -> None:
 
 
 def cmd_osdetect(args: argparse.Namespace) -> None:
-    osdetect(host=_resolve_host(args.host), quiet=False)
+    quiet = export_requested(args)
+    result = osdetect(host=_resolve_host(args.host), quiet=quiet)
+    if quiet:
+        emit_export(result, args)
 
 
 def cmd_deps(_args: argparse.Namespace) -> None:
