@@ -1,7 +1,7 @@
 name: xping
 title: xping
 base: core22
-version: '1.4.0'
+version: '1.4.1'
 summary: Beautiful CLI network diagnostics
 description: |
   xping is a command-line network diagnostics tool with live,
@@ -15,7 +15,7 @@ description: |
   IPv4 and IPv6; meaningful exit codes and thresholds for scripts;
   --watch / --until-up; batch checks from a TOML/JSON file.
 
-  Tab completion: source <(xping completion bash)
+  Bash tab completion is included (other shells: xping completion --install).
   Every diagnostic command supports --json --csv --markdown --quiet
 
 license: MIT
@@ -30,6 +30,7 @@ confinement: strict
 apps:
   xping:
     command: bin/xping
+    completer: xping-completion.bash
     plugs:
       - network
       - network-observe
@@ -49,6 +50,8 @@ parts:
       - iproute2
     override-build: |
       craftctl default
+      PYTHONPATH="$CRAFT_PART_SRC" python3 -m xping completion bash \
+        > "$CRAFT_PART_INSTALL/xping-completion.bash"
       install -D -m 644 man/xping.1 \
         "$CRAFT_PART_INSTALL/share/man/man1/xping.1"
       gzip -9f "$CRAFT_PART_INSTALL/share/man/man1/xping.1"

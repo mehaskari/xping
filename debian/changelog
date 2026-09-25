@@ -1,3 +1,18 @@
+xping (1.4.1-1) noble; urgency=medium
+
+  * Tab completion now works in bash (including macOS bash 3.2), zsh and
+    fish. The zsh script registers itself explicitly, because zsh's
+    _hosts completion also claims the name "xping".
+  * Completion is installed automatically for bash, zsh and fish
+    (/usr/share/bash-completion, zsh vendor-completions,
+    fish vendor_completions.d).
+  * New: xping completion --install / --uninstall for pip/pipx installs;
+    xping profile list --names.
+  * Richer completion: option descriptions, value choices, hostnames and
+    saved profile names, .toml/.json files for xping check.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Fri, 25 Sep 2026 14:00:00 +0000
+
 xping (1.4.0-1) noble; urgency=medium
 
   * Exit codes for scripts and monitoring: 0 when a check passes, 1 when

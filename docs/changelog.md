@@ -4,6 +4,34 @@
 
 ---
 
+## [1.4.1] - 2026-09-25
+
+### Fixed
+- **Tab completion did not work** (reported on macOS). There were three causes:
+  - the zsh script never registered itself when sourced;
+  - zsh's own `_hosts` completion also claims a command named `xping`
+    and took over;
+  - on macOS's bash 3.2, the documented `source <(xping completion bash)`
+    silently does nothing.
+
+  Completion scripts for bash, zsh and fish are rewritten and verified by
+  pressing Tab in real shells (zsh via zpty, bash 3.2 and 5, fish 3.7).
+
+### Added
+- `xping completion --install` / `--uninstall`: sets up completion for your
+  shell in one step. It writes the script and adds a marked, idempotent block
+  to `~/.zshrc`, `~/.bashrc` or `~/.bash_profile` (bash on macOS); fish is
+  set up via `~/.config/fish/completions/`.
+- Richer completion: option descriptions (zsh, fish), fixed-choice values
+  (`--proto`, `--type`, shells), hostnames plus saved profile names
+  wherever a host is expected, `.toml`/`.json` files for `xping check`,
+  and profile names for `profile show/remove`. In zsh, mutually exclusive
+  options are not offered together.
+- The Debian/Ubuntu package installs completion for bash, zsh and fish
+  automatically; the snap provides bash completion.
+- `xping profile list --names` prints bare profile names (used by
+  completion).
+
 ## [1.4.0] - 2026-09-25
 
 ### Added

@@ -12,3 +12,14 @@ override_dh_auto_test:
 
 override_dh_installman:
 	dh_installman man/xping.1
+
+# Shell completion for all three shells, generated from the CLI definition.
+# (zsh: vendor-completions precedes zsh's own function dirs in fpath, so this
+# _xping wins over the _hosts completion that also claims the name "xping".)
+execute_after_dh_auto_install:
+	mkdir -p debian/xping/usr/share/bash-completion/completions \
+	         debian/xping/usr/share/zsh/vendor-completions \
+	         debian/xping/usr/share/fish/vendor_completions.d
+	PYTHONPATH=. python3 -m xping completion bash > debian/xping/usr/share/bash-completion/completions/xping
+	PYTHONPATH=. python3 -m xping completion zsh  > debian/xping/usr/share/zsh/vendor-completions/_xping
+	PYTHONPATH=. python3 -m xping completion fish > debian/xping/usr/share/fish/vendor_completions.d/xping.fish

@@ -359,6 +359,10 @@ def cmd_profile(args: argparse.Namespace) -> object:
         return profile_diag.remove(args.name)
     if action == "show":
         return profile_diag.show(args.name) is not None
+    if getattr(args, "names", False):
+        for entry in profile_diag.list_profiles(quiet=True).profiles:
+            print(entry.name)
+        return True
     profile_diag.list_profiles()
     return True
 
@@ -371,15 +375,33 @@ def cmd_speedtest(args: argparse.Namespace) -> object:
 
 
 def cmd_completion(args: argparse.Namespace) -> object:
-    from xping.cli.completion import generate
+    from xping.cli import completion
 
-    try:
-        print(generate(args.shell))
-    except ValueError as exc:
-        from xping.render.errors import error
-
-        error(str(exc))
-        return False
+    if args.install or args.uninstall:
+        shell = args.shell or completion.detect_shell()
+        if shell is None:
+            raise UsageError("cannot detect your shell from $SHELL — name it: bash, zsh or fish")
+        if args.install:
+            actions = completion.install(shell)
+            for action in actions:
+                print(c("  ✔ ", BRAND_TEAL) + action)
+            print()
+            print(c(f"  {shell} completion installed. Open a new terminal, or run:", BWHITE))
+            if shell == "fish":
+                print(c("    (fish picks it up automatically)", DIM))
+            else:
+                home = completion.Path.home()
+                rc = completion._tilde(completion._rc_file(shell, home), home)
+                print(c(f"    source {rc}", BRAND_TEAL))
+            print(c("  Re-run after upgrading xping to pick up new commands and flags.", DIM))
+        else:
+            actions = completion.uninstall(shell)
+            for action in actions or ["nothing to remove"]:
+                print(c("  ✔ ", BRAND_TEAL) + action)
+        return True
+    if not args.shell:
+        raise UsageError("name a shell (bash, zsh, fish) or use --install")
+    print(completion.generate(args.shell), end="")
     return True
 
 
