@@ -20,6 +20,7 @@ from dataclasses import dataclass
 
 from xping.models import (
     BundleResult,
+    CheckReport,
     DnsCheckResult,
     DnsResult,
     HealthResult,
@@ -205,6 +206,10 @@ def evaluate(result, opts=None) -> list[Failure]:
         return _errored(result)
     if isinstance(result, ListenResult | NetResult):
         return _errored(result)
+    if isinstance(result, CheckReport):
+        if result.ok:
+            return []
+        return [Failure(f"{result.failed} of {len(result.outcomes)} checks failed")]
     if isinstance(result, WatchResult):
         if result.last_ok:
             return []

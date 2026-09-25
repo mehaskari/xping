@@ -10,6 +10,7 @@ from xping.cli.export import emit_export, export_requested, output_suppressed
 from xping.cli.verdict import evaluate
 from xping.diagnostics import profile as profile_diag
 from xping.diagnostics.bundle import run_bundle
+from xping.diagnostics.check import EXAMPLE, ConfigError, run_checks
 from xping.diagnostics.deps import print_deps_status
 from xping.diagnostics.dnscheck import dnscheck
 from xping.diagnostics.health import health
@@ -208,6 +209,21 @@ def cmd_ipscan(args: argparse.Namespace) -> object:
 def cmd_all(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
     result = run_bundle(_resolve_host(args.host), quiet=quiet, family=family_of(args))
+    emit_export(result, args)
+    return result
+
+
+def cmd_check(args: argparse.Namespace) -> object:
+    if args.example:
+        print(EXAMPLE, end="")
+        return True
+    if not args.file:
+        raise UsageError("a check file is required (see: xping check --example)")
+    quiet = output_suppressed(args)
+    try:
+        result = run_checks(args.file, workers=args.workers, quiet=quiet)
+    except ConfigError as exc:
+        raise UsageError(str(exc)) from exc
     emit_export(result, args)
     return result
 

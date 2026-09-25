@@ -7,6 +7,7 @@ Score history is persisted in ~/.xping/health_history.json.
 
 import json
 import socket
+import threading
 import time
 from pathlib import Path
 
@@ -29,7 +30,15 @@ def _load_history(host: str) -> list[dict]:
         return []
 
 
+_HISTORY_LOCK = threading.Lock()  # xping check may run several health checks at once
+
+
 def _save_history(host: str, score: int, grade: str) -> list[dict]:
+    with _HISTORY_LOCK:
+        return _save_history_locked(host, score, grade)
+
+
+def _save_history_locked(host: str, score: int, grade: str) -> list[dict]:
     try:
         _HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
         try:

@@ -1,6 +1,7 @@
 """Diagnostic result dataclasses."""
 
 from .bundle import BundleResult
+from .check import CheckOutcome, CheckReport
 from .dnscheck import DnsCheckItem, DnsCheckResult
 from .health import HealthResult
 from .http import HttpResult, RedirectHop
@@ -37,6 +38,8 @@ __all__ = [
     "IpProbe",
     "IpScanResult",
     "BundleResult",
+    "CheckOutcome",
+    "CheckReport",
     "RdnsResult",
     "TlsResult",
     "HttpResult",

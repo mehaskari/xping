@@ -207,6 +207,10 @@ def sections_for(result: Any) -> list[Section]:
                 row.append(result.matches(a))
             rows.append(row)
         return [Section("Resolvers", columns, rows)]
+    if isinstance(result, m.CheckReport):
+        rows = [[o.name, o.type, o.target, o.ok, o.detail, o.elapsed_ms] for o in result.outcomes]
+        columns = ["name", "type", "target", "ok", "detail", "elapsed_ms"]
+        return [Section("Checks", columns, rows)]
     if isinstance(result, m.ProfileListResult):
         rows = [[p.name, p.target, p.port or "", p.note or ""] for p in result.profiles]
         return [Section("Profiles", ["name", "target", "port", "note"], rows)]

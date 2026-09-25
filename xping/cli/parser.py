@@ -149,6 +149,7 @@ Commands:
   sweep  <range>       TCP sweep across CIDR / start-end IP range
   ipscan <range>       Discover live IPs with ICMP echo probes
   all    <host>        Run lookup, ping, trace, and TCP checks
+  check  <file>        Run many checks from a TOML/JSON file — one exit code
   rdns   <ip>          Reverse DNS (PTR) lookup
   tls    <host>        TLS/SSL certificate inspector
   http   <url>         HTTP status, headers, redirects, and TTFB
@@ -196,6 +197,7 @@ Examples:
   xping profile list
   xping ping prod-db
   xping all cloudflare.com
+  xping check --example > checks.toml && xping check checks.toml
         """,
     )
 
@@ -404,6 +406,24 @@ Examples:
     )
     _add_family(p_all)
     p_all.add_argument("host", help="Hostname or IP address")
+
+    p_check = sub.add_parser(
+        "check",
+        parents=[export_parent],
+        help="Run many checks from a TOML/JSON file (one exit code)",
+    )
+    p_check.add_argument("file", nargs="?", help="Check file (.toml or .json)")
+    p_check.add_argument(
+        "-w",
+        "--workers",
+        type=_positive_int,
+        default=8,
+        metavar="N",
+        help="Checks to run in parallel [default: 8]",
+    )
+    p_check.add_argument(
+        "--example", action="store_true", help="Print an example check file and exit"
+    )
 
     p_rdns = sub.add_parser("rdns", parents=[export_parent], help="Reverse DNS (PTR) lookup")
     p_rdns.add_argument("ip", help="IP address to resolve")
