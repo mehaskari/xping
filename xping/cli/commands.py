@@ -23,6 +23,7 @@ from xping.diagnostics.osdetect import osdetect
 from xping.diagnostics.ping import ping
 from xping.diagnostics.ping import watch as ping_watch
 from xping.diagnostics.portscan import portscan
+from xping.diagnostics.propagation import propagation
 from xping.diagnostics.rdns import rdns
 from xping.diagnostics.resolve import family_of
 from xping.diagnostics.speedtest import speedtest
@@ -168,6 +169,20 @@ def cmd_all(args: argparse.Namespace) -> object:
 def cmd_rdns(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
     result = rdns(ip=args.ip, quiet=quiet)
+    emit_export(result, args)
+    return result
+
+
+def cmd_propagation(args: argparse.Namespace) -> object:
+    quiet = output_suppressed(args)
+    result = propagation(
+        name=args.name,
+        rtype=args.rtype,
+        expected=args.expect,
+        servers=args.server,
+        include_system=not args.no_system,
+        quiet=quiet,
+    )
     emit_export(result, args)
     return result
 

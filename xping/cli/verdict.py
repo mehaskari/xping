@@ -33,6 +33,7 @@ from xping.models import (
     OsDetectResult,
     PingResult,
     PortScanResult,
+    PropagationResult,
     RdnsResult,
     SpeedResult,
     SweepResult,
@@ -203,6 +204,8 @@ def evaluate(result, opts=None) -> list[Failure]:
         return _errored(result)
     if isinstance(result, ListenResult | NetResult):
         return _errored(result)
+    if isinstance(result, PropagationResult):
+        return [Failure(message, threshold) for message, threshold in result.problems()]
     if isinstance(result, SpeedResult):
         if result.error:
             return [Failure(result.error)]

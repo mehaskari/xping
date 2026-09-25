@@ -7,6 +7,7 @@ import re
 import socket
 import struct
 import subprocess
+import time
 
 from xping.diagnostics.deps import warn_missing
 from xping.models.lookup import DnsResult
@@ -239,6 +240,43 @@ def query_txt(name: str, server: str | None = None) -> tuple[list[str], str | No
     if status not in _ABSENT_STATUSES:
         return records, status
     return records, None
+
+
+def query(name: str, rtype: str, server: str | None = None) -> tuple[str, list[str], float]:
+    """One DNS query: (status, normalized records, elapsed ms).
+
+    Uses dig when available (``server`` None = the system resolver),
+    otherwise xping's raw UDP client (which needs an explicit *server*).
+    Records are normalized for comparison: lower-case names without the
+    trailing dot, MX as "<priority> <host>", TXT as the joined string.
+    """
+    rtype = rtype.upper()
+    started = time.perf_counter()
+    dig = _dig_query(name, rtype, server)
+    if dig is not None:
+        status, answer = dig
+        parsers = {
+            "A": lambda out: _parse_dig_a(out)[0],
+            "AAAA": _parse_dig_aaaa,
+            "CNAME": lambda out: [c] if (c := _parse_dig_cname(out)) else [],
+            "MX": lambda out: [f"{prio} {host}" for prio, host in _parse_dig_mx(out)],
+            "NS": _parse_dig_ns,
+            "TXT": _parse_dig_txt,
+        }
+        records = parsers[rtype](answer)
+    elif server:
+        status, records = _raw_query(name, _QTYPES[rtype], server)
+    else:
+        return "ERROR", [], 0.0
+    elapsed = (time.perf_counter() - started) * 1000
+    return status, sorted({normalize_record(rtype, r) for r in records}), elapsed
+
+
+def normalize_record(rtype: str, value: str) -> str:
+    value = value.strip()
+    if rtype.upper() in ("TXT",):
+        return value
+    return value.rstrip(".").lower()
 
 
 def _socket_resolve(host: str) -> tuple[list[str], list[str]]:

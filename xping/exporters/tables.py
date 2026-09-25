@@ -196,6 +196,17 @@ def sections_for(result: Any) -> list[Section]:
             Section("Interfaces", columns, rows, primary=False),
             Section("DNS servers", ["server"], dns, primary=False),
         ]
+    if isinstance(result, m.PropagationResult):
+        columns = ["resolver", "server", "status", "records", "elapsed_ms"]
+        if result.expected:
+            columns.append("matches")
+        rows = []
+        for a in result.answers:
+            row = [a.resolver, a.server or "system", a.status, " ".join(a.records), a.elapsed_ms]
+            if result.expected:
+                row.append(result.matches(a))
+            rows.append(row)
+        return [Section("Resolvers", columns, rows)]
     if isinstance(result, m.ProfileListResult):
         rows = [[p.name, p.target, p.port or "", p.note or ""] for p in result.profiles]
         return [Section("Profiles", ["name", "target", "port", "note"], rows)]

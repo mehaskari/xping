@@ -130,6 +130,7 @@ Commands:
   mtr    <host>        Combined traceroute + live per-hop ping
   mtu    <host>        Path MTU discovery (binary search)
   dnscheck <domain>    DNS health check — SPF, DMARC, DKIM, NS, MX
+  propagation <name>   Compare answers from public resolvers (DNS propagation)
   osdetect <host>      Guess remote OS from TTL fingerprint
   speedtest            Download/upload speed via Cloudflare
   listen               Show locally listening TCP/UDP ports
@@ -160,6 +161,8 @@ Examples:
   xping mtr 1.1.1.1 --cycles 15
   xping mtu 8.8.8.8
   xping dnscheck github.com
+  xping propagation example.com --type MX
+  xping propagation example.com --expect 93.184.216.34
   xping speedtest --json
   xping net
   xping profile add prod-db 10.0.0.5 --port 5432 --note "Production DB"
@@ -382,6 +385,38 @@ Examples:
     )
     p_dnscheck.add_argument("domain", help="Domain name to check")
     _add_min_score(p_dnscheck)
+
+    p_prop = sub.add_parser(
+        "propagation",
+        parents=[export_parent],
+        help="Compare a record across public resolvers (DNS propagation)",
+    )
+    p_prop.add_argument("name", help="DNS name to query")
+    p_prop.add_argument(
+        "--type",
+        "-t",
+        dest="rtype",
+        default="A",
+        type=str.upper,
+        choices=["A", "AAAA", "CNAME", "MX", "NS", "TXT"],
+        help="Record type [default: A]",
+    )
+    p_prop.add_argument(
+        "--expect",
+        action="append",
+        default=None,
+        metavar="VALUE",
+        help="Exit 1 unless every resolver returns VALUE (repeatable; MX as 'PRIO HOST')",
+    )
+    p_prop.add_argument(
+        "--server",
+        "-s",
+        action="append",
+        default=None,
+        metavar="IP",
+        help="Also query this resolver (repeatable)",
+    )
+    p_prop.add_argument("--no-system", action="store_true", help="Skip your own system resolver")
 
     p_tls = sub.add_parser("tls", parents=[export_parent], help="TLS/SSL certificate inspector")
     p_tls.add_argument("host", help="Hostname to connect to")

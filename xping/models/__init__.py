@@ -14,6 +14,7 @@ from .osdetect import OsDetectResult
 from .ping import PingResult
 from .portscan import PortResult, PortScanResult
 from .profile import ProfileEntry, ProfileListResult
+from .propagation import PropagationResult, ResolverAnswer
 from .rdns import RdnsResult
 from .speedtest import SpeedResult
 from .sweep import HostProbe, SweepResult
@@ -43,6 +44,8 @@ __all__ = [
     "HealthResult",
     "ProfileEntry",
     "ProfileListResult",
+    "PropagationResult",
+    "ResolverAnswer",
     "MtrHop",
     "MtrResult",
     "MtuResult",
