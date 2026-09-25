@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+---
+
+## [1.3.8] - 2026-09-25
+
 ### Security
 - Every TLS/HTTPS connection (`tls`, `http`, `whois` RDAP, `speedtest`)
   now goes through one shared context that verifies certificates and

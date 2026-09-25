@@ -1,3 +1,24 @@
+xping (1.3.8-1) noble; urgency=medium
+
+  * Security: all TLS/HTTPS connections (tls, http, whois RDAP,
+    speedtest) share one context that verifies certificates and
+    requires TLS 1.2 or newer; whois no longer retries RDAP with
+    certificate verification disabled.
+  * http: fixed failures on HTTP/2-capable HTTPS sites (request now
+    negotiates HTTP/1.1 only; HTTP/2 support probed separately).
+  * dnscheck: DMARC read from _dmarc.<domain>; DKIM probed at common
+    selectors; DNS query failures no longer reported as missing records.
+  * listen: works on macOS; fixed Linux/Windows netstat parsing.
+  * Export (--json/--csv/--markdown) now includes http timing fields,
+    health history and the TLS certificate chain.
+  * trace honours the IPv4 header length and passes --timeout to the
+    system traceroute/tracert fallback; tcp connects to the resolved IP.
+  * ping --watch rejects export flags instead of ignoring them;
+    osdetect no longer crashes on unusual TTL values.
+  * speedtest and osdetect accept --json/--csv/--markdown.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Fri, 25 Sep 2026 08:00:00 +0000
+
 xping (1.3.7-1) noble; urgency=low
 
   * cli/main.py: the ASCII-art banner now prints only when `xping` is
