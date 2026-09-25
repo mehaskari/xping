@@ -173,7 +173,8 @@ class TestIcmpEcho:
         offender = struct.pack("=HH4s8x", socket.AF_INET, 0, socket.inet_aton("192.0.2.9"))
         cmsg = struct.pack("=IBBBBII", 113, 2, 11, 0, 0, 0, 0) + offender
         sock = MagicMock()
-        sock.recvmsg.return_value = (original, [(0, 11, cmsg)], 0, None)
+        level, opt = icmp._RECVERR[socket.AF_INET]  # platform constants (Windows differs)
+        sock.recvmsg.return_value = (original, [(level, opt, cmsg)], 0, None)
         assert icmp._read_error_queue(sock, socket.AF_INET, seq) == "192.0.2.9"
         assert icmp._read_error_queue(sock, socket.AF_INET, seq + 1) is None
 
