@@ -299,3 +299,20 @@ class TestNativeTrace:
         assert args.ipv6 and not args.ipv4
         with pytest.raises(SystemExit):
             build_parser().parse_args(["ping", "h", "-4", "-6"])
+
+
+def test_icmp_module_works_without_msg_dontwait(monkeypatch):
+    """Windows' socket module has no MSG_DONTWAIT; icmp must not depend on it."""
+    import importlib
+
+    monkeypatch.delattr(socket, "MSG_DONTWAIT", raising=False)
+    reloaded = importlib.reload(icmp)
+    try:
+        assert reloaded._MSG_DONTWAIT == 0
+        seq = 5
+        sock = MagicMock()
+        sock.recvmsg.return_value = (struct.pack("!BBHHH", 8, 0, 0, 1, seq), [], 0, None)
+        assert reloaded._read_error_queue(sock, socket.AF_INET, seq) is None
+    finally:
+        monkeypatch.undo()
+        importlib.reload(icmp)

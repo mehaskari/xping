@@ -36,7 +36,8 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -e ".[dev]"
+      # Failing tests become check-run annotations, readable without the raw log
+      - run: pip install -e ".[dev]" pytest-github-actions-annotate-failures
       - run: pytest -v
 
   lint:
