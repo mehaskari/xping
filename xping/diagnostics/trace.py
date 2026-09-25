@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 
+from xping.diagnostics import asn as asn_lookup
 from xping.diagnostics import icmp
 from xping.diagnostics.deps import is_available, require, warn_missing
 from xping.diagnostics.platform_cmds import parse_trace_line, trace_command, trace_tool
@@ -171,6 +172,7 @@ def trace(
     probes: int = 3,
     quiet: bool = False,
     family: int | None = None,
+    asn: bool = False,
 ) -> list[Hop]:
 
     try:
@@ -208,10 +210,18 @@ def trace(
                 return []
             if not quiet:
                 warn_missing("ICMP sockets", "using system traceroute")
-            on_hop = (lambda _h: None) if quiet else trace_view.print_hop
+
+            def on_hop(found: Hop) -> None:
+                if asn:
+                    asn_lookup.annotate(found)
+                if not quiet:
+                    trace_view.print_hop(found)
+
             hops = _subprocess_trace_live(dest_ip, max_hops, probes, on_hop=on_hop, timeout=timeout)
             break
 
+        if asn:
+            asn_lookup.annotate(hop)
         hops.append(hop)
         if not quiet:
             trace_view.print_hop(hop)

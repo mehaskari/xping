@@ -214,6 +214,11 @@ Examples:
     )
     _add_family(p_trace)
     p_trace.add_argument(
+        "--asn",
+        action="store_true",
+        help="Show the network operator (AS number/name) of each hop via Team Cymru DNS",
+    )
+    p_trace.add_argument(
         "-t",
         "--timeout",
         type=float,
@@ -448,6 +453,11 @@ Examples:
         "mtr", parents=[export_parent], help="Combined traceroute + live per-hop ping"
     )
     _add_family(p_mtr)
+    p_mtr.add_argument(
+        "--asn",
+        action="store_true",
+        help="Show the network operator (AS number/name) of each hop via Team Cymru DNS",
+    )
     p_mtr.add_argument("host", help="Hostname or IP address")
     p_mtr.add_argument(
         "-c",

@@ -82,6 +82,7 @@ def cmd_trace(args: argparse.Namespace) -> object:
         probes=args.probes,
         quiet=quiet,
         family=family_of(args),
+        asn=args.asn,
     )
     emit_export(result, args)
     return result
@@ -227,6 +228,7 @@ def cmd_mtr(args: argparse.Namespace) -> object:
         interval=args.interval,
         quiet=quiet,
         family=family_of(args),
+        asn=args.asn,
     )
     emit_export(result, args)
     return result

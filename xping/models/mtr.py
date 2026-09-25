@@ -13,6 +13,8 @@ class MtrHop:
     ip: str | None = None
     host: str | None = None
     rtts: list[float] = field(default_factory=list)
+    asn: int | None = None  # origin AS of the hop address (mtr --asn)
+    as_name: str | None = None
 
     @property
     def sent(self) -> int:

@@ -8,6 +8,7 @@ live, like the classic `mtr` tool.
 import socket
 import time
 
+from xping.diagnostics import asn as asn_lookup
 from xping.diagnostics.deps import is_available, require, warn_missing
 from xping.diagnostics.ping import ping_once, ping_once_subprocess
 from xping.diagnostics.resolve import resolve
@@ -33,6 +34,7 @@ def mtr(
     interval: float = 0.3,
     quiet: bool = False,
     family: int | None = None,
+    asn: bool = False,
 ) -> MtrResult:
     """Run a combined traceroute + ping report for *host*."""
     try:
@@ -73,6 +75,8 @@ def mtr(
     for hop in hops:
         if hop.ip:
             hop.host = _reverse(hop.ip)
+    if asn:
+        asn_lookup.annotate_all(hops)
     result.hops = hops
 
     printed_rows = 0

@@ -14,6 +14,7 @@ from ..ansi import (
 )
 from ..latency import latency_color
 from ..tables import print_table
+from ._asn import short_name
 
 _HOP_W = 5
 _RTT_W = 14
@@ -42,6 +43,8 @@ def print_hop(hop) -> None:
         if len(label) > _HOST_W - 2:
             label = label[: _HOST_W - 5] + "…"
         host_s = c(f"  {label}", BWHITE)
+        if getattr(hop, "asn", None):
+            host_s += c(f"  AS{hop.asn} {short_name(hop.as_name)}".rstrip(), BRAND_INDIGO)
 
     hue = (
         BRAND_ROSE
