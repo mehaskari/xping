@@ -331,7 +331,7 @@ class TestWhois:
                 with patch("xping.diagnostics.whois.time.sleep"):
                     text = _query("whois.verisign-grs.com", "github.com")
         assert mock_conn.call_count == 2
-        assert "GITHUB.COM" in text
+        assert text == "Domain: GITHUB.COM\r\n"
 
 
 # ── health ────────────────────────────────────────────────────────────────────
