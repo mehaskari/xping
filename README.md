@@ -100,6 +100,16 @@ pip install .
 yay -S python-xping
 ```
 
+### Tab completion
+
+The Ubuntu/Debian package sets up completion for bash, zsh and fish automatically. With pip, pipx or a source install, run once:
+
+```bash
+xping completion --install     # detects your shell; re-run after upgrading
+```
+
+It completes commands, options (with descriptions in zsh and fish), option values like `--proto tcp|udp`, hostnames and saved profile names, and `.toml`/`.json` files for `xping check`. To wire it up manually instead, add `source <(xping completion zsh)` to `~/.zshrc`, or `eval "$(xping completion bash)"` to `~/.bashrc` (use `eval` on macOS, whose bash 3.2 ignores `source <(…)`). For fish, run `xping completion fish > ~/.config/fish/completions/xping.fish`. `xping completion --uninstall` removes it.
+
 ### Manual page (source installs)
 
 ```bash

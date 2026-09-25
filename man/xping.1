@@ -1,6 +1,6 @@
 .\" xping manual page
 .\" Created by Mehdi Askari <iorganamis@gmail.com>
-.TH XPING 1 "2026-09-25" "xping 1.4.0" "Network Diagnostics"
+.TH XPING 1 "2026-09-25" "xping 1.4.1" "Network Diagnostics"
 .
 .SH NAME
 xping \- beautiful CLI network diagnostics
@@ -348,13 +348,15 @@ Check whether the optional system binaries
 are installed, and print the correct package-manager install command
 for the detected Linux distribution or macOS.
 .TP
-.BR completion " \fISHELL\fR"
-Generate a shell tab-completion script for
+.BR completion " [\fISHELL\fR] [\fB\-\-install\fR|\fB\-\-uninstall\fR]"
+Print a tab-completion script for
 .I SHELL
 .RB ( bash ,
 .BR zsh ,
 or
-.BR fish ).
+.BR fish ),
+or set it up with
+.BR \-\-install .
 See
 .B SHELL COMPLETION
 below.
@@ -819,40 +821,65 @@ the terminal does not scroll.
 similarly redraws its hop table in place on every cycle.
 .
 .SH SHELL COMPLETION
-Tab-completion scripts are generated with the
-.B completion
-subcommand.
+The Debian/Ubuntu package installs completion for bash, zsh and fish
+automatically. For pip, pipx and source installs, run once:
 .PP
-.B Bash
 .RS
 .nf
-echo 'source <(xping completion bash)' >> ~/.bashrc
-source ~/.bashrc
+xping completion \-\-install
 .fi
 .RE
 .PP
-.B Zsh
-.RS
-.nf
-echo 'source <(xping completion zsh)' >> ~/.zshrc
-source ~/.zshrc
-.fi
-.RE
+This detects your shell from
+.BR $SHELL ,
+writes the script (zsh and bash:
+.IR ~/.xping/completions/ ;
+fish:
+.IR ~/.config/fish/completions/xping.fish )
+and adds a marked block that loads it to
+.I ~/.zshrc
+(zsh),
+.I ~/.bashrc
+(bash on Linux) or
+.I ~/.bash_profile
+(bash on macOS, whose Terminal opens login shells).
+It is idempotent; re-run it after upgrading xping to pick up new commands
+and flags, and name a shell to override detection
+.RB ( "xping completion bash \-\-install" ).
+.B xping completion \-\-uninstall
+removes the script and the block.
 .PP
-.B Fish
+To wire it up by hand instead:
+.PP
 .RS
 .nf
+source <(xping completion zsh)                       # ~/.zshrc
+eval "$(xping completion bash)"                      # ~/.bashrc
 xping completion fish > ~/.config/fish/completions/xping.fish
 .fi
 .RE
 .PP
-After installation, pressing
-.B <Tab>
-after
-.B xping
-lists all commands; pressing
-.B <Tab>
-after a command lists its flags.
+Use
+.B eval
+for bash: macOS ships bash 3.2, where
+.B "source <(...)"
+silently does nothing.
+.PP
+Completion covers commands and profile sub-commands, every option with
+its description, option values with fixed choices (e.g.
+.BR "listen \-\-proto" ,
+.BR "propagation \-\-type" ),
+hostnames and saved profile names wherever a host is expected, and
+.B .toml
+/
+.B .json
+files for
+.BR check .
+Options that cannot be combined (such as
+.B \-\-json
+and
+.BR \-\-csv )
+are not offered together in zsh.
 .
 .SH SAVED PROFILES
 Profiles are stored in
@@ -1043,8 +1070,8 @@ Ping using the saved profile.
 .B xping lookup github.com \-\-json > dns-report.json
 Save DNS lookup results to dns-report.json.
 .TP
-.B xping completion bash
-Print the bash tab-completion script.
+.B xping completion \-\-install
+Set up tab completion for your shell.
 .TP
 .B xping deps
 Check which system tools are installed.

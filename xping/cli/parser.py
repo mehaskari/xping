@@ -164,7 +164,7 @@ Commands:
   listen               Show locally listening TCP/UDP ports
   net                  Local network overview: interfaces, gateway, DNS, public IP
   deps                 Check system dependency status
-  completion <shell>   Generate bash/zsh/fish tab-completion script
+  completion [shell]   Tab completion for bash/zsh/fish (--install to set it up)
   about                Show author, license, and attribution info
   profile              Manage saved target profiles
     add <name> <target>   Save a profile
@@ -612,7 +612,10 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     p_prof_show = profile_sub.add_parser("show", help="Show a single profile")
     p_prof_show.add_argument("name", help="Profile name")
 
-    profile_sub.add_parser("list", help="List all saved profiles")
+    p_prof_list = profile_sub.add_parser("list", help="List all saved profiles")
+    p_prof_list.add_argument(
+        "--names", action="store_true", help="Print only profile names, one per line"
+    )
 
     p_speed = sub.add_parser(
         "speedtest",
@@ -636,10 +639,22 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         help="Maximum download measurement time [default: 8]",
     )
 
-    p_completion = sub.add_parser("completion", help="Generate shell tab-completion script")
-    p_completion.add_argument(
-        "shell", choices=["bash", "zsh", "fish"], help="Shell to generate completion for"
+    p_completion = sub.add_parser(
+        "completion", help="Tab completion: print a script or --install it for your shell"
     )
+    p_completion.add_argument(
+        "shell",
+        nargs="?",
+        choices=["bash", "zsh", "fish"],
+        help="Shell [default with --install/--uninstall: your login shell]",
+    )
+    comp_action = p_completion.add_mutually_exclusive_group()
+    comp_action.add_argument(
+        "--install",
+        action="store_true",
+        help="Install completion for the shell (writes the script, updates your shell rc file)",
+    )
+    comp_action.add_argument("--uninstall", action="store_true", help="Remove what --install added")
 
     p_listen = sub.add_parser(
         "listen", parents=[export_parent], help="Show locally listening TCP/UDP ports"
