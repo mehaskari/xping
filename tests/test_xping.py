@@ -5,6 +5,7 @@ Run with: python -m pytest tests/ -v
 
 import sys
 import os
+import re
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import socket
@@ -31,7 +32,7 @@ def test_banner_returns_string():
 
 
 def test_latency_color_no_crash():
-    from xping.render import supports_color, latency_color
+    from xping.render import latency_color
     # patch colour off so output is plain
     with patch("xping.render.COLOR", False):
         assert "10.00 ms" in latency_color(10.0)
@@ -134,7 +135,7 @@ def test_lookup_bad_host():
     from xping.lookup import lookup
     with patch("socket.gethostbyname", side_effect=socket.gaierror):
         with patch("xping.diagnostics.lookup._dig_query", return_value=None):
-            with patch("xping.diagnostics.lookup._socket_resolve", return_value=([], [])):
+            with patch("xping.diagnostics.lookup._raw_query", return_value=("NXDOMAIN", [])):
                 with patch("builtins.print"):  # suppress output
                     result = lookup("this.host.totally.invalid")
     assert result.error is not None
@@ -451,7 +452,8 @@ def test_lookup_view_renders_result(capsys):
     )
     with patch("xping.render.COLOR", False):
         lookup_view.print_result(result)
-    assert "example.com" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert re.search(r"\bexample\.com\b", out)
 
 
 def test_tcp_view_renders_summary(capsys):
@@ -594,7 +596,7 @@ def test_lookup_with_dig_path():
         "TXT": 'example.com.\t3600\tIN\tTXT\t"v=spf1 include:example.com ~all"\n',
     }
     with patch("xping.diagnostics.lookup._dig_query",
-               side_effect=lambda _host, rtype, server=None: dig_outputs.get(rtype)):
+               side_effect=lambda _host, rtype, server=None: ("NOERROR", dig_outputs.get(rtype, ""))):
         with patch("socket.gethostbyaddr", return_value=("example.com", [], [])):
             with patch("xping.render.COLOR", False):
                 result = lookup("example.com", full=True)
@@ -613,7 +615,7 @@ def test_lookup_socket_fallback():
     # wrong function let this test silently fall through to a real network
     # call in CI. Mock what is actually called, keyed by qtype.
     def fake_raw_query(host, qtype, server="8.8.8.8", timeout=4.0):
-        return ["93.184.216.34"] if qtype == 1 else []
+        return "NOERROR", (["93.184.216.34"] if qtype == 1 else [])
 
     with patch("xping.diagnostics.lookup._dig_query", return_value=None):
         with patch("xping.diagnostics.lookup._raw_query", side_effect=fake_raw_query):
@@ -719,11 +721,11 @@ def test_render_warn_api(capsys):
 
 def test_render_resolve_error(capsys):
     from xping.render import resolve_error
-    import io
-    buf = io.StringIO()
-    with patch("xping.render.COLOR", False):
+    with patch("xping.render.errors.c", side_effect=lambda text, *codes: text):
         resolve_error("bad.host", socket.gaierror("failed"))
     # resolve_error writes to stderr by default through error()
+    err = capsys.readouterr().err
+    assert "Cannot resolve 'bad.host': failed" in err
 
 
 def test_deps_detects_darwin(monkeypatch):

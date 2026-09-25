@@ -15,11 +15,13 @@ If any of these fail locally, they will fail in CI too — fix them
 ## Release Steps
 
 ```bash
-# 1. Bump version in all 4 files (see CONTRIBUTING.md)
+# 1. Bump version in every versioned file (see CONTRIBUTING.md)
 OLD=1.3.3; NEW=1.3.4
 sed -i "s/version = \"$OLD\"/version = \"$NEW\"/" pyproject.toml
 sed -i "s/__version__ = \"$OLD\"/__version__ = \"$NEW\"/" xping/__init__.py
 sed -i "s/\"xping $OLD\"/\"xping $NEW\"/" man/xping.1
+sed -i "s/^version = $OLD$/version = $NEW/" setup.cfg
+sed -i "s/^version: '$OLD'$/version: '$NEW'/" snap/snapcraft.yaml
 # update the date in man/xping.1 and add an entry to docs/changelog.md
 # and debian/changelog (dch -v "$NEW-1" "..."; dch -r "")
 
@@ -28,8 +30,8 @@ sed -i "s/\"xping $OLD\"/\"xping $NEW\"/" man/xping.1
 # 3. Run the full local check suite above
 
 # 4. Commit, tag, push
-git add pyproject.toml xping/__init__.py man/xping.1 \
-        docs/changelog.md debian/changelog
+git add pyproject.toml xping/__init__.py man/xping.1 setup.cfg \
+        snap/snapcraft.yaml docs/changelog.md debian/changelog
 git commit -m "chore: release v$NEW"
 git tag -a "v$NEW" -m "Release v$NEW"
 git push origin main && git push origin "v$NEW"

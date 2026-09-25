@@ -36,7 +36,7 @@ def _ptr_name(ip: str) -> str:
         hex_str = packed.hex()
         return ".".join(reversed(list(hex_str))) + ".ip6.arpa"
     except OSError:
-        pass
+        pass  # not IPv6 — build the IPv4 in-addr.arpa name below
     parts = ip.split(".")
     return ".".join(reversed(parts)) + ".in-addr.arpa"
 

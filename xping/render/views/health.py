@@ -83,7 +83,7 @@ def print_summary(result) -> None:
     print()
 
     # History trend
-    history = getattr(result, "history", None)
+    history = result.history
     if history and len(history) >= 2:
         scores = [h["score"] for h in history[-10:]]
         arrow = _trend_arrow(scores)

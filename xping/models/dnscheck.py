@@ -10,7 +10,7 @@ from ._export import model_to_dict
 @dataclass
 class DnsCheckItem:
     name: str
-    status: str  # "ok" | "warn" | "fail" | "info"
+    status: str  # "ok" | "warn" | "fail" | "info" | "unknown" (query failed)
     detail: str = ""
 
     def to_dict(self, *, include_computed: bool = True) -> dict:
@@ -48,6 +48,10 @@ class DnsCheckResult:
     @property
     def warn_count(self) -> int:
         return sum(1 for c in self.checks if c.status == "warn")
+
+    @property
+    def unknown_count(self) -> int:
+        return sum(1 for c in self.checks if c.status == "unknown")
 
     def to_dict(self, *, include_computed: bool = True) -> dict:
         return model_to_dict(self, include_computed=include_computed)

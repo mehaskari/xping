@@ -50,7 +50,8 @@ def _raw_trace_hop(
             if select.select([recv_s], [], [], timeout)[0]:
                 data, (src_ip, _) = recv_s.recvfrom(512)
                 elapsed = (time.perf_counter() - t0) * 1000
-                itype = data[20]
+                ihl = (data[0] & 0x0F) * 4  # IPv4 header length; options make it > 20
+                itype = data[ihl]
                 if itype in (ICMP_TIME_EXCEEDED, ICMP_DEST_UNREACH, ICMP_ECHO_REPLY_T):
                     last_ip = src_ip
                     rtts.append(elapsed)
@@ -69,12 +70,14 @@ def _raw_trace_hop(
     return Hop(ttl=ttl, host=hostname, ip=last_ip, rtts=rtts, timeout=timed_out)
 
 
-def _subprocess_trace_live(host: str, max_hops: int, probes: int, on_hop) -> list[Hop]:
+def _subprocess_trace_live(
+    host: str, max_hops: int, probes: int, on_hop, timeout: float = 2.0
+) -> list[Hop]:
     """Run system traceroute/tracert and call on_hop(Hop) for each hop line."""
     if trace_tool() is None:
         return []
 
-    cmd = trace_command(host, max_hops, probes)
+    cmd = trace_command(host, max_hops, probes, timeout)
     try:
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
@@ -152,7 +155,6 @@ def trace(
         print()
         trace_view.hop_header()
 
-    use_subprocess = False
     hops: list[Hop] = []
     probe_port = 33434
 
@@ -162,42 +164,26 @@ def trace(
             spinner = Spinner(c(f"Probing hop {ttl}…", BRAND_TEAL))
             spinner.start()
 
-        if not use_subprocess:
-            hop = _raw_trace_hop(dest_ip, ttl, probe_port + ttl, timeout=timeout, probes=probes)
-            if hop is None:
-                use_subprocess = True
-                if not is_available("traceroute"):
-                    if spinner:
-                        spinner.stop()
-                    require("traceroute", "traceroute")
-                    return []
-                if spinner:
-                    spinner.stop()
-                if not quiet:
-                    warn_missing(
-                        "raw sockets", "using system traceroute (run as root for native mode)"
-                    )
-                spinner = None
-                on_hop = (lambda _h: None) if quiet else trace_view.print_hop
-                hops = _subprocess_trace_live(
-                    host,
-                    max_hops,
-                    probes,
-                    on_hop=on_hop,
-                )
-                break
+        hop = _raw_trace_hop(dest_ip, ttl, probe_port + ttl, timeout=timeout, probes=probes)
+        if spinner:
+            spinner.stop()
 
-            if spinner:
-                spinner.stop()
-            hops.append(hop)
+        if hop is None:
+            # No raw-socket permission: hand the whole trace to the system tool.
+            if not is_available("traceroute"):
+                require("traceroute", "traceroute")
+                return []
             if not quiet:
-                trace_view.print_hop(hop)
+                warn_missing("raw sockets", "using system traceroute (run as root for native mode)")
+            on_hop = (lambda _h: None) if quiet else trace_view.print_hop
+            hops = _subprocess_trace_live(host, max_hops, probes, on_hop=on_hop, timeout=timeout)
+            break
 
-            if hop.ip == dest_ip and not hop.timeout:
-                break
-        else:
-            if spinner:
-                spinner.stop()
+        hops.append(hop)
+        if not quiet:
+            trace_view.print_hop(hop)
+
+        if hop.ip == dest_ip and not hop.timeout:
             break
 
     if not quiet:

@@ -14,12 +14,14 @@ _STATUS_ICON = {
     "warn": c(" ⚠ ", BRAND_AMBER, BOLD),
     "fail": c(" ✘ ", BRAND_ROSE, BOLD),
     "info": c(" ℹ ", BRAND_INDIGO),
+    "unknown": c(" ? ", BRAND_AMBER, BOLD),
 }
 _STATUS_COLOR = {
     "ok": BWHITE,
     "warn": BRAND_AMBER,
     "fail": BRAND_ROSE,
     "info": DIM,
+    "unknown": BRAND_AMBER,
 }
 
 
@@ -48,5 +50,8 @@ def print_result(result) -> None:
     ok_s = c(f"✔ {result.ok_count} passed", BRAND_MINT)
     warn_s = c(f"⚠ {result.warn_count} warnings", BRAND_AMBER)
     fail_s = c(f"✘ {result.fail_count} failed", BRAND_ROSE if result.fail_count else DIM)
-    print(f"  {ok_s}   {warn_s}   {fail_s}")
+    summary = f"  {ok_s}   {warn_s}   {fail_s}"
+    if result.unknown_count:
+        summary += "   " + c(f"? {result.unknown_count} not verified", BRAND_AMBER)
+    print(summary)
     print()

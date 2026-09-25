@@ -63,48 +63,53 @@ def _parse_ss(output: str) -> list[ListenEntry]:
     return entries
 
 
+def _split_addr(local: str) -> tuple[str, int] | None:
+    """Split a netstat local address into (addr, port).
+
+    Handles Linux (0.0.0.0:22, :::22, [::]:22) and BSD/macOS, which separate
+    the port with a dot (*.22, 127.0.0.1.631, ::1.631, fe80::1%lo0.123).
+    The port delimiter is whichever of '.' or ':' comes last."""
+    m = re.match(r"^\[(.+)\]:(\d+)$", local)
+    if m:
+        addr, port_s = m.group(1), m.group(2)
+    else:
+        cut = max(local.rfind("."), local.rfind(":"))
+        if cut < 0:
+            return None
+        addr, port_s = local[:cut], local[cut + 1 :]
+    try:
+        return addr or "*", int(port_s)
+    except ValueError:
+        return None
+
+
 def _parse_netstat_unix(output: str) -> list[ListenEntry]:
-    """Parse macOS/Linux `netstat -tlunp` output."""
+    """Parse Linux `netstat -tlunp` or macOS/BSD `netstat -an` output."""
     entries = []
     for line in output.splitlines():
         parts = line.split()
-        if not parts or parts[0] not in ("tcp", "tcp6", "udp", "udp6"):
+        # Linux: tcp, tcp6, udp, udp6 — macOS/BSD: tcp4, tcp6, tcp46, udp4, …
+        if len(parts) < 5 or not re.match(r"^(tcp|udp)(4|6|46)?$", parts[0]):
             continue
-        if len(parts) < 6:
-            continue
-        state = parts[-1] if parts[0].startswith("tcp") else "LISTEN"
-        if "LISTEN" not in state:
-            continue
-        local = parts[3]
         proto = "tcp" if parts[0].startswith("tcp") else "udp"
-        pid_prog = parts[-2] if len(parts) >= 7 else "-"
-        pid, proc = None, None
-        if "/" in pid_prog:
-            pid_s, proc = pid_prog.split("/", 1)
-            try:
-                pid = int(pid_s)
-            except ValueError:
-                pass
-        if local.startswith("["):
-            m = re.match(r"\[(.+)\]:(\d+)", local)
-            if m:
-                addr, port_s = m.group(1), m.group(2)
-            else:
+        foreign = parts[4]
+        if proto == "tcp":
+            if len(parts) < 6 or parts[5] != "LISTEN":
                 continue
-        elif "." in local:
-            # macOS uses dots: 0.0.0.0.22
-            parts2 = local.rsplit(".", 1)
-            addr, port_s = parts2[0], parts2[1]
-        elif ":" in local:
-            addr, _, port_s = local.rpartition(":")
-        else:
+        elif not foreign.endswith("*"):
+            continue  # connected UDP socket, not a listener
+        pid, proc = None, None
+        for token in parts[5:]:
+            m = re.match(r"^(\d+)/(.+)$", token)
+            if m:
+                pid, proc = int(m.group(1)), m.group(2)
+                break
+        addr_port = _split_addr(parts[3])
+        if addr_port is None:
             continue
-        try:
-            port = int(port_s)
-        except ValueError:
-            continue
+        addr, port = addr_port
         entries.append(
-            ListenEntry(proto=proto, local_addr=addr or "*", local_port=port, pid=pid, process=proc)
+            ListenEntry(proto=proto, local_addr=addr, local_port=port, pid=pid, process=proc)
         )
     return entries
 
@@ -114,7 +119,8 @@ def _parse_netstat_windows(output: str) -> list[ListenEntry]:
     entries = []
     for line in output.splitlines():
         parts = line.split()
-        if len(parts) < 4:
+        # TCP rows have a state column; UDP rows have only 3 columns
+        if len(parts) < 3:
             continue
         if parts[0] not in ("TCP", "UDP"):
             continue
@@ -123,15 +129,11 @@ def _parse_netstat_windows(output: str) -> list[ListenEntry]:
         state = parts[3] if proto == "tcp" and len(parts) >= 4 else "LISTENING"
         if proto == "tcp" and "LISTENING" not in state:
             continue
-        if ":" in local:
-            addr, _, port_s = local.rpartition(":")
-        else:
+        addr_port = _split_addr(local)
+        if addr_port is None:
             continue
-        try:
-            port = int(port_s)
-        except ValueError:
-            continue
-        entries.append(ListenEntry(proto=proto, local_addr=addr or "*", local_port=port))
+        addr, port = addr_port
+        entries.append(ListenEntry(proto=proto, local_addr=addr, local_port=port))
     return entries
 
 
@@ -161,7 +163,9 @@ def listen(proto_filter: str | None = None, quiet: bool = False) -> ListenResult
         if out:
             entries = _parse_ss(out)
         else:
-            flags = "-tlunp" if platform.startswith("linux") else "-tlun"
+            # GNU netstat understands -tlunp; BSD/macOS netstat does not
+            # (it lists UNIX sockets instead), so ask for everything there.
+            flags = "-tlunp" if platform.startswith("linux") else "-an"
             out = _run("netstat", flags)
             if out:
                 entries = _parse_netstat_unix(out)

@@ -31,6 +31,7 @@ _COMMANDS = [
     "speedtest",
     "listen",
     "osdetect",
+    "completion",
     "deps",
     "about",
 ]
@@ -41,7 +42,6 @@ _FLAGS: dict[str, list[str]] = {
         "--timeout",
         "--interval",
         "--watch",
-        "--alarm",
         "--json",
         "--csv",
         "--markdown",
@@ -62,9 +62,9 @@ _FLAGS: dict[str, list[str]] = {
     "mtr": ["--cycles", "--max-hops", "--timeout", "--interval", "--json", "--csv", "--markdown"],
     "mtu": ["--max-mtu", "--timeout", "--json", "--csv", "--markdown"],
     "profile": [],
-    "speedtest": [],
+    "speedtest": ["--json", "--csv", "--markdown"],
     "listen": ["--proto", "--json", "--csv", "--markdown"],
-    "osdetect": [],
+    "osdetect": ["--json", "--csv", "--markdown"],
     "deps": [],
     "about": [],
 }

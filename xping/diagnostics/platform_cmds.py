@@ -42,13 +42,14 @@ def trace_tool() -> str | None:
     return None
 
 
-def trace_command(host: str, max_hops: int, probes: int) -> list[str]:
+def trace_command(host: str, max_hops: int, probes: int, timeout: float = 2.0) -> list[str]:
     """Build a traceroute command for the current platform."""
     tool = trace_tool()
     if tool == "tracert":
-        wait_ms = max(1, 2000)
+        wait_ms = max(1, int(timeout * 1000))
         return ["tracert", "-h", str(max_hops), "-w", str(wait_ms), host]
-    return ["traceroute", "-m", str(max_hops), "-q", str(probes), host]
+    wait_sec = max(1, round(timeout))
+    return ["traceroute", "-m", str(max_hops), "-q", str(probes), "-w", str(wait_sec), host]
 
 
 def parse_trace_line(line: str) -> tuple[int, list[float], str | None, str | None] | None:

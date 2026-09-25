@@ -21,6 +21,7 @@ class TlsResult:
     not_before: str | None = None
     not_after: str | None = None
     san: list[str] = field(default_factory=list)
+    chain: list[str] = field(default_factory=list)
     error: str | None = None
 
     @property

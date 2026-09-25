@@ -9,70 +9,48 @@ import socket
 import subprocess
 
 from xping.diagnostics.platform_cmds import ping_command
+from xping.models.osdetect import OsDetectResult
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 from xping.render.errors import resolve_error
 
-# TTL heuristics: OS sets initial TTL; each hop decrements by 1.
-# We check the received TTL and map to the nearest common initial TTL.
-_TTL_SIGNATURES: list[tuple[range, str, str]] = [
-    (range(241, 256), "Linux / Android", "initial TTL 255"),
-    (range(113, 129), "Windows", "initial TTL 128"),
-    (range(57, 65), "Linux", "initial TTL 64"),
-    (range(248, 256), "Cisco IOS", "initial TTL 255"),
-    (range(252, 256), "Solaris / AIX", "initial TTL 255"),
-]
+# Every OS stamps outgoing packets with a fixed initial TTL and each router
+# on the way decrements it by one, so the smallest common initial TTL that is
+# >= the received value is the sender's most likely starting point.
+_INITIAL_TTLS: tuple[tuple[int, str, str], ...] = (
+    (32, "Windows 95/NT (legacy)", "initial TTL 32  — old Windows"),
+    (64, "Linux / macOS / FreeBSD", "initial TTL 64  — Linux, macOS, FreeBSD"),
+    (128, "Windows", "initial TTL 128 — Windows family"),
+    (255, "Linux / Unix / Network device", "initial TTL 255 — Linux kernel, Cisco IOS, Solaris"),
+)
 
+# Matches "ttl=57" (Linux/macOS) as well as "TTL=57" (Windows)
 _TTL_RE = re.compile(r"ttl[=\s]+(\d+)", re.IGNORECASE)
-_WIN_TTL_RE = re.compile(r"TTL=(\d+)", re.IGNORECASE)
 
 
 def _extract_ttl(output: str) -> int | None:
-    for pat in (_TTL_RE, _WIN_TTL_RE):
-        m = pat.search(output)
-        if m:
-            try:
-                return int(m.group(1))
-            except ValueError:
-                pass
-    return None
+    m = _TTL_RE.search(output)
+    return int(m.group(1)) if m else None
 
 
 def _guess_os(ttl: int) -> tuple[str, str]:
     """Map received TTL to (os_guess, reasoning)."""
-    # Find the closest initial TTL that is >= the received TTL
-    for init in (255, 128, 64, 32):
-        if ttl <= init:
-            closest = init
-    mapping = {
-        255: (
-            "Linux / Unix / Network device",
-            "initial TTL 255 — Linux kernel, Cisco IOS, Solaris",
-        ),
-        128: ("Windows", "initial TTL 128 — Windows family"),
-        64: ("Linux / macOS / FreeBSD", "initial TTL 64  — Linux, macOS, FreeBSD"),
-        32: ("Windows 95/NT (legacy)", "initial TTL 32  — old Windows"),
-    }
-    return mapping.get(closest, ("Unknown", f"TTL {ttl} — no match"))
+    for initial, os_guess, reasoning in _INITIAL_TTLS:
+        if ttl <= initial:
+            return os_guess, reasoning
+    return "Unknown", f"TTL {ttl} — no match"
 
 
-def osdetect(host: str, quiet: bool = False) -> dict:
+def osdetect(host: str, quiet: bool = False) -> OsDetectResult:
     """Guess target OS from ping TTL."""
-    result = {
-        "host": host,
-        "ip": None,
-        "ttl": None,
-        "os_guess": None,
-        "reasoning": None,
-        "error": None,
-    }
+    result = OsDetectResult(host=host)
 
     try:
         ip = socket.gethostbyname(host)
-        result["ip"] = ip
+        result.ip = ip
     except socket.gaierror:
         if not quiet:
             resolve_error(host)
-        result["error"] = f"Cannot resolve '{host}'"
+        result.error = f"Cannot resolve '{host}'"
         return result
 
     if not quiet:
@@ -91,17 +69,17 @@ def osdetect(host: str, quiet: bool = False) -> dict:
         ttl = None
 
     if ttl is None:
-        result["error"] = "No ICMP reply — host may be unreachable or ICMP is blocked"
+        result.error = "No ICMP reply — host may be unreachable or ICMP is blocked"
         if not quiet:
             from xping.render.errors import error
 
-            error(result["error"])
+            error(result.error)
         return result
 
-    result["ttl"] = ttl
+    result.ttl = ttl
     os_guess, reasoning = _guess_os(ttl)
-    result["os_guess"] = os_guess
-    result["reasoning"] = reasoning
+    result.os_guess = os_guess
+    result.reasoning = reasoning
 
     if not quiet:
         from xping.render import BRAND_MINT, BWHITE, DIM

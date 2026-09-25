@@ -133,8 +133,7 @@ def health(host: str, count: int = 8, timeout: float = 2.0, quiet: bool = False)
     result.issues = issues
 
     # persist and attach history
-    history = _save_history(host, score, result.grade)
-    result.history = history  # type: ignore[attr-defined]
+    result.history = _save_history(host, score, result.grade)
 
     if not quiet:
         health_view.print_summary(result)

@@ -83,7 +83,7 @@ def print_result(result) -> None:
     print_table(["Field", "Value"], rows)
 
     # Certificate chain
-    chain = getattr(result, "chain", [])
+    chain = result.chain
     if len(chain) > 1:
         print(c("  Certificate chain:", BRAND_INDIGO, BOLD))
         for i, name in enumerate(chain):

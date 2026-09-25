@@ -9,6 +9,7 @@ from .listen import ListenEntry, ListenResult
 from .lookup import DnsResult
 from .mtr import MtrHop, MtrResult
 from .mtu import MtuResult
+from .osdetect import OsDetectResult
 from .ping import PingResult
 from .portscan import PortResult, PortScanResult
 from .profile import ProfileEntry, ProfileListResult
@@ -49,4 +50,5 @@ __all__ = [
     "SpeedResult",
     "ListenEntry",
     "ListenResult",
+    "OsDetectResult",
 ]

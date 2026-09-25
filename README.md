@@ -2,7 +2,7 @@
 
 **Beautiful CLI network diagnostics — ping, traceroute, network scanning, port scanning, TCP checks, and DNS lookup.**
 
-Zero external Python dependencies. Pure stdlib. Linux, macOS & Windows.
+Pure stdlib apart from `certifi` (CA bundle for TLS checks). Linux, macOS & Windows.
 
 ```
   ██╗  ██╗██████╗ ██╗███╗   ██╗ ██████╗
@@ -24,7 +24,8 @@ Created by **[Mehdi Askari](https://github.com/mehdiaskari)** — see [LICENSE](
 - **Ping --watch** — Continuous live ping with in-place sparkline; Ctrl-C for final summary
 - **Traceroute** — Real-time hop-by-hop path with RTT colour coding and summary
 - **MTR** — Combined live traceroute + per-hop ping, redraws in place each cycle
-- **DNS Lookup** — A, AAAA, MX, NS, TXT (SPF / DMARC / DKIM) with reverse DNS
+- **DNS Lookup** — A, AAAA, CNAME, MX, NS, TXT (incl. SPF) with reverse DNS
+- **DNS Health Check** — SPF, DMARC (`_dmarc.`), DKIM (common selectors), NS redundancy, MX backup, 0–100 score
 - **Reverse DNS** — PTR lookup with stdlib fallback to 8.8.8.8 for flaky resolvers
 - **TCP Connect** — Live TCP port checks with connect timing, success rate, and timeline
 - **Port Scanner** — Concurrent TCP port scans with service names and open-port summary
@@ -65,7 +66,7 @@ xping deps
 ```bash
 sudo add-apt-repository ppa:mehdiaskari/xping
 sudo apt update
-sudo apt install python3-xping
+sudo apt install xping
 ```
 
 Supported: Ubuntu 22.04 LTS, 24.04 LTS, Linux Mint 21+, Pop!\_OS 22.04+
@@ -137,7 +138,8 @@ xping mtr example.com --json      # export full hop statistics
 
 ```bash
 xping lookup github.com
-xping lookup github.com --full    # includes TXT / SPF / DMARC / DKIM
+xping lookup github.com --full    # includes TXT records (SPF etc.)
+xping dnscheck github.com         # SPF / DMARC / DKIM / NS / MX health check
 ```
 
 ### Reverse DNS
@@ -243,13 +245,13 @@ Runs full DNS lookup, 4-packet ping, traceroute, and TCP checks on ports 443 and
 
 ### Export formats
 
-Every diagnostic command accepts structured output flags (interactive rendering is suppressed):
+Every diagnostic command accepts structured output flags (interactive rendering is suppressed). Redirect to save to a file:
 
 ```bash
 xping ping 1.1.1.1 --json
 xping trace example.com --csv
 xping lookup github.com --full --markdown
-xping all cloudflare.com --json
+xping all cloudflare.com --json > report.json
 ```
 
 ### Dependency check

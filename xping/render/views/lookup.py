@@ -83,4 +83,8 @@ def print_result(result, full: bool = False) -> None:
         print(c(f"  ✉  {len(result.mx)} mail server(s) configured", BRAND_AMBER))
     if result.ns:
         print(c(f"  🌐  {len(result.ns)} name server(s) found", BRAND_MINT))
+    errors = getattr(result, "query_errors", {})
+    if errors:
+        failed = ", ".join(f"{rtype} ({status})" for rtype, status in errors.items())
+        print(c(f"  ⚠  Query failed, results may be incomplete: {failed}", BRAND_AMBER))
     print()

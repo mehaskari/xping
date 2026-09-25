@@ -25,6 +25,10 @@ class HttpResult:
     ttfb_ms: float | None = None
     total_ms: float | None = None
     body_bytes: int = 0
+    dns_ms: float | None = None
+    tcp_ms: float | None = None
+    http_version: str | None = None
+    h2_supported: bool | None = None  # None = ALPN probe failed / not HTTPS
     error: str | None = None
 
     @property

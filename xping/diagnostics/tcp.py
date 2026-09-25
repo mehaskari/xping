@@ -65,7 +65,7 @@ def tcp(
     attempts: list[TcpAttempt] = []
     for seq in range(1, count + 1):
         started = time.perf_counter()
-        attempt = _connect_once(host, port, timeout, seq)
+        attempt = _connect_once(ip, port, timeout, seq)
         attempts.append(attempt)
         if not quiet:
             tcp_view.print_line(attempt, count)

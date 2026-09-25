@@ -69,8 +69,9 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     "SpeedResult": ("grade",),
     "ListenEntry": ("address",),
     "ListenResult": ("count",),
+    "OsDetectResult": (),
     "DnsCheckItem": (),
-    "DnsCheckResult": ("grade", "ok_count", "fail_count", "warn_count"),
+    "DnsCheckResult": ("grade", "ok_count", "fail_count", "warn_count", "unknown_count"),
 }
 
 

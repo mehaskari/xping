@@ -63,40 +63,38 @@ def _print_next_steps(host: str) -> None:
     print()
 
 
+_DISPATCH = {
+    "ping": cmd_ping,
+    "trace": cmd_trace,
+    "lookup": cmd_lookup,
+    "tcp": cmd_tcp,
+    "portscan": cmd_portscan,
+    "sweep": cmd_sweep,
+    "ipscan": cmd_ipscan,
+    "all": cmd_all,
+    "rdns": cmd_rdns,
+    "dnscheck": cmd_dnscheck,
+    "tls": cmd_tls,
+    "http": cmd_http,
+    "whois": cmd_whois,
+    "health": cmd_health,
+    "mtr": cmd_mtr,
+    "mtu": cmd_mtu,
+    "profile": cmd_profile,
+    "speedtest": cmd_speedtest,
+    "listen": cmd_listen,
+    "osdetect": cmd_osdetect,
+    "completion": cmd_completion,
+    "deps": cmd_deps,
+    "about": cmd_about,
+}
+
+
 def _is_bare_host(argv: list[str]) -> str | None:
     """Return the host if argv looks like `xping <host>` (no subcommand)."""
-    known_commands = {
-        "ping",
-        "trace",
-        "lookup",
-        "tcp",
-        "portscan",
-        "sweep",
-        "ipscan",
-        "all",
-        "rdns",
-        "dnscheck",
-        "tls",
-        "http",
-        "whois",
-        "health",
-        "mtr",
-        "mtu",
-        "profile",
-        "speedtest",
-        "completion",
-        "listen",
-        "osdetect",
-        "deps",
-        "about",
-        "-h",
-        "--help",
-        "-V",
-        "--version",
-    }
     if len(argv) == 1:
         token = argv[0]
-        if token not in known_commands and not token.startswith("-"):
+        if token not in _DISPATCH and not token.startswith("-"):
             return token
     return None
 
@@ -132,34 +130,8 @@ def main() -> None:
         parser.print_help()
         sys.exit(0)
 
-    dispatch = {
-        "ping": cmd_ping,
-        "trace": cmd_trace,
-        "lookup": cmd_lookup,
-        "tcp": cmd_tcp,
-        "portscan": cmd_portscan,
-        "sweep": cmd_sweep,
-        "ipscan": cmd_ipscan,
-        "all": cmd_all,
-        "rdns": cmd_rdns,
-        "dnscheck": cmd_dnscheck,
-        "tls": cmd_tls,
-        "http": cmd_http,
-        "whois": cmd_whois,
-        "health": cmd_health,
-        "mtr": cmd_mtr,
-        "mtu": cmd_mtu,
-        "profile": cmd_profile,
-        "speedtest": cmd_speedtest,
-        "listen": cmd_listen,
-        "osdetect": cmd_osdetect,
-        "completion": cmd_completion,
-        "deps": cmd_deps,
-        "about": cmd_about,
-    }
-
     try:
-        dispatch[args.command](args)
+        _DISPATCH[args.command](args)
     except KeyboardInterrupt:
         print(c("\n\n  Interrupted.", BRAND_AMBER))
         sys.exit(130)
