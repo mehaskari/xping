@@ -124,6 +124,9 @@ _RECVERR = {  # Linux: ICMP errors for ping sockets arrive on the error queue
     socket.AF_INET6: (getattr(socket, "SOL_IPV6", 41), getattr(socket, "IPV6_RECVERR", 25)),
 }
 _MSG_ERRQUEUE = getattr(socket, "MSG_ERRQUEUE", 0x2000)
+# Windows has no MSG_DONTWAIT; there recv only runs after select() reported
+# the socket readable, so a plain blocking recv is equivalent.
+_MSG_DONTWAIT = getattr(socket, "MSG_DONTWAIT", 0)
 
 
 def _set_hop_limit(sock: socket.socket, family: int, ttl: int) -> None:
@@ -153,7 +156,7 @@ def _read_error_queue(sock: socket.socket, family: int, seq: int) -> str | None:
     """Linux ping sockets: return the router that reported an ICMP error for
     our probe *seq*, from the socket error queue (``IP_RECVERR``)."""
     try:
-        data, ancdata, _flags, _addr = sock.recvmsg(2048, 512, _MSG_ERRQUEUE | socket.MSG_DONTWAIT)
+        data, ancdata, _flags, _addr = sock.recvmsg(2048, 512, _MSG_ERRQUEUE | _MSG_DONTWAIT)
     except (BlockingIOError, OSError):
         return None
     if len(data) < 8 or struct.unpack("!H", data[6:8])[0] != seq & 0xFFFF:
@@ -207,7 +210,7 @@ def probe(ip: str, ttl: int, seq: int, timeout: float = 2.0) -> tuple[str | None
                 if router:
                     return router, (time.perf_counter() - sent) * 1000
             try:
-                data, addr = sock.recvfrom(2048, socket.MSG_DONTWAIT)
+                data, addr = sock.recvfrom(2048, _MSG_DONTWAIT)
             except (BlockingIOError, InterruptedError):
                 continue
             rtt = (time.perf_counter() - sent) * 1000
