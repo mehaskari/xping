@@ -2,6 +2,65 @@
 
 ## [Unreleased]
 
+### Added
+- **Exit codes you can script with**: every command exits `0` when its
+  check passes and `1` when it fails (unreachable, closed port, HTTP
+  ≥ 400, expired certificate, DNS error, …); invalid usage exits `2`,
+  Ctrl-C `130`. Previously almost everything exited `0`.
+- **Thresholds**: `ping --max-loss/--max-latency`, `tcp --max-latency`,
+  `mtr --max-loss/--max-latency`, `http --max-latency/--expect-status`,
+  `tls --min-days`, `health`/`dnscheck --min-score`. The reason a
+  threshold failed is printed on stderr.
+- **`-q` / `--quiet`** on every diagnostic command: no output, exit code
+  only.
+- **IPv6**: IPv6-only hosts now work, and `-4` / `-6` force a family on
+  ping, trace, mtr, tcp, portscan, tls, http, health, mtu, osdetect and
+  all. System fallbacks use `ping -6`/`ping6`, `traceroute -6`/
+  `traceroute6`/`tracert -6`.
+- **No root needed** for ping, trace, mtr and health on macOS and Linux:
+  xping uses unprivileged ICMP ("ping") sockets, with raw sockets and the
+  system tools as fallbacks. Traceroute reads "time exceeded" replies
+  from the socket (macOS) or the IP_RECVERR error queue (Linux).
+  `xping deps` shows which mode is available.
+- **`trace --asn` / `mtr --asn`**: the network operator (AS number and
+  name) of every hop, via Team Cymru's DNS interface. Opt-in.
+- **`xping net`**: interfaces (state, MTU, addresses), default gateways,
+  DNS resolvers, local source addresses and public IPv4/IPv6 with
+  country and Cloudflare colo. `--no-public` keeps everything local.
+- **`xping propagation`**: compare a record (A, AAAA, CNAME, MX, NS,
+  TXT) across your resolver and six public ones; `--expect` makes it a
+  pass/fail propagation check.
+- **`--watch` / `--until-up`** for `tcp`, `http` and `health`: a live
+  up/down log with downtime and an uptime summary, or "wait until it's
+  up, then exit 0" for scripts. Thresholds apply in watch mode too.
+- **`xping check <file>`**: run many ping/tcp/http/tls/lookup/dnscheck/
+  health/propagation checks from one TOML or JSON file in parallel,
+  with one exit code. `xping check --example` prints a starter file.
+- **Multi-connection speedtest** (`-c/--connections`, default 4;
+  `-d/--duration`): a single stream under-reports fast links. Upload is
+  timed after the TLS handshakes; the server row shows the Cloudflare
+  colo.
+
+### Changed
+- **`--csv` and `--markdown` are real tables** now: one row per ping
+  reply, hop (with per-probe columns), port, host, DNS record, check, …
+  instead of Python `repr()` of nested lists. Field-type results (tls,
+  whois, http, health, speedtest, …) export `field,value` rows. JSON is
+  unchanged.
+- `--json`, `--csv`, `--markdown` and `--quiet` are mutually exclusive.
+- Shell completion is generated from the argument parser, so it always
+  matches the real commands and flags.
+- `xping http` records the address it connected to (`ip`); `mtu` exports
+  its header `overhead` (28 for IPv4, 48 for IPv6).
+
+### Fixed
+- `speedtest` wrote the download error message into the `server` field.
+- Parallel `health` checks could corrupt `~/.xping/health_history.json`
+  (history writes are now serialized).
+- Man page: the `health` options were listed under a duplicated `mtu`
+  heading, `trace` promised a path tree it does not draw, and two
+  invalid roff escapes broke rendering in `mandoc`.
+
 ---
 
 ## [1.3.8] - 2026-09-25

@@ -198,6 +198,10 @@ Examples:
   xping ping prod-db
   xping all cloudflare.com
   xping check --example > checks.toml && xping check checks.toml
+
+Exit codes: 0 check passed · 1 check failed · 2 invalid usage · 130 interrupted
+Thresholds (e.g. --max-loss, --max-latency, --min-days) turn checks into alarms;
+add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         """,
     )
 
