@@ -1,3 +1,26 @@
+xping (1.4.0-1) noble; urgency=medium
+
+  * Exit codes for scripts and monitoring: 0 when a check passes, 1 when
+    it fails, 2 for invalid usage, 130 on Ctrl-C.
+  * Thresholds: ping/mtr --max-loss/--max-latency, tcp/http --max-latency,
+    http --expect-status, tls --min-days, health/dnscheck --min-score;
+    -q/--quiet for exit-code-only output.
+  * IPv6: IPv6-only hosts work; -4/-6 force an address family.
+  * ping, trace, mtr and health no longer need root on Linux: they use
+    unprivileged ICMP sockets (IP_RECVERR for traceroute replies).
+  * New commands: net (local network overview), propagation (compare a
+    DNS record across public resolvers), check (batch checks from a
+    TOML/JSON file with one exit code).
+  * trace/mtr --asn show each hop's network operator (Team Cymru DNS).
+  * tcp/http/health --watch and --until-up.
+  * speedtest uses 4 parallel connections by default (-c, -d).
+  * --csv/--markdown export real tables (one row per reply, hop, port,
+    record, ...). JSON output is unchanged.
+  * Fixes: unreadable ~/.xping no longer crashes commands; parallel
+    health runs cannot corrupt the history file; man page corrections.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Fri, 25 Sep 2026 12:00:00 +0000
+
 xping (1.3.8-1) noble; urgency=medium
 
   * Security: all TLS/HTTPS connections (tls, http, whois RDAP,

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+---
+
+## [1.4.0] - 2026-09-25
+
 ### Added
 - **Exit codes you can script with**: every command exits `0` when its
   check passes and `1` when it fails (unreachable, closed port, HTTP
