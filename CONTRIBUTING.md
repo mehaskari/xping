@@ -23,13 +23,16 @@ ruff format --check xping/ --line-length 100
 
 ## Version Bump Protocol
 
-**All four files must be updated together, every time:**
+**All of these files must be updated together, every time:**
 
 | File | Pattern |
 |------|---------|
 | `pyproject.toml` | `version = "X.Y.Z"` |
 | `xping/__init__.py` | `__version__ = "X.Y.Z"` |
 | `man/xping.1` | `.TH XPING 1 "YYYY-MM-DD" "xping X.Y.Z"` |
+| `setup.cfg` | `version = X.Y.Z` |
+| `snap/snapcraft.yaml` | `version: 'X.Y.Z'` |
+| `debian/changelog` | `xping (X.Y.Z-1) noble; …` (new top entry via `dch`) |
 | `docs/changelog.md` | `## [X.Y.Z] - YYYY-MM-DD` |
 
 Verify:
@@ -40,6 +43,9 @@ files = {
     'pyproject.toml':   (open('pyproject.toml').read(),   r'version = \"(.+?)\"'),
     'xping/__init__.py':(open('xping/__init__.py').read(),r'__version__\s*=\s*\"(.+?)\"'),
     'man/xping.1':      (open('man/xping.1').read(),      r'\"xping ([0-9]+\.[0-9]+\.[0-9]+)\"'),
+    'setup.cfg':        (open('setup.cfg').read(),        r'(?m)^version = (.+)$'),
+    'snap/snapcraft.yaml': (open('snap/snapcraft.yaml').read(), r"(?m)^version: '(.+?)'"),
+    'debian/changelog': (open('debian/changelog').read(), r'^xping \(([^)-]+)'),
 }
 v = {k: re.search(p,t).group(1) for k,(t,p) in files.items()}
 assert len(set(v.values()))==1, f'MISMATCH: {v}'

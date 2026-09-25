@@ -44,20 +44,24 @@ def test_main_without_command_exits(capsys):
 
 
 def test_main_handles_keyboard_interrupt(capsys):
-    from xping.cli.main import main
+    from xping.cli.main import _DISPATCH, main
 
+    # Patch the dict object itself: the dotted string "xping.cli.main._DISPATCH"
+    # resolves to the main() function on Python 3.10, since xping.cli re-exports it.
     with patch("sys.argv", ["xping", "ping", "1.1.1.1"]):
-        with patch.dict("xping.cli.main._DISPATCH", {"ping": MagicMock(side_effect=KeyboardInterrupt)}):
+        with patch.dict(_DISPATCH, {"ping": MagicMock(side_effect=KeyboardInterrupt)}):
             with pytest.raises(SystemExit) as exc:
                 main()
     assert exc.value.code == 130
 
 
 def test_main_handles_generic_error(capsys):
-    from xping.cli.main import main
+    from xping.cli.main import _DISPATCH, main
 
+    # Patch the dict object itself: the dotted string "xping.cli.main._DISPATCH"
+    # resolves to the main() function on Python 3.10, since xping.cli re-exports it.
     with patch("sys.argv", ["xping", "ping", "1.1.1.1"]):
-        with patch.dict("xping.cli.main._DISPATCH", {"ping": MagicMock(side_effect=RuntimeError("boom"))}):
+        with patch.dict(_DISPATCH, {"ping": MagicMock(side_effect=RuntimeError("boom"))}):
             with pytest.raises(SystemExit) as exc:
                 main()
     assert exc.value.code == 1

@@ -8,7 +8,7 @@
 
 ## Checklist
 - [ ] Tests pass (`pytest`)
-- [ ] Version bumped in all 4 files (if releasing)
+- [ ] Version bumped in every versioned file — see CONTRIBUTING.md (if releasing)
 - [ ] `docs/changelog.md` updated
 - [ ] `man/xping.1` updated (if new commands/flags)
 - [ ] `ruff check xping/ --config ruff.toml` passes
