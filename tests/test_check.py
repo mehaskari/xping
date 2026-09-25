@@ -14,9 +14,9 @@ from xping.models.tcp import TcpAttempt, TcpResult
 needs_tomllib = pytest.mark.skipif(sys.version_info < (3, 11), reason="tomllib is 3.11+")
 
 
-def _write(tmp_path, name, text):
+def _write(tmp_path, name, text, encoding="utf-8"):
     path = tmp_path / name
-    path.write_text(text)
+    path.write_bytes(text.encode(encoding))
     return str(path)
 
 
@@ -100,3 +100,22 @@ def test_cli_example_and_missing_file(capsys):
     assert "[[check]]" in capsys.readouterr().out
     with pytest.raises(UsageError):
         commands.cmd_check(build_parser().parse_args(["check"]))
+
+
+def test_example_is_ascii():
+    assert check_diag.EXAMPLE.isascii()
+
+
+@pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig", "utf-16"])
+def test_config_encodings(tmp_path, encoding):
+    """PowerShell 5 redirection writes UTF-16 with a BOM; UTF-8 BOMs are common too."""
+    cfg = '{"checks": [{"type": "ping", "host": "h", "name": "caf\u00e9"}]}'
+    entries = check_diag.load_config(_write(tmp_path, "c.json", cfg, encoding))
+    assert entries[0]["name"] == "caf\u00e9"
+
+
+def test_config_undecodable(tmp_path):
+    path = tmp_path / "c.json"
+    path.write_bytes(b'{"checks": [\x97]}')
+    with pytest.raises(check_diag.ConfigError, match="not UTF-8"):
+        check_diag.load_config(str(path))

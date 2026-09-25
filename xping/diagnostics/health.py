@@ -24,7 +24,7 @@ _MAX_HISTORY = 50  # entries per host
 
 def _load_history(host: str) -> list[dict]:
     try:
-        data = json.loads(_HISTORY_FILE.read_text())
+        data = json.loads(_HISTORY_FILE.read_text(encoding="utf-8"))
         return data.get(host, [])
     except Exception:
         return []
@@ -42,7 +42,7 @@ def _save_history_locked(host: str, score: int, grade: str) -> list[dict]:
     try:
         _HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
         try:
-            data = json.loads(_HISTORY_FILE.read_text())
+            data = json.loads(_HISTORY_FILE.read_text(encoding="utf-8"))
         except Exception:
             data = {}
         entry = {
@@ -53,7 +53,7 @@ def _save_history_locked(host: str, score: int, grade: str) -> list[dict]:
         data.setdefault(host, []).append(entry)
         data[host] = data[host][-_MAX_HISTORY:]
         tmp = _HISTORY_FILE.with_suffix(".tmp")
-        tmp.write_text(json.dumps(data, indent=2))
+        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
         tmp.replace(_HISTORY_FILE)
         return data[host]
     except Exception:

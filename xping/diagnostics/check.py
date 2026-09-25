@@ -37,7 +37,7 @@ from xping.render.animations import Spinner
 from xping.render.views import check as check_view
 
 EXAMPLE = """\
-# xping check — run with:  xping check checks.toml
+# xping check - run with:  xping check checks.toml
 # Exit code 0 when every check passes, 1 otherwise.
 
 [defaults]
@@ -208,11 +208,22 @@ class ConfigError(ValueError):
     """The check file is missing, unreadable or invalid."""
 
 
+def _decode(raw: bytes, path: str) -> str:
+    """UTF-8 (with or without BOM) or BOM-marked UTF-16. The latter is what
+    Windows PowerShell 5 writes for `xping check --example > checks.toml`."""
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return raw.decode("utf-16")
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ConfigError(f"{path}: not UTF-8 or UTF-16 text ({exc.reason})") from exc
+
+
 def load_config(path: str) -> list[dict]:
     """Parse *path* (TOML or JSON) into validated check entries (defaults applied)."""
     file = Path(path)
     try:
-        text = file.read_text(encoding="utf-8")
+        text = _decode(file.read_bytes(), path)
     except OSError as exc:
         raise ConfigError(f"cannot read {path}: {exc.strerror or exc}") from exc
 
