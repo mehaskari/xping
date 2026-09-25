@@ -18,11 +18,10 @@ def test_export_json_ping():
     assert payload["avg_rtt"] == 15.0
 
 
-def test_export_csv_ping():
-    result = PingResult(host="t", ip="1.1.1.1", count=1, rtts=[5.0])
-    text = export_csv(result)
-    assert "field,value" in text
-    assert "host,t" in text
+def test_export_csv_ping_one_row_per_reply():
+    result = PingResult(host="t", ip="1.1.1.1", count=2, rtts=[5.0, -1.0])
+    lines = export_csv(result).splitlines()
+    assert lines == ["seq,rtt_ms,status", "1,5,reply", "2,,timeout"]
 
 
 def test_export_markdown_trace_hops():

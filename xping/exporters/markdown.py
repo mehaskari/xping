@@ -1,35 +1,38 @@
-"""Markdown export for diagnostic results."""
+"""Markdown export for diagnostic results: a summary table of the scalar
+fields followed by one table per section (hops, ports, records, …)."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from .serialize import to_dict
+from .tables import Section, cell, sections_for, summary_for
 
 
 def export_markdown(result: Any, *, title: str = "XPing Result") -> str:
     """Serialize a diagnostic result to Markdown."""
-    if isinstance(result, list):
-        lines = [f"# {title}", ""]
-        for index, item in enumerate(result, start=1):
-            lines.append(f"## Item {index}")
-            lines.extend(_markdown_fields(to_dict(item)))
-            lines.append("")
-        return "\n".join(lines).rstrip() + "\n"
-
-    data = result.to_dict() if hasattr(result, "to_dict") else to_dict(result)
     lines = [f"# {title}", ""]
-    lines.extend(_markdown_fields(data))
+    summary = summary_for(result)
+    if summary:
+        lines += _table(["Field", "Value"], [[k, v] for k, v in summary])
+        lines.append("")
+    for section in sections_for(result):
+        lines += [f"## {section.title}", ""]
+        lines += _section(section)
+        lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _markdown_fields(data: dict[str, Any]) -> list[str]:
-    lines = ["| Field | Value |", "| --- | --- |"]
-    for key, value in sorted(data.items()):
-        lines.append(f"| {key} | {_md_cell(value)} |")
-    return lines
+def _section(section: Section) -> list[str]:
+    if not section.rows:
+        return ["_none_"]
+    return _table(section.columns, section.rows)
 
 
-def _md_cell(value: Any) -> str:
-    text = repr(value) if isinstance(value, (list, dict, tuple)) else str(value)
-    return text.replace("|", "\\|").replace("\n", " ")
+def _table(columns: list[str], rows: list[list[Any]]) -> list[str]:
+    out = ["| " + " | ".join(columns) + " |", "|" + "---|" * len(columns)]
+    out += ["| " + " | ".join(_md(v) for v in row) + " |" for row in rows]
+    return out
+
+
+def _md(value: Any) -> str:
+    return cell(value).replace("|", "\\|").replace("\n", " ")

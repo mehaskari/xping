@@ -28,6 +28,6 @@ def emit_export(result, args: argparse.Namespace) -> None:
     if getattr(args, "json", False):
         print(export_json(result))
     elif getattr(args, "csv", False):
-        print(export_csv(result))
+        print(export_csv(result), end="")
     elif getattr(args, "markdown", False):
-        print(export_markdown(result))
+        print(export_markdown(result), end="")
