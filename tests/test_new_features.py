@@ -280,7 +280,10 @@ class TestWhois:
         from xping.diagnostics.whois import _rdap_url_for
         assert "verisign" in _rdap_url_for("com")
         assert "verisign" in _rdap_url_for("net")
-        assert _rdap_url_for("ir") is None  # .ir has no RDAP
+        bootstrap = MagicMock()
+        bootstrap.__enter__.return_value.read.return_value = b'{"services": [[["dev"], ["https://x/"]]]}'
+        with patch("xping.diagnostics.whois.urllib.request.urlopen", return_value=bootstrap):
+            assert _rdap_url_for("ir") is None  # .ir has no RDAP
 
     def test_whois_result_found(self):
         from xping.models.whois import WhoisResult

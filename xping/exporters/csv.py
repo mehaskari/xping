@@ -1,4 +1,10 @@
-"""CSV export for diagnostic results."""
+"""CSV export for diagnostic results.
+
+Results with natural rows (ping replies, trace hops, scanned ports, …)
+export one row per item with a header line, ready for a spreadsheet.
+Results whose payload is a set of fields (TLS, WHOIS, HTTP, health, …)
+export ``field,value`` pairs.
+"""
 
 from __future__ import annotations
 
@@ -6,32 +12,23 @@ import csv
 import io
 from typing import Any
 
-from .serialize import to_dict
+from .tables import cell, sections_for, summary_for
 
 
 def export_csv(result: Any) -> str:
     """Serialize a diagnostic result to CSV text."""
-    if isinstance(result, list):
-        rows = [to_dict(item) for item in result]
-        if not rows:
-            return ""
-        fieldnames = sorted({key for row in rows for key in row})
-        buf = io.StringIO()
-        writer = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    sections = sections_for(result)
+    if sections and sections[0].primary:
+        primary = sections[0]
+        writer.writerow(primary.columns)
+        writer.writerows([cell(v) for v in row] for row in primary.rows)
         return buf.getvalue()
 
-    data = result.to_dict() if hasattr(result, "to_dict") else to_dict(result)
-    buf = io.StringIO()
-    writer = csv.writer(buf)
     writer.writerow(["field", "value"])
-    for key, value in sorted(data.items()):
-        writer.writerow([key, _csv_cell(value)])
+    if isinstance(result, list):
+        return buf.getvalue()
+    for key, value in summary_for(result):
+        writer.writerow([key, cell(value)])
     return buf.getvalue()
-
-
-def _csv_cell(value: Any) -> str:
-    if isinstance(value, (list, dict, tuple)):
-        return repr(value)
-    return str(value)

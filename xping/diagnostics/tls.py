@@ -8,6 +8,7 @@ import socket
 import ssl
 import sys
 
+from xping.diagnostics.resolve import resolve
 from xping.diagnostics.sslctx import secure_context
 from xping.models.tls import TlsResult
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
@@ -26,12 +27,18 @@ def _format_name(name_tuples) -> str:
     return ", ".join(parts)
 
 
-def tls(host: str, port: int = 443, timeout: float = 5.0, quiet: bool = False) -> TlsResult:
+def tls(
+    host: str,
+    port: int = 443,
+    timeout: float = 5.0,
+    quiet: bool = False,
+    family: int | None = None,
+) -> TlsResult:
     """Connect to *host*:*port*, perform a TLS handshake, and report cert info."""
     result = TlsResult(host=host, port=port)
 
     try:
-        ip = socket.gethostbyname(host)
+        ip = resolve(host, family)
         result.ip = ip
     except socket.gaierror:
         if not quiet:
@@ -53,7 +60,7 @@ def tls(host: str, port: int = 443, timeout: float = 5.0, quiet: bool = False) -
     context = secure_context()
 
     try:
-        with socket.create_connection((host, port), timeout=timeout) as sock:
+        with socket.create_connection((ip, port), timeout=timeout) as sock:
             with context.wrap_socket(sock, server_hostname=host) as tls_sock:
                 cert = tls_sock.getpeercert()
                 cipher = tls_sock.cipher()

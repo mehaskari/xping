@@ -6,6 +6,7 @@ import socket
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from xping.diagnostics.resolve import resolve
 from xping.models.portscan import PortResult, PortScanResult
 from xping.render import BOLD, BRAND_INDIGO, BRAND_MINT, BRAND_TEAL, c, kv, section_header
 from xping.render.errors import resolve_error
@@ -149,9 +150,10 @@ def portscan(
     workers: int = 100,
     grab_banners: bool = False,
     quiet: bool = False,
+    family: int | None = None,
 ) -> PortScanResult:
     try:
-        ip = socket.gethostbyname(host)
+        ip = resolve(host, family)
     except socket.gaierror as exc:
         if not quiet:
             resolve_error(host, exc)

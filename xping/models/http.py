@@ -18,6 +18,7 @@ class RedirectHop:
 class HttpResult:
     url: str
     final_url: str | None = None
+    ip: str | None = None  # address the final request connected to
     status_code: int | None = None
     reason: str | None = None
     headers: dict[str, str] = field(default_factory=dict)

@@ -8,12 +8,15 @@ description: |
   colour-coded, animated output.
 
   Quick start: xping 8.8.8.8
-  Commands: ping, trace, mtr, lookup, dnscheck, rdns, tcp, tls,
-  http, whois, portscan, ipscan, sweep, mtu, health, speedtest,
-  listen, osdetect, profile, all, completion
+  Commands: ping, trace, mtr, lookup, dnscheck, propagation, rdns,
+  tcp, tls, http, whois, portscan, ipscan, sweep, mtu, health,
+  speedtest, net, listen, osdetect, check, profile, all, completion
+
+  IPv4 and IPv6; meaningful exit codes and thresholds for scripts;
+  --watch / --until-up; batch checks from a TOML/JSON file.
 
   Tab completion: source <(xping completion bash)
-  Every diagnostic command supports --json --csv --markdown
+  Every diagnostic command supports --json --csv --markdown --quiet
 
 license: MIT
 contact: iorganamis@gmail.com

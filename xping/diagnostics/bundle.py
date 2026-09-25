@@ -67,14 +67,14 @@ def _bundle_summary(result: BundleResult) -> None:
     print()
 
 
-def run_bundle(host: str, *, quiet: bool = False) -> BundleResult:
+def run_bundle(host: str, *, quiet: bool = False, family: int | None = None) -> BundleResult:
     """Run lookup, ping, trace, and common TCP checks for a host."""
     dns = lookup(host=host, full=True, quiet=quiet)
-    icmp = ping(host=host, count=4, quiet=quiet)
-    hops = trace(host=host, quiet=quiet)
+    icmp = ping(host=host, count=4, quiet=quiet, family=family)
+    hops = trace(host=host, quiet=quiet, family=family)
     tcp_checks = [
-        tcp(host=host, port=443, count=2, quiet=quiet),
-        tcp(host=host, port=80, count=2, quiet=quiet),
+        tcp(host=host, port=443, count=2, quiet=quiet, family=family),
+        tcp(host=host, port=80, count=2, quiet=quiet, family=family),
     ]
     result = BundleResult(host=host, lookup=dns, ping=icmp, trace=hops, tcp=tcp_checks)
     if not quiet:

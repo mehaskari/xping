@@ -25,7 +25,12 @@ Recommends:
 Suggests:
  dnsutils
 Description: Beautiful CLI network diagnostics
- xping provides live, colour-coded output for ping, traceroute, DNS,
- TLS, HTTP, WHOIS, port scanning, health scoring, speed testing, and
- more, with bash/zsh/fish completion and JSON/CSV/Markdown export on
- every command.
+ xping provides live, colour-coded output for ping, traceroute, MTR,
+ DNS (including propagation checks), TLS, HTTP, WHOIS, port scanning,
+ health scoring, speed testing, and more, over IPv4 and IPv6. Ping and
+ traceroute work without root on Linux via unprivileged ICMP sockets.
+ .
+ Every command returns a meaningful exit code and accepts thresholds,
+ so it can be used from scripts and monitoring; batch checks run from a
+ TOML/JSON file. Includes bash/zsh/fish completion and JSON/CSV/Markdown
+ export on every command.

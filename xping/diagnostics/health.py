@@ -7,10 +7,12 @@ Score history is persisted in ~/.xping/health_history.json.
 
 import json
 import socket
+import threading
 import time
 from pathlib import Path
 
 from xping.diagnostics.ping import ping
+from xping.diagnostics.resolve import resolve
 from xping.models.health import HealthResult
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 from xping.render.errors import resolve_error
@@ -28,7 +30,15 @@ def _load_history(host: str) -> list[dict]:
         return []
 
 
+_HISTORY_LOCK = threading.Lock()  # xping check may run several health checks at once
+
+
 def _save_history(host: str, score: int, grade: str) -> list[dict]:
+    with _HISTORY_LOCK:
+        return _save_history_locked(host, score, grade)
+
+
+def _save_history_locked(host: str, score: int, grade: str) -> list[dict]:
     try:
         _HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -97,7 +107,13 @@ def _score(dns_ms: float, ping_result) -> tuple[int, list[str]]:
     return max(0, min(100, score)), issues
 
 
-def health(host: str, count: int = 8, timeout: float = 2.0, quiet: bool = False) -> HealthResult:
+def health(
+    host: str,
+    count: int = 8,
+    timeout: float = 2.0,
+    quiet: bool = False,
+    family: int | None = None,
+) -> HealthResult:
     """Run DNS + ping diagnostics and roll them up into a health score."""
     result = HealthResult(host=host)
 
@@ -108,7 +124,7 @@ def health(host: str, count: int = 8, timeout: float = 2.0, quiet: bool = False)
 
     t0 = time.perf_counter()
     try:
-        ip = socket.gethostbyname(host)
+        ip = resolve(host, family)
     except socket.gaierror:
         if not quiet:
             resolve_error(host)
@@ -125,7 +141,7 @@ def health(host: str, count: int = 8, timeout: float = 2.0, quiet: bool = False)
         print(kv("IP", c(ip, BRAND_INDIGO)))
         print(kv("DNS resolve", f"{dns_ms:.1f} ms"))
 
-    ping_result = ping(host=host, count=count, timeout=timeout, quiet=quiet)
+    ping_result = ping(host=host, count=count, timeout=timeout, quiet=quiet, family=family)
     result.ping = ping_result
 
     score, issues = _score(dns_ms, ping_result)

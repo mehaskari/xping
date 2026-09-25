@@ -12,6 +12,8 @@ class Hop:
     ip: str | None
     rtts: list[float] = field(default_factory=list)
     timeout: bool = False
+    asn: int | None = None  # origin AS of the hop address (trace --asn)
+    as_name: str | None = None
 
     @property
     def avg_rtt(self) -> float:

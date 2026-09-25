@@ -1,4 +1,4 @@
-"""Export output helpers for CLI commands."""
+"""Output-mode helpers for CLI commands."""
 
 from __future__ import annotations
 
@@ -17,10 +17,17 @@ def export_requested(args: argparse.Namespace) -> bool:
     )
 
 
+def output_suppressed(args: argparse.Namespace) -> bool:
+    """True when the interactive rendering must be skipped: an export format
+    was requested, or --quiet asked for no output at all (exit code only)."""
+    return export_requested(args) or bool(getattr(args, "quiet", False))
+
+
 def emit_export(result, args: argparse.Namespace) -> None:
-    if args.json:
+    """Print *result* in the requested export format; no-op otherwise."""
+    if getattr(args, "json", False):
         print(export_json(result))
-    elif args.csv:
-        print(export_csv(result))
-    elif args.markdown:
-        print(export_markdown(result))
+    elif getattr(args, "csv", False):
+        print(export_csv(result), end="")
+    elif getattr(args, "markdown", False):
+        print(export_markdown(result), end="")

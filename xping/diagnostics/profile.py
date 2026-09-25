@@ -22,9 +22,13 @@ _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 
 
 def _load() -> dict:
-    if not STORE_FILE.exists():
-        return {}
+    # exists() itself raises PermissionError when the home directory is
+    # unreadable (e.g. sudo -u with HOME preserved), so keep it in the try:
+    # an unreadable store must behave like "no profiles", not crash every
+    # host-taking command.
     try:
+        if not STORE_FILE.exists():
+            return {}
         with open(STORE_FILE, encoding="utf-8") as f:
             data = json.load(f)
         return data if isinstance(data, dict) else {}

@@ -30,7 +30,7 @@ def test_cmd_export_json(capsys, command, handler, extra, mock_target, return_va
 def test_emit_export_csv(capsys):
     args = build_parser().parse_args(["ping", "1.1.1.1", "--csv"])
     emit_export(PingResult(host="1.1.1.1", ip="1.1.1.1", count=1, rtts=[1.0]), args)
-    assert "field,value" in capsys.readouterr().out
+    assert capsys.readouterr().out.startswith("seq,rtt_ms,status")
 
 
 def test_main_without_command_exits(capsys):

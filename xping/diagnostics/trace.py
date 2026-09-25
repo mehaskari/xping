@@ -3,14 +3,18 @@ xping.trace — Live animated traceroute.
 Each hop is printed the moment its probe response arrives.
 """
 
+import random
 import select
 import socket
 import subprocess
 import sys
 import time
 
+from xping.diagnostics import asn as asn_lookup
+from xping.diagnostics import icmp
 from xping.diagnostics.deps import is_available, require, warn_missing
 from xping.diagnostics.platform_cmds import parse_trace_line, trace_command, trace_tool
+from xping.diagnostics.resolve import is_ipv6, resolve
 from xping.models.trace import Hop
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 from xping.render.animations import Spinner
@@ -107,18 +111,44 @@ def _subprocess_trace_live(
     return hops
 
 
+def _icmp_trace_hop(dest_ip: str, ttl: int, timeout: float = 2.0, probes: int = 3) -> Hop | None:
+    """One TTL level using hop-limited ICMP echoes — unprivileged on macOS
+    and Linux ping sockets, IPv4 and IPv6. None if no ICMP socket opens."""
+    rtts: list[float] = []
+    last_ip = None
+    base = random.randint(1, 0xFFFF - 1000)
+    for i in range(probes):
+        answer = icmp.probe(dest_ip, ttl, base + ttl * probes + i, timeout)
+        if answer is None:
+            return None
+        responder, rtt = answer
+        rtts.append(rtt)
+        if responder:
+            last_ip = responder
+    timed_out = all(r < 0 for r in rtts)
+    hostname = _reverse(last_ip) if last_ip and not timed_out else None
+    return Hop(ttl=ttl, host=hostname, ip=last_ip, rtts=rtts, timeout=timed_out)
+
+
+def _native_hop(dest_ip: str, ttl: int, timeout: float, probes: int) -> Hop | None:
+    """Best native probe: unprivileged ICMP, then raw UDP (IPv4, root)."""
+    hop = _icmp_trace_hop(dest_ip, ttl, timeout=timeout, probes=probes)
+    if hop is None and not is_ipv6(dest_ip):
+        hop = _raw_trace_hop(dest_ip, ttl, 33434 + ttl, timeout=timeout, probes=probes)
+    return hop
+
+
 def discover_path(
     dest_ip: str, max_hops: int = 30, timeout: float = 2.0, probes: int = 1
 ) -> list[tuple[int, str | None]] | None:
     """
-    One-shot raw-socket path discovery for `mtr`: ttl -> hop IP (or None
-    if that hop was silent). Returns None if raw sockets are unavailable,
+    One-shot native path discovery for `mtr`: ttl -> hop IP (or None if
+    that hop was silent). Returns None if no native socket is available,
     in which case the caller should fall back to `discover_path_subprocess`.
     """
     path: list[tuple[int, str | None]] = []
-    probe_port = 33434
     for ttl in range(1, max_hops + 1):
-        hop = _raw_trace_hop(dest_ip, ttl, probe_port + ttl, timeout=timeout, probes=probes)
+        hop = _native_hop(dest_ip, ttl, timeout, probes)
         if hop is None:
             return None
         path.append((ttl, None if hop.timeout else hop.ip))
@@ -136,11 +166,17 @@ def discover_path_subprocess(
 
 
 def trace(
-    host: str, max_hops: int = 30, timeout: float = 2.0, probes: int = 3, quiet: bool = False
+    host: str,
+    max_hops: int = 30,
+    timeout: float = 2.0,
+    probes: int = 3,
+    quiet: bool = False,
+    family: int | None = None,
+    asn: bool = False,
 ) -> list[Hop]:
 
     try:
-        dest_ip = socket.gethostbyname(host)
+        dest_ip = resolve(host, family)
     except socket.gaierror:
         if not quiet:
             resolve_error(host)
@@ -156,7 +192,6 @@ def trace(
         trace_view.hop_header()
 
     hops: list[Hop] = []
-    probe_port = 33434
 
     for ttl in range(1, max_hops + 1):
         spinner = None
@@ -164,21 +199,29 @@ def trace(
             spinner = Spinner(c(f"Probing hop {ttl}…", BRAND_TEAL))
             spinner.start()
 
-        hop = _raw_trace_hop(dest_ip, ttl, probe_port + ttl, timeout=timeout, probes=probes)
+        hop = _native_hop(dest_ip, ttl, timeout, probes)
         if spinner:
             spinner.stop()
 
         if hop is None:
-            # No raw-socket permission: hand the whole trace to the system tool.
+            # No usable ICMP/raw socket: hand the whole trace to the system tool.
             if not is_available("traceroute"):
                 require("traceroute", "traceroute")
                 return []
             if not quiet:
-                warn_missing("raw sockets", "using system traceroute (run as root for native mode)")
-            on_hop = (lambda _h: None) if quiet else trace_view.print_hop
-            hops = _subprocess_trace_live(host, max_hops, probes, on_hop=on_hop, timeout=timeout)
+                warn_missing("ICMP sockets", "using system traceroute")
+
+            def on_hop(found: Hop) -> None:
+                if asn:
+                    asn_lookup.annotate(found)
+                if not quiet:
+                    trace_view.print_hop(found)
+
+            hops = _subprocess_trace_live(dest_ip, max_hops, probes, on_hop=on_hop, timeout=timeout)
             break
 
+        if asn:
+            asn_lookup.annotate(hop)
         hops.append(hop)
         if not quiet:
             trace_view.print_hop(hop)

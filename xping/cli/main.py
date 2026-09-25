@@ -8,6 +8,7 @@ import sys
 from xping.cli.commands import (
     cmd_about,
     cmd_all,
+    cmd_check,
     cmd_completion,
     cmd_deps,
     cmd_dnscheck,
@@ -18,10 +19,12 @@ from xping.cli.commands import (
     cmd_lookup,
     cmd_mtr,
     cmd_mtu,
+    cmd_net,
     cmd_osdetect,
     cmd_ping,
     cmd_portscan,
     cmd_profile,
+    cmd_propagation,
     cmd_rdns,
     cmd_speedtest,
     cmd_sweep,
@@ -31,7 +34,9 @@ from xping.cli.commands import (
     cmd_whois,
     print_version,
 )
+from xping.cli.errors import UsageError
 from xping.cli.parser import build_parser
+from xping.cli.verdict import evaluate
 from xping.render import BOLD, BRAND_AMBER, BRAND_SLATE, BRAND_TEAL, DIM, banner, c, error
 
 _NEXT_STEPS = [
@@ -72,8 +77,10 @@ _DISPATCH = {
     "sweep": cmd_sweep,
     "ipscan": cmd_ipscan,
     "all": cmd_all,
+    "check": cmd_check,
     "rdns": cmd_rdns,
     "dnscheck": cmd_dnscheck,
+    "propagation": cmd_propagation,
     "tls": cmd_tls,
     "http": cmd_http,
     "whois": cmd_whois,
@@ -84,6 +91,7 @@ _DISPATCH = {
     "speedtest": cmd_speedtest,
     "listen": cmd_listen,
     "osdetect": cmd_osdetect,
+    "net": cmd_net,
     "completion": cmd_completion,
     "deps": cmd_deps,
     "about": cmd_about,
@@ -111,12 +119,13 @@ def main() -> None:
             from xping.diagnostics.ping import ping
 
             resolved = profile_diag.resolve_target(bare)
-            ping(host=resolved, count=5, quiet=False)
+            result = ping(host=resolved, count=5, quiet=False)
             if is_tty:
                 _print_next_steps(bare)
         except KeyboardInterrupt:
             print(c("\n\n  Interrupted.", BRAND_AMBER))
-        sys.exit(0)
+            sys.exit(130)
+        sys.exit(1 if evaluate(result) else 0)
 
     parser = build_parser()
     args = parser.parse_args()
@@ -131,17 +140,34 @@ def main() -> None:
         sys.exit(0)
 
     try:
-        _DISPATCH[args.command](args)
+        result = _DISPATCH[args.command](args)
     except KeyboardInterrupt:
         print(c("\n\n  Interrupted.", BRAND_AMBER))
         sys.exit(130)
     except BrokenPipeError:
         sys.exit(0)
+    except UsageError as exc:
+        parser.exit(2, f"xping {args.command}: error: {exc}\n")
     except Exception as exc:
         error(str(exc))
         if os.environ.get("XPING_DEBUG"):
             raise
         sys.exit(1)
+
+    sys.exit(_exit_code(result, args))
+
+
+def _exit_code(result, args) -> int:
+    """0 when the check passed, 1 when it failed. Threshold violations are
+    explained on stderr (other failures were already shown by the view)."""
+    failures = evaluate(result, args)
+    if not failures:
+        return 0
+    if not getattr(args, "quiet", False):
+        for failure in failures:
+            if failure.threshold:
+                error(failure.message)
+    return 1
 
 
 if __name__ == "__main__":

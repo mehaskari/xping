@@ -9,6 +9,7 @@ import socket
 import subprocess
 
 from xping.diagnostics.platform_cmds import ping_command
+from xping.diagnostics.resolve import resolve
 from xping.models.osdetect import OsDetectResult
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 from xping.render.errors import resolve_error
@@ -23,8 +24,8 @@ _INITIAL_TTLS: tuple[tuple[int, str, str], ...] = (
     (255, "Linux / Unix / Network device", "initial TTL 255 — Linux kernel, Cisco IOS, Solaris"),
 )
 
-# Matches "ttl=57" (Linux/macOS) as well as "TTL=57" (Windows)
-_TTL_RE = re.compile(r"ttl[=\s]+(\d+)", re.IGNORECASE)
+# Matches "ttl=57" (Linux/macOS), "TTL=57" (Windows) and "hlim=57" (macOS ping6)
+_TTL_RE = re.compile(r"(?:ttl|hlim)[=\s]+(\d+)", re.IGNORECASE)
 
 
 def _extract_ttl(output: str) -> int | None:
@@ -40,12 +41,12 @@ def _guess_os(ttl: int) -> tuple[str, str]:
     return "Unknown", f"TTL {ttl} — no match"
 
 
-def osdetect(host: str, quiet: bool = False) -> OsDetectResult:
+def osdetect(host: str, quiet: bool = False, family: int | None = None) -> OsDetectResult:
     """Guess target OS from ping TTL."""
     result = OsDetectResult(host=host)
 
     try:
-        ip = socket.gethostbyname(host)
+        ip = resolve(host, family)
         result.ip = ip
     except socket.gaierror:
         if not quiet:
@@ -60,7 +61,7 @@ def osdetect(host: str, quiet: bool = False) -> OsDetectResult:
         print(kv("Method", "TTL analysis (1 ICMP echo probe)"))
         print()
 
-    cmd = ping_command(host, timeout=3.0)
+    cmd = ping_command(ip, timeout=3.0)
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=8)
         output = (proc.stdout or "") + "\n" + (proc.stderr or "")

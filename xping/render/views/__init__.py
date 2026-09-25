@@ -1,6 +1,7 @@
 """Command-specific view renderers."""
 
 from . import (
+    check,
     dnscheck,
     health,
     http,
@@ -9,19 +10,23 @@ from . import (
     lookup,
     mtr,
     mtu,
+    net,
     ping,
     portscan,
     profile,
+    propagation,
     rdns,
     speedtest,
     sweep,
     tcp,
     tls,
     trace,
+    watch,
     whois,
 )
 
 __all__ = [
+    "check",
     "dnscheck",
     "health",
     "http",
@@ -30,8 +35,10 @@ __all__ = [
     "lookup",
     "mtr",
     "mtu",
+    "net",
     "ping",
     "portscan",
+    "propagation",
     "profile",
     "rdns",
     "speedtest",
@@ -39,5 +46,6 @@ __all__ = [
     "tcp",
     "tls",
     "trace",
+    "watch",
     "whois",
 ]

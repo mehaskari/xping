@@ -11,6 +11,9 @@ class SpeedResult:
     upload_mbps: float | None = None
     ping_ms: float | None = None
     server: str | None = None
+    connections: int = 1
+    download_bytes: int = 0
+    upload_bytes: int = 0
     error: str | None = None
 
     @property

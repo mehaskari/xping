@@ -504,7 +504,7 @@ def test_trace_reaches_destination(capsys):
         Hop(ttl=2, host=None, ip="1.1.1.1", rtts=[10.0, 11.0, 12.0]),
     ]
     with patch("socket.gethostbyname", return_value="1.1.1.1"):
-        with patch("xping.diagnostics.trace._raw_trace_hop", side_effect=hops):
+        with patch("xping.diagnostics.trace._native_hop", side_effect=hops):
             with patch("sys.stdout.isatty", return_value=False):
                 with patch("xping.render.COLOR", False):
                     result = trace("1.1.1.1", max_hops=5)
@@ -568,9 +568,9 @@ def test_icmp_ping_timeout():
             raise AssertionError("should not be reached")
         def close(self):
             pass
-    with patch("xping.diagnostics.ping.socket.socket", return_value=FakeSock()):
+    with patch("xping.diagnostics.icmp.socket.socket", return_value=FakeSock()):
         with patch("xping.diagnostics.ping.socket.gethostbyname", return_value="1.1.1.1"):
-            with patch("xping.diagnostics.ping.select.select", return_value=([], [], [])):
+            with patch("xping.diagnostics.icmp.select.select", return_value=([], [], [])):
                 assert _icmp_ping("1.1.1.1", 1, timeout=0.1) == -1.0
 
 
@@ -666,7 +666,7 @@ def test_trace_subprocess_fallback(capsys):
     from xping.trace import Hop, trace
     hops = [Hop(ttl=1, host="gw", ip="10.0.0.1", rtts=[1.0, 2.0, 3.0])]
     with patch("socket.gethostbyname", return_value="1.1.1.1"):
-        with patch("xping.diagnostics.trace._raw_trace_hop", return_value=None):
+        with patch("xping.diagnostics.trace._native_hop", return_value=None):
             with patch("xping.diagnostics.trace.is_available", return_value=True):
                 with patch("xping.diagnostics.trace._subprocess_trace_live", return_value=hops) as mock_live:
                     with patch("sys.stdout.isatty", return_value=False):
@@ -870,14 +870,15 @@ def test_lookup_parse_cname_and_aaaa():
     assert _parse_dig_cname(cname) == "example.com"
 
 
-def test_print_deps_status_raw_socket_denied(capsys):
+def test_print_deps_status_icmp_socket_denied(capsys):
     from xping.deps import print_deps_status
     with patch("xping.diagnostics.deps.check_all", return_value={"ping": True, "traceroute": True, "dig": True}):
         with patch("xping.diagnostics.deps.get_distro", return_value="debian"):
             with patch("xping.render.COLOR", False):
                 with patch("socket.socket", side_effect=PermissionError):
                     print_deps_status()
-    assert "Raw sockets" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "Native ICMP (v4)" in out and "fallback" in out
 
 
 def test_render_resolve_error_with_exc(capsys):

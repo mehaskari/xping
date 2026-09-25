@@ -33,12 +33,33 @@ sparkline charts, and histogram distributions make network behaviour
 instantly readable.
 .PP
 .B xping
-uses raw ICMP sockets when possible and automatically falls back to the
+speaks ICMP and ICMPv6 natively.
+On macOS and Linux it uses unprivileged ICMP ("ping") sockets, so
+.BR ping ,
+.BR trace ,
+and
+.B mtr
+work without root; raw sockets are used when running as root, and the
 system
 .BR ping (8)
 and
 .BR traceroute (8)
-binaries when raw-socket access is unavailable.
+binaries are the last fallback.
+IPv4 is preferred, IPv6-only hosts work automatically, and
+.B \-4
+/
+.B \-6
+force a family.
+.PP
+Every command exits 0 when its check passes and 1 when it fails, and
+most accept thresholds (for example
+.BR \-\-max\-loss ,
+.BR \-\-max\-latency ,
+.BR \-\-min\-days ),
+so xping can be used from scripts, cron and monitoring systems; see
+.B EXIT STATUS
+and
+.BR "SCRIPTING AND MONITORING" .
 It requires only the
 .B certifi
 package (auto-installed); all other functionality uses the Python
@@ -73,8 +94,10 @@ Perform a hop-by-hop traceroute to
 .IR HOST .
 Each hop is printed in real time. RTT values are colour-coded:
 green < 30 ms, amber < 100 ms, yellow < 300 ms, red otherwise.
-The summary includes total hops, responding hops, final-hop RTT,
-and an ASCII path tree showing the network topology.
+The summary includes total hops, responding hops and final-hop RTT.
+Probes are hop-limited ICMP echoes (no root needed on macOS/Linux);
+.B \-\-asn
+adds each hop's network operator.
 .TP
 .BR mtr " \fIHOST\fR [\fIOPTIONS\fR]"
 Combined live traceroute and per-hop ping (My Traceroute).
@@ -82,9 +105,12 @@ Discovers the path to
 .IR HOST ,
 then pings every hop repeatedly and redraws a live table showing
 per-hop loss%, last/avg/best/worst RTT, standard deviation, and a
-sparkline. Falls back to system
+sparkline.
+.B \-\-asn
+adds an AS number/operator column.
+Falls back to the system
 .B traceroute
-when raw sockets are unavailable.
+when no ICMP socket can be opened.
 .TP
 .BR lookup " \fIHOST\fR [\fIOPTIONS\fR]"
 Query DNS records for
@@ -130,6 +156,11 @@ on
 .IR PORT .
 Each attempt is printed immediately with open/failed status and
 connect timing. The summary reports success rate and min/avg/max times.
+.B \-\-watch
+and
+.B \-\-until\-up
+repeat the check (see
+.BR "WATCH MODE" ).
 .TP
 .BR tls " \fIHOST\fR [\fIOPTIONS\fR]"
 Inspect the TLS/SSL certificate presented by
@@ -147,13 +178,28 @@ following redirects automatically.
 Reports the HTTP version used, whether the server supports HTTP/2
 (detected via ALPN), status
 code, redirect chain, response headers, and a full timing breakdown:
-DNS resolve time \(· TCP connect time \(· TTFB \(· total request time.
+DNS resolve time \(md TCP connect time \(md TTFB \(md total request time.
+Exits 1 on HTTP status \(>= 400 unless
+.B \-\-expect\-status
+says otherwise.
+.TP
+.BR propagation " \fINAME\fR [\fIOPTIONS\fR]"
+Query
+.I NAME
+on your system resolver and on Google, Cloudflare, Quad9, OpenDNS,
+AdGuard and Control D in parallel, and show which answers differ from
+the majority \(em the quick way to see whether a DNS change has
+propagated.
+Different answers alone do not fail the command (CDNs and geo-DNS
+vary on purpose);
+.B \-\-expect
+makes it exit 1 unless every answering resolver returns the value.
 .TP
 .BR whois " \fIDOMAIN\fR [\fIOPTIONS\fR]"
 Look up WHOIS registration data for
 .IR DOMAIN .
 Queries the authoritative registry WHOIS server on port 43, following
-up to two referrals (IANA \(→ registry \(→ registrar), with up to two
+up to two referrals (IANA \(-> registry \(-> registrar), with up to two
 retries per server. Falls back automatically to RDAP over HTTPS when
 port 43 is blocked or firewalled.
 .SS Network scanning
@@ -183,7 +229,19 @@ Discover the Path MTU to
 via binary search using DF-flagged (Don't Fragment) ping probes.
 Identifies the largest unfragmented packet size along the path;
 useful for diagnosing VPN or tunnel fragmentation issues.
+IPv6 is supported on Linux and macOS (macOS needs root for the
+don't-fragment IPv6 probe) but not on Windows.
 .SS Local machine
+.TP
+.B net [\fIOPTIONS\fR]
+Your own network at a glance: hostname, the local IPv4/IPv6 source
+addresses used for outbound traffic, default gateways, DNS resolvers,
+public IPv4/IPv6 addresses (with country and Cloudflare data centre),
+and interfaces with state, MTU and addresses.
+The public-address lookup is the only outbound request
+.RI ( https://1.1.1.1/cdn-cgi/trace )
+and is skipped with
+.BR \-\-no\-public .
 .TP
 .B listen [\fIOPTIONS\fR]
 List locally listening TCP/UDP ports, with process names and PIDs
@@ -207,10 +265,16 @@ TTL\~\(>=\~241 \(-> Linux kernel/Cisco IOS/Solaris.
 This is a heuristic \(em VPNs and tunnels can change the observed TTL.
 .TP
 .B speedtest
-Measure download and upload throughput using Cloudflare's public speed
-endpoint (
-.IR speed.cloudflare.com ).
-Runs a single HTTP connection transferring 25 MB down and 5 MB up.
+Measure latency, download and upload throughput using Cloudflare's
+public speed endpoint
+.RI ( speed.cloudflare.com ).
+Uses 4 parallel HTTPS connections by default (a single stream
+under-reports fast links); download runs for at most
+.B \-\-duration
+seconds and is timed from the first byte, upload is timed after the TLS
+handshakes. Data used: up to about 40 MB down and 8 MB up
+.RB ( "\-c 1" :
+25 MB down).
 No
 .B iperf3
 required.
@@ -252,6 +316,29 @@ Run a full diagnostic bundle: lookup (full DNS), ping (4 packets),
 trace, and TCP checks on ports 443 and 80.
 Finishes with a unified one-page summary table.
 .TP
+.BR check " \fIFILE\fR [\fIOPTIONS\fR]"
+Run many checks from a TOML (Python 3.11+) or JSON file in parallel
+and exit 1 if any failed.
+Supported types:
+.BR ping ,
+.BR tcp ,
+.BR http ,
+.BR tls ,
+.BR lookup ,
+.BR dnscheck ,
+.BR health ,
+.BR propagation ,
+each with the same thresholds as the command
+.RB ( max_loss ,
+.BR max_latency ,
+.BR expect_status ,
+.BR min_days ,
+.BR min_score ).
+Saved profile names work as hosts.
+.B "xping check \-\-example"
+prints a commented starter file; see
+.BR "SCRIPTING AND MONITORING" .
+.TP
 .B deps
 Check whether the optional system binaries
 .RB ( ping ,
@@ -286,16 +373,47 @@ and exit.
 .TP
 .BR \-h ", " \-\-help
 Show a help message for the selected command and exit.
-.SS Export flags (all diagnostic commands)
+.SS Output flags (all diagnostic commands; mutually exclusive)
 .TP
 .B \-\-json
-Emit machine-readable JSON instead of interactive terminal output.
+Emit machine-readable JSON (the full nested result) instead of
+interactive terminal output.
 .TP
 .B \-\-csv
-Emit CSV output instead of interactive terminal output.
+Emit CSV: one row per item (ping reply, hop, port, record, check \&...)
+with a header line; results that are a set of fields (tls, whois,
+http, health \&...) emit
+.B field,value
+rows.
 .TP
 .B \-\-markdown
-Emit Markdown output instead of interactive terminal output.
+Emit Markdown: a summary table followed by one table per section.
+.TP
+.BR \-q ", " \-\-quiet
+No output at all; report the result only through the exit status.
+.SS Address family
+Accepted by
+.BR ping ,
+.BR trace ,
+.BR mtr ,
+.BR tcp ,
+.BR portscan ,
+.BR tls ,
+.BR http ,
+.BR health ,
+.BR mtu ,
+.BR osdetect ,
+and
+.BR all .
+.TP
+.BR \-4 ", " \-\-ipv4
+Use IPv4 only.
+.TP
+.BR \-6 ", " \-\-ipv6
+Use IPv6 only.
+.PP
+Without either flag IPv4 is preferred and IPv6 is used when the host
+has no IPv4 address.
 .SS ping
 .TP
 .BI \-c " N" ", \-\-count " N
@@ -316,6 +434,16 @@ Default:
 .B \-\-watch ", " \-w
 Continuous live ping mode. Displays a live sparkline with running
 min/avg/max statistics. Press Ctrl-C to stop and print a final summary.
+.TP
+.BI \-\-max\-loss " PCT"
+Exit 1 if packet loss exceeds
+.I PCT
+percent (100% loss always fails).
+.TP
+.BI \-\-max\-latency " MS"
+Exit 1 if the average RTT exceeds
+.I MS
+milliseconds.
 .SS trace
 .TP
 .BI \-m " N" ", \-\-max\-hops " N
@@ -329,9 +457,15 @@ Default:
 .BR 2.0 .
 .TP
 .BI \-p " N" ", \-\-probes " N
-UDP probe packets per TTL value.
+Probes per TTL value.
 Default:
 .BR 3 .
+.TP
+.B \-\-asn
+Show the origin AS number and operator of every hop, looked up over DNS
+via Team Cymru
+.RI ( origin.asn.cymru.com ).
+Opt-in because hop addresses are sent to Cymru's DNS servers.
 .SS mtr
 .TP
 .BI \-c " N" ", \-\-cycles " N
@@ -353,6 +487,20 @@ Default:
 Interval between cycles in seconds.
 Default:
 .BR 0.3 .
+.TP
+.B \-\-asn
+Add an AS number/operator column (see
+.BR trace ).
+.TP
+.BI \-\-max\-loss " PCT"
+Exit 1 if packet loss at the destination hop exceeds
+.I PCT
+percent.
+.TP
+.BI \-\-max\-latency " MS"
+Exit 1 if the destination's average RTT exceeds
+.I MS
+milliseconds.
 .SS lookup
 .TP
 .BR \-f ", " \-\-full
@@ -380,6 +528,16 @@ Default:
 Interval between attempts in seconds.
 Default:
 .BR 0.5 .
+.TP
+.BI \-\-max\-latency " MS"
+Exit 1 if the average connect time exceeds
+.I MS
+milliseconds.
+.TP
+.BR \-\-watch ", " \-\-until\-up ", " \-\-every " \fISEC\fR"
+Repeat the check; see
+.B WATCH MODE
+(default every 2 s).
 .SS tls
 .TP
 .BI \-\-port " N"
@@ -391,12 +549,32 @@ Default:
 Connection timeout in seconds.
 Default:
 .BR 5.0 .
+.TP
+.BI \-\-min\-days " N"
+Exit 1 if the certificate expires in fewer than
+.I N
+days (an expired certificate always fails).
 .SS http
 .TP
 .BI \-t " SEC" ", \-\-timeout " SEC
 Request timeout in seconds.
 Default:
 .BR 8.0 .
+.TP
+.BI \-\-expect\-status " CODE"
+Exit 1 unless the final HTTP status is
+.IR CODE .
+Without it, any status \(>= 400 fails.
+.TP
+.BI \-\-max\-latency " MS"
+Exit 1 if the total request time exceeds
+.I MS
+milliseconds.
+.TP
+.BR \-\-watch ", " \-\-until\-up ", " \-\-every " \fISEC\fR"
+Repeat the request; see
+.B WATCH MODE
+(default every 5 s).
 .SS portscan
 .TP
 .BI \-p " LIST" ", \-\-ports " LIST
@@ -471,20 +649,7 @@ for jumbo-frame networks.
 Per-probe timeout.
 Default:
 .BR 2.0 .
-.SS mtu
-.TP
-.BI \-\-max\-mtu " BYTES"
-Search ceiling for path MTU (bytes).
-Default:
-.BR 1500 .
-Use
-.B 9000
-for jumbo-frame networks.
-.TP
-.BI \-t " SEC" ", \-\-timeout " SEC
-Per-probe timeout.
-Default:
-.BR 2.0 .
+.SS health
 .TP
 .BI \-c " N" ", \-\-count " N
 ICMP ping packets used for scoring.
@@ -495,6 +660,75 @@ Default:
 Per-packet timeout.
 Default:
 .BR 2.0 .
+.TP
+.BI \-\-min\-score " N"
+Exit 1 if the health score (0\(en100) is below
+.IR N .
+.TP
+.BR \-\-watch ", " \-\-until\-up ", " \-\-every " \fISEC\fR"
+Repeat the check; see
+.B WATCH MODE
+(default every 30 s).
+.SS dnscheck
+.TP
+.BI \-\-min\-score " N"
+Exit 1 if the DNS health score (0\(en100) is below
+.IR N .
+.SS propagation
+.TP
+.BI \-t " TYPE" ", \-\-type " TYPE
+Record type:
+.BR A ,
+.BR AAAA ,
+.BR CNAME ,
+.BR MX ,
+.BR NS ,
+or
+.BR TXT .
+Default:
+.BR A .
+.TP
+.BI \-\-expect " VALUE"
+Exit 1 unless every resolver that answered returns
+.I VALUE
+(repeatable; MX values as
+.RI \(dq PRIORITY " " HOST \(dq).
+.TP
+.BI \-s " IP" ", \-\-server " IP
+Also query this resolver (repeatable).
+.TP
+.B \-\-no\-system
+Skip your own system resolver.
+.SS check
+.TP
+.BI \-w " N" ", \-\-workers " N
+Checks run in parallel.
+Default:
+.BR 8 .
+.TP
+.B \-\-example
+Print an example check file and exit.
+.SS net
+.TP
+.B \-\-no\-public
+Skip the public IP lookup; nothing leaves the local network.
+.TP
+.B \-\-all
+Also list interfaces that only have link-local addresses.
+.SS speedtest
+.TP
+.BI \-c " N" ", \-\-connections " N
+Parallel connections.
+Default:
+.BR 4 ;
+use
+.B 1
+for a single stream.
+.TP
+.BI \-d " SEC" ", \-\-duration " SEC
+Maximum download measurement time.
+Default:
+.BR 8 .
 .SS listen
 .TP
 .BI \-\-proto " PROTO"
@@ -503,6 +737,55 @@ Must be
 .B tcp
 or
 .BR udp .
+.
+.SH WATCH MODE
+.BR tcp ,
+.BR http ,
+and
+.B health
+accept:
+.TP
+.B \-\-watch
+Repeat the check every
+.B \-\-every
+seconds until Ctrl-C, one line per check, highlighting DOWN / UP
+transitions with the downtime, then print a summary (checks, uptime %,
+state changes, longest outage, average latency).
+The exit status reflects the final state.
+.TP
+.B \-\-until\-up
+Repeat the check until it passes, then exit 0 \(em useful to wait for a
+service in scripts (works with
+.BR \-\-quiet ).
+Ctrl-C exits 130.
+.PP
+Each run is judged like a normal run, so thresholds such as
+.B \-\-max\-latency
+or
+.B \-\-expect\-status
+also decide UP / DOWN.
+Export formats cannot be combined with watch mode.
+.
+.SH SCRIPTING AND MONITORING
+.RS
+.nf
+# fail a cron job / CI step when the link degrades
+xping ping 1.1.1.1 -c 10 --max-loss 10 --max-latency 150 -q || alert
+
+# wait for a database before running migrations
+xping tcp db.internal 5432 --until-up -q && ./migrate
+
+# certificate expiry alarm
+xping tls example.com --min-days 14 -q || echo "renew soon"
+
+# has the new DNS record propagated everywhere?
+xping propagation example.com --expect 203.0.113.10 -q
+
+# one config file, one exit code
+xping check --example > checks.toml
+xping check checks.toml --json > report.json
+.fi
+.RE
 .
 .SH OUTPUT COLOURS
 .TP
@@ -594,25 +877,33 @@ The last 10 scores are displayed as a sparkline with a trend arrow
 (\(ua better, \(da worse, \(-> stable).
 .
 .SH PERMISSIONS
-Raw ICMP sockets require one of:
-.IP \(bu 4
-Running as
-.BR root .
-.IP \(bu 4
-The
-.B cap_net_raw
-Linux capability set on the binary.
+On macOS, and on Linux when the user's group is inside
+.I net.ipv4.ping_group_range
+(the default on most current distributions), xping uses unprivileged
+ICMP sockets:
+.BR ping ,
+.BR trace ,
+.BR mtr ,
+and
+.B health
+need no root.
 .PP
-Without elevated permissions xping falls back to the system
+Otherwise native ICMP needs
+.B root
+or the
+.B cap_net_raw
+capability, and without it xping falls back to the system
 .BR ping (8)
 and
 .BR traceroute (8)
 binaries automatically.
-To grant the capability without requiring root:
+.B xping deps
+shows which mode is available.
+To allow unprivileged ICMP sockets on a Linux system that disables them:
 .PP
 .RS
 .nf
-sudo setcap cap_net_raw+ep $(which xping)
+sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
 .fi
 .RE
 .
@@ -628,10 +919,22 @@ human-readable message.
 .SH EXIT STATUS
 .TP
 .B 0
-Success.
+The check passed.
 .TP
 .B 1
-Error: host unresolvable, network failure, or unexpected exception.
+The check failed: host unresolvable or unreachable (100% loss), port
+closed, HTTP status \(>= 400, expired certificate, DNS error, a
+threshold option was exceeded (the reason is printed on standard
+error unless
+.BR \-\-quiet ),
+any check in a
+.B check
+file failed \(em or an unexpected error occurred.
+.TP
+.B 2
+Invalid usage: bad arguments, incompatible options, or an invalid
+.B check
+file.
 .TP
 .B 130
 Interrupted by the user (Ctrl-C / SIGINT).
@@ -654,7 +957,13 @@ Twenty rapid-fire pings to Cloudflare DNS.
 Continuous live ping with sparkline and running statistics.
 .TP
 .B xping trace 8.8.8.8 \-\-max\-hops 15
-Trace the path to Google DNS, up to 15 hops, with ASCII path tree.
+Trace the path to Google DNS, up to 15 hops.
+.TP
+.B xping trace cloudflare.com \-\-asn
+Trace with the network operator (AS number and name) of every hop.
+.TP
+.B xping ping \-6 google.com
+Ping over IPv6.
 .TP
 .B xping mtr 1.1.1.1 \-\-cycles 20
 MTR: per-hop live ping for 20 cycles with stdev and sparkline.
@@ -699,7 +1008,22 @@ Binary-search the path MTU to 8.8.8.8.
 Health score with 16 ping packets and trend history.
 .TP
 .B xping speedtest
-Download/upload speed measurement via Cloudflare (no iperf3 needed).
+Download/upload speed via Cloudflare with 4 parallel connections (no iperf3 needed).
+.TP
+.B xping net
+Interfaces, gateway, DNS servers and public IPv4/IPv6 at a glance.
+.TP
+.B xping propagation example.com \-\-type MX
+Compare MX answers across public resolvers.
+.TP
+.B xping tcp db.internal 5432 \-\-until\-up \-q
+Wait until the database port accepts connections, then exit 0.
+.TP
+.B xping http https://example.com \-\-watch
+Watch a website; highlight outages and print uptime on Ctrl-C.
+.TP
+.B xping check checks.toml
+Run every check in a config file; exit 1 if any failed.
 .TP
 .B xping listen \-\-proto tcp
 All locally listening TCP ports with process names and PIDs.

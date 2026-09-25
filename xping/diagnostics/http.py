@@ -10,6 +10,7 @@ import sys
 import time
 from urllib.parse import urljoin, urlsplit
 
+from xping.diagnostics.resolve import resolve
 from xping.diagnostics.sslctx import secure_context as _ssl_context
 from xping.models.http import HttpResult, RedirectHop
 from xping.render import BOLD, BRAND_TEAL, c, kv, section_header
@@ -35,7 +36,7 @@ def _supports_h2(host: str, port: int, timeout: float) -> bool | None:
         return None
 
 
-def _one_request(url: str, timeout: float) -> dict:
+def _one_request(url: str, timeout: float, family: int | None = None) -> dict:
     """Issue a single GET and return a timing + metadata dict."""
     parts = urlsplit(url)
     if parts.scheme not in ("http", "https"):
@@ -49,7 +50,7 @@ def _one_request(url: str, timeout: float) -> dict:
 
     # DNS time
     t0 = time.perf_counter()
-    socket.gethostbyname(host)
+    ip = resolve(host, family)
     dns_ms = (time.perf_counter() - t0) * 1000
 
     # TCP connect + optional TLS. Only HTTP/1.1 is offered via ALPN:
@@ -62,6 +63,11 @@ def _one_request(url: str, timeout: float) -> dict:
         conn = http.client.HTTPSConnection(host, port, timeout=timeout, context=ctx)
     else:
         conn = http.client.HTTPConnection(host, port, timeout=timeout)
+    # Connect to the address resolved above (honours -4/-6) while keeping
+    # *host* for the Host header and TLS SNI/certificate checks.
+    conn._create_connection = lambda address, *a, **kw: socket.create_connection(
+        (ip, address[1]), *a, **kw
+    )
     conn.connect()
     tcp_ms = (time.perf_counter() - t1) * 1000
 
@@ -92,12 +98,15 @@ def _one_request(url: str, timeout: float) -> dict:
             ttfb_ms=ttfb_ms,
             total_ms=total_ms,
             http_version=http_version,
+            ip=ip,
         )
     finally:
         conn.close()
 
 
-def http_diagnose(url: str, timeout: float = 8.0, quiet: bool = False) -> HttpResult:
+def http_diagnose(
+    url: str, timeout: float = 8.0, quiet: bool = False, family: int | None = None
+) -> HttpResult:
     if "://" not in url:
         url = f"http://{url}"
 
@@ -111,7 +120,7 @@ def http_diagnose(url: str, timeout: float = 8.0, quiet: bool = False) -> HttpRe
         return result
 
     try:
-        socket.gethostbyname(host)
+        resolve(host, family)
     except socket.gaierror:
         if not quiet:
             resolve_error(host)
@@ -139,7 +148,7 @@ def http_diagnose(url: str, timeout: float = 8.0, quiet: bool = False) -> HttpRe
                 break
             seen.add(current)
 
-            d = _one_request(current, timeout)
+            d = _one_request(current, timeout, family)
 
             if 300 <= d["status"] < 400 and d["location"]:
                 result.redirects.append(RedirectHop(url=current, status_code=d["status"]))
@@ -156,6 +165,7 @@ def http_diagnose(url: str, timeout: float = 8.0, quiet: bool = False) -> HttpRe
             result.dns_ms = d["dns_ms"]
             result.tcp_ms = d["tcp_ms"]
             result.http_version = d["http_version"]
+            result.ip = d.get("ip")
             final = urlsplit(current)
             if final.scheme == "https" and final.hostname:
                 result.h2_supported = _supports_h2(final.hostname, final.port or 443, timeout)

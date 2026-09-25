@@ -175,18 +175,20 @@ def print_deps_status() -> None:
 
     print_table(["Tool", "Status", "Install command"], rows)
 
-    # Raw socket capability
+    # Native ICMP capability (unprivileged ping sockets, or raw with root)
     import socket as _socket
 
-    try:
-        s = _socket.socket(_socket.AF_INET, _socket.SOCK_RAW, _socket.IPPROTO_ICMP)
-        s.close()
-        raw = c(" ✔ yes (running as root or cap_net_raw)", BRAND_MINT)
-    except PermissionError:
-        raw = c(" ℹ  no  — using system ping/traceroute fallback", BRAND_AMBER)
-    except Exception:
-        raw = c(" ✘ unavailable", BRAND_ROSE)
+    from xping.diagnostics.icmp import socket_mode
+
+    labels = {
+        "dgram": c(" ✔ unprivileged ICMP sockets — no root needed", BRAND_MINT),
+        "raw": c(" ✔ raw sockets (running as root or cap_net_raw)", BRAND_MINT),
+        None: c(" ℹ  unavailable — using system ping/traceroute fallback", BRAND_AMBER),
+    }
+    icmp_v4 = labels[socket_mode(_socket.AF_INET)]
+    icmp_v6 = labels[socket_mode(_socket.AF_INET6)]
 
     print()
-    print(kv("Raw sockets", raw))
+    print(kv("Native ICMP (v4)", icmp_v4))
+    print(kv("Native ICMP (v6)", icmp_v6))
     print()
