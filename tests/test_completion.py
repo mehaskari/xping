@@ -23,18 +23,21 @@ def fake_env(tmp_path):
     home = tmp_path / "home"
     (home / ".xping").mkdir(parents=True)
     (home / ".xping" / "profiles.json").write_text(
-        json.dumps({"prod-db": {"target": "10.0.0.5"}, "staging-api": {"target": "s.example"}})
+        json.dumps({"prod-db": {"target": "10.0.0.5"}, "staging-api": {"target": "s.example"}}),
+        encoding="utf-8",
     )
     bindir = tmp_path / "bin"
     bindir.mkdir()
     repo = Path(__file__).resolve().parents[1]
     shim = bindir / "xping"
-    shim.write_text(f'#!/bin/sh\nPYTHONPATH="{repo}" exec "{sys.executable}" -m xping "$@"\n')
+    shim.write_text(
+        f'#!/bin/sh\nPYTHONPATH="{repo}" exec "{sys.executable}" -m xping "$@"\n', encoding="utf-8"
+    )
     shim.chmod(0o755)
     work = tmp_path / "work"
     work.mkdir()
     for name in ("checks.toml", "c2.json", "notes.txt"):
-        (work / name).write_text("")
+        (work / name).write_text("", encoding="utf-8")
     env = {**os.environ, "HOME": str(home), "PATH": f"{bindir}{os.pathsep}{os.environ['PATH']}"}
     return env, work, tmp_path
 
@@ -84,7 +87,7 @@ def test_scripts_parse(tmp_path, shell, checker):
     if not (POSIX and shutil.which(checker[0])):
         pytest.skip(f"{checker[0]} not installed")
     path = tmp_path / f"xping.{shell}"
-    path.write_text(completion.generate(shell))
+    path.write_text(completion.generate(shell), encoding="utf-8")
     subprocess.run([*checker, str(path)], check=True)
 
 
@@ -108,9 +111,9 @@ _BASH_DRIVER = textwrap.dedent(
 def test_bash_completes_commands_options_values_profiles_and_files(fake_env, tmp_path):
     env, work, _ = fake_env
     script = tmp_path / "xping.bash"
-    script.write_text(completion.generate("bash"))
+    script.write_text(completion.generate("bash"), encoding="utf-8")
     driver = tmp_path / "drive.sh"
-    driver.write_text(_BASH_DRIVER)
+    driver.write_text(_BASH_DRIVER, encoding="utf-8")
     cases = {
         "xping pi": "ping",
         "xping ping --max": "--max-loss --max-latency",
@@ -127,6 +130,7 @@ def test_bash_completes_commands_options_values_profiles_and_files(fake_env, tmp
         ["bash", str(driver), str(script), *cases, "xping check "],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         env=env,
         cwd=work,
         check=True,
@@ -168,15 +172,16 @@ _ZSH_TAB = textwrap.dedent(
 def test_zsh_tab_after_sourcing(fake_env, tmp_path, buffer, expected):
     env, work, _ = fake_env
     script = tmp_path / "_xping"
-    script.write_text(completion.generate("zsh"))
+    script.write_text(completion.generate("zsh"), encoding="utf-8")
     tab = tmp_path / "tab.zsh"
-    tab.write_text(_ZSH_TAB)
+    tab.write_text(_ZSH_TAB, encoding="utf-8")
     # like a plain ~/.zshrc: nothing but our line — the script loads compinit itself
     setup = f"cd {work}; source {script}"
     got = subprocess.run(
         ["zsh", "-f", str(tab), setup, buffer],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         env=env,
         timeout=60,
     ).stdout.split()
@@ -189,26 +194,28 @@ def test_zsh_tab_after_sourcing(fake_env, tmp_path, buffer, expected):
 def test_install_zsh_is_idempotent_and_preserves_rc(tmp_path, monkeypatch):
     monkeypatch.delenv("ZDOTDIR", raising=False)
     rc = tmp_path / ".zshrc"
-    rc.write_text("autoload -Uz compinit && compinit\nalias ll='ls -l'\n")
+    rc.write_text("autoload -Uz compinit && compinit\nalias ll='ls -l'\n", encoding="utf-8")
     completion.install("zsh", home=tmp_path)
     completion.install("zsh", home=tmp_path)
-    text = rc.read_text()
+    text = rc.read_text(encoding="utf-8")
     assert text.count(completion._BEGIN) == 1 and "alias ll" in text
     assert text.index("compinit") < text.index(completion._BEGIN)  # appended after compinit
     script = tmp_path / ".xping" / "completions" / "_xping"
-    assert script.read_text() == completion.generate("zsh")
+    assert script.read_text(encoding="utf-8") == completion.generate("zsh")
     completion.uninstall("zsh", home=tmp_path)
-    assert completion._BEGIN not in rc.read_text() and "alias ll" in rc.read_text()
+    assert completion._BEGIN not in rc.read_text(encoding="utf-8") and "alias ll" in rc.read_text(
+        encoding="utf-8"
+    )
     assert not script.exists()
 
 
 def test_install_bash_uses_bash_profile_on_macos(tmp_path, monkeypatch):
     monkeypatch.setattr(completion.sys, "platform", "darwin")
     completion.install("bash", home=tmp_path)
-    assert completion._BEGIN in (tmp_path / ".bash_profile").read_text()
+    assert completion._BEGIN in (tmp_path / ".bash_profile").read_text(encoding="utf-8")
     monkeypatch.setattr(completion.sys, "platform", "linux")
     completion.install("bash", home=tmp_path)
-    assert completion._BEGIN in (tmp_path / ".bashrc").read_text()
+    assert completion._BEGIN in (tmp_path / ".bashrc").read_text(encoding="utf-8")
 
 
 def test_install_fish_writes_completions_dir(tmp_path, monkeypatch):
