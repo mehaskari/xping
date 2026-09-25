@@ -610,10 +610,26 @@ Examples:
 
     profile_sub.add_parser("list", help="List all saved profiles")
 
-    sub.add_parser(
+    p_speed = sub.add_parser(
         "speedtest",
         parents=[export_parent],
         help="Measure download/upload speed via Cloudflare",
+    )
+    p_speed.add_argument(
+        "-c",
+        "--connections",
+        type=_positive_int,
+        default=4,
+        metavar="N",
+        help="Parallel connections [default: 4; 1 = single-stream]",
+    )
+    p_speed.add_argument(
+        "-d",
+        "--duration",
+        type=_positive_float,
+        default=8.0,
+        metavar="SEC",
+        help="Maximum download measurement time [default: 8]",
     )
 
     p_completion = sub.add_parser("completion", help="Generate shell tab-completion script")

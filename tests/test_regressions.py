@@ -342,7 +342,7 @@ class TestExportFlags:
             "xping.cli.commands.speedtest", return_value=SpeedResult(download_mbps=50.0)
         ) as fake:
             cmd_speedtest(args)
-        fake.assert_called_once_with(quiet=True)
+        fake.assert_called_once_with(connections=4, duration=8.0, quiet=True)
         assert json.loads(capsys.readouterr().out)["grade"] == "Good"
 
 

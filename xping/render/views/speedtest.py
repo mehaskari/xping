@@ -23,6 +23,9 @@ def print_result(result) -> None:
     grade = result.grade
     color = _GRADE_COLOR.get(grade, BWHITE)
     print()
+    if result.error:
+        print(c(f"  ✘  {result.error}", BRAND_ROSE, BOLD))
+        print()
     print(c("  " + "─" * 60, DIM))
     print()
 
@@ -41,6 +44,9 @@ def print_result(result) -> None:
         rows.append(["Upload", f"{result.upload_mbps:.1f} Mbps"])
     if result.server:
         rows.append(["Server", result.server])
+    rows.append(["Connections", str(result.connections)])
+    if result.download_bytes:
+        rows.append(["Data used", f"{(result.download_bytes + result.upload_bytes) / 1e6:.0f} MB"])
     if rows:
         print_table(["Metric", "Value"], rows)
     print()
