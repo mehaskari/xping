@@ -185,6 +185,17 @@ def sections_for(result: Any) -> list[Section]:
             for e in result.entries
         ]
         return [Section("Listening sockets", ["proto", "address", "port", "pid", "process"], rows)]
+    if isinstance(result, m.NetResult):
+        rows = [
+            [i.name, i.state, i.mtu or "", i.mac or "", " ".join(i.addresses)]
+            for i in result.interfaces
+        ]
+        columns = ["interface", "state", "mtu", "mac", "addresses"]
+        dns = [[s] for s in result.dns_servers]
+        return [
+            Section("Interfaces", columns, rows, primary=False),
+            Section("DNS servers", ["server"], dns, primary=False),
+        ]
     if isinstance(result, m.ProfileListResult):
         rows = [[p.name, p.target, p.port or "", p.note or ""] for p in result.profiles]
         return [Section("Profiles", ["name", "target", "port", "note"], rows)]

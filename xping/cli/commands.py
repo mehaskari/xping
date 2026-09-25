@@ -18,6 +18,7 @@ from xping.diagnostics.listen import listen
 from xping.diagnostics.lookup import lookup
 from xping.diagnostics.mtr import mtr
 from xping.diagnostics.mtu import mtu
+from xping.diagnostics.net import net
 from xping.diagnostics.osdetect import osdetect
 from xping.diagnostics.ping import ping
 from xping.diagnostics.ping import watch as ping_watch
@@ -290,6 +291,13 @@ def cmd_listen(args: argparse.Namespace) -> object:
 def cmd_osdetect(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
     result = osdetect(host=_resolve_host(args.host), quiet=quiet, family=family_of(args))
+    emit_export(result, args)
+    return result
+
+
+def cmd_net(args: argparse.Namespace) -> object:
+    quiet = output_suppressed(args)
+    result = net(public=not args.no_public, quiet=quiet, show_all=args.all)
     emit_export(result, args)
     return result
 

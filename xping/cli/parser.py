@@ -133,6 +133,7 @@ Commands:
   osdetect <host>      Guess remote OS from TTL fingerprint
   speedtest            Download/upload speed via Cloudflare
   listen               Show locally listening TCP/UDP ports
+  net                  Local network overview: interfaces, gateway, DNS, public IP
   deps                 Check system dependency status
   completion <shell>   Generate bash/zsh/fish tab-completion script
   about                Show author, license, and attribution info
@@ -160,6 +161,7 @@ Examples:
   xping mtu 8.8.8.8
   xping dnscheck github.com
   xping speedtest --json
+  xping net
   xping profile add prod-db 10.0.0.5 --port 5432 --note "Production DB"
   xping profile list
   xping ping prod-db
@@ -546,6 +548,20 @@ Examples:
     )
     _add_family(p_osdetect)
     p_osdetect.add_argument("host", help="Hostname or IP address")
+
+    p_net = sub.add_parser(
+        "net",
+        parents=[export_parent],
+        help="Local network overview: interfaces, gateway, DNS, public IP",
+    )
+    p_net.add_argument(
+        "--no-public",
+        action="store_true",
+        help="Skip the public IP lookup (no traffic leaves your network)",
+    )
+    p_net.add_argument(
+        "--all", action="store_true", help="Also list interfaces with only link-local addresses"
+    )
 
     sub.add_parser("deps", help="Check system dependency status")
     sub.add_parser("about", help="Show author, license, and attribution info")

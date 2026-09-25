@@ -29,6 +29,7 @@ from xping.models import (
     ListenResult,
     MtrResult,
     MtuResult,
+    NetResult,
     OsDetectResult,
     PingResult,
     PortScanResult,
@@ -200,7 +201,7 @@ def evaluate(result, opts=None) -> list[Failure]:
         return [Failure(result.error or "cannot resolve host")] if not result.resolved else []
     if isinstance(result, DnsResult | RdnsResult | WhoisResult | MtuResult | OsDetectResult):
         return _errored(result)
-    if isinstance(result, ListenResult):
+    if isinstance(result, ListenResult | NetResult):
         return _errored(result)
     if isinstance(result, SpeedResult):
         if result.error:

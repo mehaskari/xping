@@ -70,6 +70,8 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     "ListenEntry": ("address",),
     "ListenResult": ("count",),
     "OsDetectResult": (),
+    "NetInterface": ("loopback",),
+    "NetResult": (),
     "DnsCheckItem": (),
     "DnsCheckResult": ("grade", "ok_count", "fail_count", "warn_count", "unknown_count"),
 }

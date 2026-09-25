@@ -9,6 +9,7 @@ from .listen import ListenEntry, ListenResult
 from .lookup import DnsResult
 from .mtr import MtrHop, MtrResult
 from .mtu import MtuResult
+from .net import NetInterface, NetResult
 from .osdetect import OsDetectResult
 from .ping import PingResult
 from .portscan import PortResult, PortScanResult
@@ -45,6 +46,8 @@ __all__ = [
     "MtrHop",
     "MtrResult",
     "MtuResult",
+    "NetInterface",
+    "NetResult",
     "DnsCheckItem",
     "DnsCheckResult",
     "SpeedResult",
