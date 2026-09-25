@@ -39,6 +39,7 @@ from xping.models import (
     SweepResult,
     TcpResult,
     TlsResult,
+    WatchResult,
     WhoisResult,
 )
 
@@ -204,6 +205,10 @@ def evaluate(result, opts=None) -> list[Failure]:
         return _errored(result)
     if isinstance(result, ListenResult | NetResult):
         return _errored(result)
+    if isinstance(result, WatchResult):
+        if result.last_ok:
+            return []
+        return [Failure(f"{result.target} was down at the last check")]
     if isinstance(result, PropagationResult):
         return [Failure(message, threshold) for message, threshold in result.problems()]
     if isinstance(result, SpeedResult):

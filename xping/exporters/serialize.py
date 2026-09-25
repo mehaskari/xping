@@ -72,6 +72,8 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     "OsDetectResult": (),
     "NetInterface": ("loopback",),
     "NetResult": (),
+    "WatchSample": (),
+    "WatchResult": ("checks", "up_pct", "last_ok", "transitions", "longest_outage_s"),
     "ResolverAnswer": ("answered",),
     "PropagationResult": ("consistent", "distinct_answers", "majority", "matching"),
     "DnsCheckItem": (),

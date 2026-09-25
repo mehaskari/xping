@@ -21,6 +21,7 @@ from .sweep import HostProbe, SweepResult
 from .tcp import TcpAttempt, TcpResult
 from .tls import TlsResult
 from .trace import Hop
+from .watch import WatchResult, WatchSample
 from .whois import WhoisResult
 
 __all__ = [
@@ -57,4 +58,6 @@ __all__ = [
     "ListenEntry",
     "ListenResult",
     "OsDetectResult",
+    "WatchResult",
+    "WatchSample",
 ]

@@ -20,6 +20,7 @@ from . import (
     tcp,
     tls,
     trace,
+    watch,
     whois,
 )
 
@@ -43,5 +44,6 @@ __all__ = [
     "tcp",
     "tls",
     "trace",
+    "watch",
     "whois",
 ]

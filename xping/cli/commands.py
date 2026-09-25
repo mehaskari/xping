@@ -6,7 +6,8 @@ import argparse
 
 from xping import __author__, __copyright__, __email__, __license__, __url__, __version__
 from xping.cli.errors import UsageError
-from xping.cli.export import emit_export, output_suppressed
+from xping.cli.export import emit_export, export_requested, output_suppressed
+from xping.cli.verdict import evaluate
 from xping.diagnostics import profile as profile_diag
 from xping.diagnostics.bundle import run_bundle
 from xping.diagnostics.deps import print_deps_status
@@ -31,6 +32,7 @@ from xping.diagnostics.sweep import sweep
 from xping.diagnostics.tcp import tcp
 from xping.diagnostics.tls import tls
 from xping.diagnostics.trace import trace
+from xping.diagnostics.watch import watch
 from xping.diagnostics.whois import whois
 from xping.render import (
     BOLD,
@@ -46,6 +48,34 @@ from xping.render import (
 def _resolve_host(value: str) -> str:
     """Transparently substitute a saved profile name for its stored target."""
     return profile_diag.resolve_target(value)
+
+
+def _watch_requested(args: argparse.Namespace) -> bool:
+    return bool(getattr(args, "watch", False) or getattr(args, "until_up", False))
+
+
+def _run_watch(args: argparse.Namespace, target: str, check: str, run_once, describe) -> object:
+    """Shared --watch / --until-up driver: judge every run with the same
+    verdict (and thresholds) as the exit code, and hand it to watch()."""
+    if export_requested(args):
+        raise UsageError("--watch/--until-up cannot be combined with --json/--csv/--markdown")
+    if getattr(args, "quiet", False) and not getattr(args, "until_up", False):
+        raise UsageError("--watch runs until Ctrl-C and cannot be combined with --quiet")
+
+    def probe():
+        result = run_once()
+        failures = evaluate(result, args)
+        latency, detail = describe(result)
+        return (not failures, latency, failures[0].message if failures else detail)
+
+    return watch(
+        target,
+        check,
+        probe,
+        every=args.every,
+        until_up=getattr(args, "until_up", False),
+        quiet=getattr(args, "quiet", False),
+    )
 
 
 def cmd_ping(args: argparse.Namespace) -> object:
@@ -103,6 +133,22 @@ def cmd_lookup(args: argparse.Namespace) -> object:
 
 
 def cmd_tcp(args: argparse.Namespace) -> object:
+    if _watch_requested(args):
+        host = _resolve_host(args.host)
+        return _run_watch(
+            args,
+            f"{args.host}:{args.port}",
+            "tcp",
+            lambda: tcp(
+                host=host,
+                port=args.port,
+                count=1,
+                timeout=args.timeout,
+                quiet=True,
+                family=family_of(args),
+            ),
+            lambda r: (r.avg_connect_ms, "connected"),
+        )
     quiet = output_suppressed(args)
     result = tcp(
         host=_resolve_host(args.host),
@@ -201,6 +247,16 @@ def cmd_tls(args: argparse.Namespace) -> object:
 
 
 def cmd_http(args: argparse.Namespace) -> object:
+    if _watch_requested(args):
+        return _run_watch(
+            args,
+            args.url,
+            "http",
+            lambda: http_diagnose(
+                url=args.url, timeout=args.timeout, quiet=True, family=family_of(args)
+            ),
+            lambda r: (r.total_ms, f"HTTP {r.status_code} {r.reason or ''}".strip()),
+        )
     quiet = output_suppressed(args)
     result = http_diagnose(url=args.url, timeout=args.timeout, quiet=quiet, family=family_of(args))
     emit_export(result, args)
@@ -222,6 +278,21 @@ def cmd_dnscheck(args: argparse.Namespace) -> object:
 
 
 def cmd_health(args: argparse.Namespace) -> object:
+    if _watch_requested(args):
+        host = _resolve_host(args.host)
+        return _run_watch(
+            args,
+            args.host,
+            "health",
+            lambda: health(
+                host=host,
+                count=args.count,
+                timeout=args.timeout,
+                quiet=True,
+                family=family_of(args),
+            ),
+            lambda r: (r.ping.avg_rtt if r.ping else None, f"score {r.score} ({r.grade})"),
+        )
     quiet = output_suppressed(args)
     result = health(
         host=_resolve_host(args.host),

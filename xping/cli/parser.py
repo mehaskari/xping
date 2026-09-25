@@ -76,6 +76,33 @@ def _add_family(p: argparse.ArgumentParser) -> None:
     fam.add_argument("-6", "--ipv6", action="store_true", help="Use IPv6 only")
 
 
+def _positive_float(value: str) -> float:
+    number = _non_negative_float(value)
+    if number == 0:
+        raise argparse.ArgumentTypeError("value must be greater than zero")
+    return number
+
+
+def _add_watch(p: argparse.ArgumentParser, every: float) -> None:
+    p.add_argument(
+        "--watch",
+        action="store_true",
+        help="Repeat the check until Ctrl-C, highlighting up/down changes",
+    )
+    p.add_argument(
+        "--until-up",
+        action="store_true",
+        help="Repeat the check until it passes, then exit 0 (works with --quiet)",
+    )
+    p.add_argument(
+        "--every",
+        type=_positive_float,
+        default=every,
+        metavar="SEC",
+        help=f"Seconds between checks in watch mode [default: {every:g}]",
+    )
+
+
 def _add_max_loss(p: argparse.ArgumentParser, what: str = "packet loss") -> None:
     p.add_argument(
         "--max-loss",
@@ -260,6 +287,7 @@ Examples:
         help="Number of connection attempts [default: 3]",
     )
     _add_family(p_tcp)
+    _add_watch(p_tcp, 2.0)
     p_tcp.add_argument(
         "-t",
         "--timeout",
@@ -444,6 +472,7 @@ Examples:
         "http", parents=[export_parent], help="HTTP diagnostics (status, headers, TTFB)"
     )
     _add_family(p_http)
+    _add_watch(p_http, 5.0)
     p_http.add_argument("url", help="URL to request (http:// or https://)")
     p_http.add_argument(
         "-t",
@@ -476,6 +505,7 @@ Examples:
         help="Ping packets for scoring [default: 8]",
     )
     _add_family(p_health)
+    _add_watch(p_health, 30.0)
     p_health.add_argument(
         "-t",
         "--timeout",
