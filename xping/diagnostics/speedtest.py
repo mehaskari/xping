@@ -5,11 +5,11 @@ single-connection throughput estimate. Pure stdlib, no iperf3 needed.
 """
 
 import socket
-import ssl
 import sys
 import time
 import urllib.request
 
+from xping.diagnostics.sslctx import secure_context
 from xping.models.speedtest import SpeedResult
 from xping.render import BOLD, BRAND_TEAL, c, kv, section_header
 from xping.render.animations import Spinner
@@ -17,28 +17,13 @@ from xping.render.errors import error
 from xping.render.views import speedtest as speedtest_view
 
 # Cloudflare __down endpoint — returns a fixed-size payload at line speed
-_SERVERS = [
-    ("Cloudflare", "speed.cloudflare.com", "/cdn-cgi/trace"),
-    ("Cloudflare", "speed.cloudflare.com", "/__down?bytes=25000000"),
-]
 _PING_URL = "https://speed.cloudflare.com/cdn-cgi/trace"
 _DOWN_URL = "https://speed.cloudflare.com/__down?bytes=25000000"  # 25 MB
 _UP_URL = "https://speed.cloudflare.com/__up"
 
 
-def _ssl_ctx() -> ssl.SSLContext:
-    ctx = ssl.create_default_context()
-    try:
-        import certifi
-
-        ctx.load_verify_locations(certifi.where())
-    except ImportError:
-        pass
-    return ctx
-
-
 def _measure_ping(timeout: float = 5.0) -> float | None:
-    ctx = _ssl_ctx()
+    ctx = secure_context()
     times = []
     for _ in range(3):
         try:
@@ -47,12 +32,12 @@ def _measure_ping(timeout: float = 5.0) -> float | None:
                 r.read()
             times.append((time.perf_counter() - t0) * 1000)
         except Exception:
-            pass
+            continue  # one failed sample is fine; the fastest successful one is reported
     return min(times) if times else None
 
 
 def _measure_download(timeout: float = 20.0) -> tuple[float | None, str]:
-    ctx = _ssl_ctx()
+    ctx = secure_context()
     try:
         req = urllib.request.Request(_DOWN_URL, headers={"User-Agent": "xping/speedtest"})
         t0 = time.perf_counter()
@@ -73,7 +58,7 @@ def _measure_download(timeout: float = 20.0) -> tuple[float | None, str]:
 
 
 def _measure_upload(size_bytes: int = 5_000_000, timeout: float = 20.0) -> float | None:
-    ctx = _ssl_ctx()
+    ctx = secure_context()
     payload = b"x" * size_bytes
     try:
         req = urllib.request.Request(
@@ -149,7 +134,6 @@ def speedtest(quiet: bool = False) -> SpeedResult:
     result.upload_mbps = ul
     if spinner:
         spinner.stop()
-        spinner = None
 
     if not quiet:
         speedtest_view.print_result(result)

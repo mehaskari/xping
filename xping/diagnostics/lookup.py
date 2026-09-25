@@ -56,10 +56,8 @@ def _parse_dig_a(output: str) -> tuple[list[str], int | None]:
         parts = line.split()
         if len(parts) >= 5 and parts[3] == "A":
             ips.append(parts[4])
-            try:
+            if parts[1].isdigit():
                 ttl = int(parts[1])
-            except ValueError:
-                pass
     return ips, ttl
 
 
@@ -77,7 +75,7 @@ def _parse_dig_mx(output: str) -> list[tuple[int, str]]:
             try:
                 records.append((int(parts[4]), parts[5].rstrip(".")))
             except (ValueError, IndexError):
-                pass
+                continue  # malformed MX row — skip it
     return sorted(records)
 
 
@@ -255,7 +253,7 @@ def _socket_resolve(host: str) -> tuple[list[str], list[str]]:
                 if addr not in v4:
                     v4.append(addr)
     except socket.gaierror:
-        pass
+        return [], []  # name does not resolve
     return v4, v6
 
 
@@ -321,7 +319,7 @@ def lookup(
                 try:
                     result.mx.append((int(parts[0]), parts[1].rstrip(".")))
                 except ValueError:
-                    pass
+                    continue  # malformed MX answer — skip it
         result.ns = [n.rstrip(".") for n in raw("NS")]
         if full:
             result.txt = raw("TXT")

@@ -2,8 +2,6 @@
 
 from unittest.mock import patch
 
-import pytest
-
 
 def test_ping_command_linux():
     from xping.platform_cmds import ping_command
@@ -36,7 +34,15 @@ def test_trace_command_unix():
     from xping.platform_cmds import trace_command
     with patch("xping.diagnostics.platform_cmds.trace_tool", return_value="traceroute"):
         cmd = trace_command("example.com", 20, 2)
-    assert cmd == ["traceroute", "-m", "20", "-q", "2", "example.com"]
+    assert cmd == ["traceroute", "-m", "20", "-q", "2", "-w", "2", "example.com"]
+
+
+def test_trace_command_passes_timeout():
+    from xping.platform_cmds import trace_command
+    with patch("xping.diagnostics.platform_cmds.trace_tool", return_value="traceroute"):
+        assert trace_command("h", 5, 1, timeout=4.0)[-3:] == ["-w", "4", "h"]
+    with patch("xping.diagnostics.platform_cmds.trace_tool", return_value="tracert"):
+        assert trace_command("h", 5, 1, timeout=0.5)[-3:] == ["-w", "500", "h"]
 
 
 def test_trace_command_windows():

@@ -50,12 +50,12 @@ def print_result(result) -> None:
 
     # ── Timing breakdown ──────────────────────────────────────────
     print(_sub_header("Timing"))
-    dns_ms = getattr(result, "dns_ms", None)
-    tcp_ms = getattr(result, "tcp_ms", None)
-    http_ver = getattr(result, "http_version", "HTTP/1.1")
+    dns_ms = result.dns_ms
+    tcp_ms = result.tcp_ms
+    http_ver = result.http_version or "HTTP/1.1"
     ttfb = latency_color(result.ttfb_ms) if result.ttfb_ms is not None else c("—", DIM)
     total = latency_color(result.total_ms) if result.total_ms is not None else c("—", DIM)
-    h2 = getattr(result, "h2_supported", None)
+    h2 = result.h2_supported
     print(f"  {c('HTTP version', DIM):<28}  {c(http_ver, BWHITE, BOLD)}")
     if h2 is not None:
         h2_str = c("yes", BRAND_MINT, BOLD) if h2 else c("no", DIM)

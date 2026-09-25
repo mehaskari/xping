@@ -4,9 +4,7 @@ rdns, tls, http, whois, health, profile, mtr, mtu, ping --watch
 """
 
 import json
-import pathlib
 import socket
-import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -105,7 +103,7 @@ class TestTls:
         assert result.error is not None
 
     def test_tls_result_days_remaining(self):
-        import ssl, time
+        import time
         from xping.models.tls import TlsResult
         future = time.strftime("%b %d %H:%M:%S %Y GMT",
                                time.gmtime(time.time() + 86400 * 30))
@@ -144,7 +142,6 @@ class TestTls:
         json.dumps(d)
 
     def test_tls_mock_success(self):
-        import ssl
         from xping.diagnostics.tls import tls
 
         fake_cert = {
@@ -220,7 +217,6 @@ class TestHttp:
 
     def test_http_mock_200(self):
         from xping.diagnostics.http import http_diagnose
-        import http.client, io
 
         mock_resp = MagicMock()
         mock_resp.status = 200
@@ -323,13 +319,6 @@ class TestWhois:
 
     def test_whois_retry_on_os_error(self):
         from xping.diagnostics.whois import _query
-        call_count = [0]
-        def flaky(*args, **kwargs):
-            call_count[0] += 1
-            if call_count[0] < 2:
-                raise OSError("network error")
-            # second call returns data
-            return "Domain Name: GITHUB.COM\nRegistrar: MarkMonitor\n"
         with patch("xping.diagnostics.whois.socket.getaddrinfo",
                    return_value=[(None, None, None, None, ("1.2.3.4", 43))]):
             with patch("xping.diagnostics.whois.socket.create_connection") as mock_conn:
@@ -340,11 +329,9 @@ class TestWhois:
                 mock_sock.recv.side_effect = [b"Domain: GITHUB.COM\r\n", b""]
                 mock_conn.side_effect = [OSError("refused"), mock_sock]
                 with patch("xping.diagnostics.whois.time.sleep"):
-                    try:
-                        _query("whois.verisign-grs.com", "github.com")
-                    except Exception:
-                        pass  # second attempt worked or failed — we just check retry happened
-        assert mock_conn.call_count >= 1
+                    text = _query("whois.verisign-grs.com", "github.com")
+        assert mock_conn.call_count == 2
+        assert "GITHUB.COM" in text
 
 
 # ── health ────────────────────────────────────────────────────────────────────
@@ -423,7 +410,7 @@ class TestHealth:
 class TestProfile:
     @pytest.fixture(autouse=True)
     def tmp_profile_store(self, tmp_path):
-        import xping.diagnostics.profile as pd
+        from xping.diagnostics import profile as pd
         self._orig_file = pd.STORE_FILE
         self._orig_dir = pd.STORE_DIR
         pd.STORE_FILE = tmp_path / "profiles.json"
@@ -453,12 +440,14 @@ class TestProfile:
     def test_remove_profile(self):
         from xping.diagnostics.profile import add, list_profiles, remove
         add("temp", "3.3.3.3", quiet=True)
-        assert remove("temp", quiet=True) is True
+        removed = remove("temp", quiet=True)
+        assert removed is True
         assert list_profiles(quiet=True).count == 0
 
     def test_remove_nonexistent(self):
         from xping.diagnostics.profile import remove
-        assert remove("no-such-profile", quiet=True) is False
+        removed = remove("no-such-profile", quiet=True)
+        assert removed is False
 
     def test_add_invalid_name(self):
         from xping.diagnostics.profile import add
@@ -545,7 +534,6 @@ class TestMtr:
 
     def test_mtr_mock_run(self):
         from xping.diagnostics.mtr import mtr
-        from xping.models.mtr import MtrHop
         with patch("xping.diagnostics.mtr.socket.gethostbyname", return_value="8.8.8.8"):
             with patch("xping.diagnostics.mtr.discover_path",
                        return_value=[(1, "10.0.0.1"), (2, "8.8.8.8")]):
@@ -615,7 +603,6 @@ class TestMtu:
 
     def test_mtu_binary_search(self):
         from xping.diagnostics.mtu import mtu
-        import subprocess
         call_count = [0]
         def fake_probe(host, size, timeout):
             call_count[0] += 1

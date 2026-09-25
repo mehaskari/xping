@@ -344,3 +344,115 @@ class TestExportFlags:
             cmd_speedtest(args)
         fake.assert_called_once_with(quiet=True)
         assert json.loads(capsys.readouterr().out)["grade"] == "Good"
+
+
+# ── TLS context, export fields, osdetect, trace, tcp ─────────────────────────
+
+
+class TestSecureContext:
+    def test_requires_tls12_and_verifies(self):
+        import ssl
+
+        from xping.diagnostics.sslctx import secure_context
+
+        ctx = secure_context()
+        assert ctx.minimum_version >= ssl.TLSVersion.TLSv1_2
+        assert ctx.verify_mode == ssl.CERT_REQUIRED
+        assert ctx.check_hostname
+
+    def test_rdap_never_falls_back_to_unverified_tls(self):
+        from xping.diagnostics import whois as whois_diag
+
+        with (
+            patch.object(whois_diag, "_rdap_url_for", return_value="https://rdap.example"),
+            patch.object(whois_diag.urllib.request, "urlopen", side_effect=OSError("tls")),
+            patch.object(whois_diag.time, "sleep"),
+            patch("ssl._create_unverified_context") as unverified,
+        ):
+            assert whois_diag._rdap_query("example.com", "com") is None
+        unverified.assert_not_called()
+
+
+class TestExportedExtras:
+    def test_http_timing_fields_exported(self):
+        import json
+
+        from xping.exporters import export_json
+        from xping.models.http import HttpResult
+
+        r = HttpResult(url="https://x", dns_ms=1.5, tcp_ms=2.5, http_version="HTTP/1.1")
+        r.h2_supported = True
+        data = json.loads(export_json(r))
+        assert data["dns_ms"] == 1.5
+        assert data["tcp_ms"] == 2.5
+        assert data["http_version"] == "HTTP/1.1"
+        assert data["h2_supported"] is True
+
+    def test_health_history_and_tls_chain_exported(self):
+        from xping.models.health import HealthResult
+        from xping.models.tls import TlsResult
+
+        h = HealthResult(host="h", history=[{"ts": 1, "score": 90, "grade": "Excellent"}])
+        assert h.to_dict()["history"][0]["score"] == 90
+        t = TlsResult(host="h", port=443, chain=["leaf", "Root CA"])
+        assert t.to_dict()["chain"] == ["leaf", "Root CA"]
+
+
+class TestOsGuess:
+    @pytest.mark.parametrize(
+        ("ttl", "expected"),
+        [
+            (30, "Windows 95/NT (legacy)"),
+            (57, "Linux / macOS / FreeBSD"),
+            (64, "Linux / macOS / FreeBSD"),
+            (117, "Windows"),
+            (240, "Linux / Unix / Network device"),
+            (300, "Unknown"),
+        ],
+    )
+    def test_guess(self, ttl, expected):
+        from xping.diagnostics.osdetect import _guess_os
+
+        assert _guess_os(ttl)[0] == expected
+
+    def test_extract_windows_ttl(self):
+        from xping.diagnostics.osdetect import _extract_ttl
+
+        assert _extract_ttl("Reply from 1.2.3.4: bytes=32 time=9ms TTL=117") == 117
+        assert _extract_ttl("Request timed out.") is None
+
+
+class TestTraceIpHeader:
+    def test_icmp_type_read_after_ip_options(self):
+        """An IPv4 header with options (IHL > 5) must not be misread as ICMP."""
+        from xping.diagnostics import trace as trace_diag
+
+        # IHL=6 → 24-byte header whose 4 option bytes start with 0x08, which a
+        # fixed data[20] read would misparse as an ICMP echo *request*.
+        ip_header = bytes([0x46]) + bytes(19) + bytes([8, 0, 0, 0])
+        packet = ip_header + bytes([11, 0]) + bytes(6)  # ICMP time exceeded
+        recv_sock, send_sock = MagicMock(), MagicMock()
+        recv_sock.recvfrom.return_value = (packet, ("10.0.0.1", 0))
+        with (
+            patch.object(trace_diag.socket, "socket", side_effect=[recv_sock, send_sock]),
+            patch.object(trace_diag.select, "select", return_value=([recv_sock], [], [])),
+            patch.object(trace_diag, "_reverse", return_value=None),
+        ):
+            hop = trace_diag._raw_trace_hop("1.1.1.1", 1, 33435, probes=1)
+        assert hop.ip == "10.0.0.1"
+        assert not hop.timeout
+
+
+class TestTcpUsesResolvedIp:
+    def test_connects_to_resolved_address(self):
+        from xping.diagnostics import tcp as tcp_diag
+        from xping.models.tcp import TcpAttempt
+
+        with (
+            patch.object(tcp_diag, "_resolve", return_value="93.184.216.34"),
+            patch.object(
+                tcp_diag, "_connect_once", return_value=TcpAttempt(seq=1, ok=True, elapsed_ms=1.0)
+            ) as connect,
+        ):
+            tcp_diag.tcp("example.com", 443, count=1, quiet=True)
+        assert connect.call_args.args[0] == "93.184.216.34"

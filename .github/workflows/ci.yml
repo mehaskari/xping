@@ -24,6 +24,21 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest --cov=xping --cov-report=xml --cov-report=term-missing -v
 
+  test-windows:
+    # Windows is advertised as supported; run the suite there too. Kept
+    # non-blocking until it has a green track record.
+    name: Test — Python 3.12 / windows-latest
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest -v
+
   lint:
     name: Code Quality
     runs-on: ubuntu-latest
@@ -50,6 +65,9 @@ jobs:
               'pyproject.toml':   (open('pyproject.toml').read(),   r'version = "(.+?)"'),
               'xping/__init__.py':(open('xping/__init__.py').read(),r'__version__\s*=\s*"(.+?)"'),
               'man/xping.1':      (open('man/xping.1').read(),      r'"xping ([0-9]+\.[0-9]+\.[0-9]+)"'),
+              'setup.cfg':        (open('setup.cfg').read(),        r'(?m)^version = (.+)$'),
+              'snap/snapcraft.yaml': (open('snap/snapcraft.yaml').read(), r"(?m)^version: '(.+?)'"),
+              'debian/changelog': (open('debian/changelog').read(), r'^xping \(([^)-]+)'),
           }
           v = {k: re.search(p, t).group(1) for k, (t, p) in files.items()}
           print("Versions:", v)

@@ -46,6 +46,10 @@ def _resolve_host(value: str) -> str:
 
 def cmd_ping(args: argparse.Namespace) -> None:
     if getattr(args, "watch", False):
+        if export_requested(args):
+            raise ValueError(
+                "--watch runs until Ctrl-C and cannot be combined with --json/--csv/--markdown"
+            )
         ping_watch(
             host=_resolve_host(args.host),
             timeout=args.timeout,

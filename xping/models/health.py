@@ -17,6 +17,7 @@ class HealthResult:
     ping: PingResult | None = None
     score: int = 0
     issues: list[str] = field(default_factory=list)
+    history: list[dict] = field(default_factory=list)  # past {ts, score, grade} runs
     error: str | None = None
 
     @property

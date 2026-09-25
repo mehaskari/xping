@@ -8,6 +8,7 @@ import socket
 import ssl
 import sys
 
+from xping.diagnostics.sslctx import secure_context
 from xping.models.tls import TlsResult
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 from xping.render.animations import Spinner
@@ -49,15 +50,7 @@ def tls(host: str, port: int = 443, timeout: float = 5.0, quiet: bool = False) -
         spinner = Spinner(c("Negotiating TLS handshake…", BRAND_TEAL))
         spinner.start()
 
-    # Build SSL context — try system CAs first, fall back to certifi if
-    # available (common need on macOS with Homebrew/pyenv Python builds).
-    context = ssl.create_default_context()
-    try:
-        import certifi
-
-        context.load_verify_locations(certifi.where())
-    except ImportError:
-        pass  # certifi not installed — rely on system CAs
+    context = secure_context()
 
     try:
         with socket.create_connection((host, port), timeout=timeout) as sock:
@@ -89,7 +82,7 @@ def tls(host: str, port: int = 443, timeout: float = 5.0, quiet: bool = False) -
                         chain_names.append(result.subject.split("CN=")[-1].split(",")[0])
                     if result.issuer and result.issuer != result.subject:
                         chain_names.append(result.issuer.split("CN=")[-1].split(",")[0])
-                result.chain = chain_names  # type: ignore[attr-defined]
+                result.chain = chain_names
     except ssl.SSLCertVerificationError as exc:
         result.error = f"Certificate verification failed: {exc.verify_message}"
     except ssl.SSLError as exc:

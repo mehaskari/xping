@@ -10,6 +10,7 @@ import sys
 import time
 from urllib.parse import urljoin, urlsplit
 
+from xping.diagnostics.sslctx import secure_context as _ssl_context
 from xping.models.http import HttpResult, RedirectHop
 from xping.render import BOLD, BRAND_TEAL, c, kv, section_header
 from xping.render.animations import Spinner
@@ -17,17 +18,6 @@ from xping.render.errors import error, resolve_error
 from xping.render.views import http as http_view
 
 MAX_REDIRECTS = 10
-
-
-def _ssl_context() -> ssl.SSLContext:
-    ctx = ssl.create_default_context()
-    try:
-        import certifi
-
-        ctx.load_verify_locations(certifi.where())
-    except ImportError:
-        pass
-    return ctx
 
 
 def _supports_h2(host: str, port: int, timeout: float) -> bool | None:
@@ -163,15 +153,12 @@ def http_diagnose(url: str, timeout: float = 8.0, quiet: bool = False) -> HttpRe
             result.body_bytes = d["body_bytes"]
             result.ttfb_ms = d["ttfb_ms"]
             result.total_ms = (time.perf_counter() - total_wall) * 1000
-            # extra attrs consumed by view
-            result.dns_ms = d["dns_ms"]  # type: ignore[attr-defined]
-            result.tcp_ms = d["tcp_ms"]  # type: ignore[attr-defined]
-            result.http_version = d["http_version"]  # type: ignore[attr-defined]
+            result.dns_ms = d["dns_ms"]
+            result.tcp_ms = d["tcp_ms"]
+            result.http_version = d["http_version"]
             final = urlsplit(current)
             if final.scheme == "https" and final.hostname:
-                result.h2_supported = _supports_h2(  # type: ignore[attr-defined]
-                    final.hostname, final.port or 443, timeout
-                )
+                result.h2_supported = _supports_h2(final.hostname, final.port or 443, timeout)
             break
         else:
             result.error = f"Too many redirects (> {MAX_REDIRECTS})"

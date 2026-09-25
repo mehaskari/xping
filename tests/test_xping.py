@@ -5,6 +5,7 @@ Run with: python -m pytest tests/ -v
 
 import sys
 import os
+import re
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import socket
@@ -31,7 +32,7 @@ def test_banner_returns_string():
 
 
 def test_latency_color_no_crash():
-    from xping.render import supports_color, latency_color
+    from xping.render import latency_color
     # patch colour off so output is plain
     with patch("xping.render.COLOR", False):
         assert "10.00 ms" in latency_color(10.0)
@@ -451,7 +452,8 @@ def test_lookup_view_renders_result(capsys):
     )
     with patch("xping.render.COLOR", False):
         lookup_view.print_result(result)
-    assert "example.com" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert re.search(r"\bexample\.com\b", out)
 
 
 def test_tcp_view_renders_summary(capsys):
@@ -719,11 +721,11 @@ def test_render_warn_api(capsys):
 
 def test_render_resolve_error(capsys):
     from xping.render import resolve_error
-    import io
-    buf = io.StringIO()
-    with patch("xping.render.COLOR", False):
+    with patch("xping.render.errors.c", side_effect=lambda text, *codes: text):
         resolve_error("bad.host", socket.gaierror("failed"))
     # resolve_error writes to stderr by default through error()
+    err = capsys.readouterr().err
+    assert "Cannot resolve 'bad.host': failed" in err
 
 
 def test_deps_detects_darwin(monkeypatch):

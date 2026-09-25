@@ -8,11 +8,11 @@ Pure stdlib — no external libraries.
 import json
 import re
 import socket
-import ssl
 import sys
 import time
 import urllib.request
 
+from xping.diagnostics.sslctx import secure_context
 from xping.models.whois import WhoisResult
 from xping.render import BOLD, BRAND_TEAL, c, kv, section_header
 from xping.render.animations import Spinner
@@ -25,7 +25,7 @@ RDAP_BOOTSTRAP = "https://data.iana.org/rdap/dns.json"
 WHOIS_TIMEOUT = 3.0  # per-attempt timeout for port-43
 MAX_REFERRALS = 2
 PORT43_RETRIES = 2  # 2 × 3s + 1 × 0.5s = 6.5s max before RDAP fallback
-RDAP_RETRIES = 3  # 3 attempts per SSL context (× 2 contexts = 6 total)
+RDAP_RETRIES = 3
 RETRY_DELAY = 0.5  # seconds between retries
 
 _FIELD_PATTERNS: dict[str, list[str]] = {
@@ -155,19 +155,8 @@ def _rdap_url_for(tld: str) -> str | None:
             if tld.lower() in [t.lower() for t in tlds]:
                 return urls[0].rstrip("/")
     except Exception:
-        pass
+        return None  # bootstrap unreachable or malformed — caller reports "no RDAP"
     return None
-
-
-def _make_ssl_context() -> ssl.SSLContext:
-    ctx = ssl.create_default_context()
-    try:
-        import certifi
-
-        ctx.load_verify_locations(certifi.where())
-    except ImportError:
-        pass
-    return ctx
 
 
 def _rdap_query(domain: str, tld: str) -> WhoisResult | None:
@@ -181,19 +170,17 @@ def _rdap_query(domain: str, tld: str) -> WhoisResult | None:
         "User-Agent": "curl/7.88.0",
     }
     data = None
-    for ctx in (_make_ssl_context(), ssl._create_unverified_context()):
-        for attempt in range(RDAP_RETRIES):
-            if attempt:
-                time.sleep(RETRY_DELAY)
-            try:
-                req = urllib.request.Request(url, headers=headers)
-                with urllib.request.urlopen(req, context=ctx, timeout=8) as resp:
-                    data = json.loads(resp.read())
-                break
-            except Exception:
-                continue
-        if data is not None:
+    ctx = secure_context()
+    for attempt in range(RDAP_RETRIES):
+        if attempt:
+            time.sleep(RETRY_DELAY)
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, context=ctx, timeout=8) as resp:
+                data = json.loads(resp.read())
             break
+        except Exception:
+            continue
     if data is None:
         return None
 
@@ -278,10 +265,10 @@ def whois(domain: str, quiet: bool = False) -> WhoisResult:
 
         port43_ok = result.error is None
 
-    except (socket.timeout, TimeoutError, ConnectionRefusedError, OSError):
-        port43_ok = False  # will try RDAP below
-    except socket.gaierror:
-        result.error = f"Cannot resolve WHOIS server for .{tld}"
+    except OSError:
+        # Timeouts, refusals, and unresolvable WHOIS servers (gaierror is an
+        # OSError subclass) all mean port 43 is unusable here — try RDAP.
+        port43_ok = False
     finally:
         if spinner:
             spinner.stop()

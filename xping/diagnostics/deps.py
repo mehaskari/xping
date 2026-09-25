@@ -39,7 +39,7 @@ def _detect_distro() -> str:
         if "void" in text:
             return "void"
     except FileNotFoundError:
-        pass
+        pass  # no os-release (older/minimal systems) — probe package managers below
 
     # Fallback: check for package manager binaries
     for mgr, family in (

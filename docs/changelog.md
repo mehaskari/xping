@@ -2,7 +2,27 @@
 
 ## [Unreleased]
 
+### Security
+- Every TLS/HTTPS connection (`tls`, `http`, `whois` RDAP, `speedtest`)
+  now goes through one shared context that verifies certificates and
+  refuses anything older than TLS 1.2.
+- `whois` no longer retries RDAP with certificate verification turned
+  off when the verified request fails.
+
 ### Fixed
+- `--json` output dropped several values shown on screen: `http` now
+  exports `dns_ms`, `tcp_ms`, `http_version` and `h2_supported`,
+  `health` exports `history`, and `tls` exports `chain`.
+- `trace` read the ICMP type at a fixed offset, misparsing replies whose
+  IPv4 header carries options; the header length is now honoured.
+- The system `traceroute`/`tracert` fallback ignored `--timeout`.
+- `tcp` resolved the host, then connected by name (resolving again, and
+  possibly to a different address than the one displayed).
+- `ping --watch` silently ignored `--json`/`--csv`/`--markdown`; the
+  combination is now rejected with a clear error.
+- `osdetect` could crash on a TTL above 255; dead TTL tables removed.
+- Removed an unreachable `except` branch in `whois` and unused code in
+  `trace` and `speedtest`.
 - **`http` failed on every HTTP/2-capable HTTPS site**: the request
   connection offered `h2` via ALPN, but `http.client` only speaks
   HTTP/1.1, so servers that picked h2 rejected the request. The request
@@ -24,6 +44,14 @@
   leaves them out of the score instead of failing them.
 - `speedtest` and `osdetect` now accept `--json` / `--csv` /
   `--markdown` (`osdetect` returns a proper result model).
+
+### Internal
+- The command list is now defined once (`cli/main.py`), and tests check
+  that the parser, shell completion, and `--help` stay in sync with it.
+- CI's version check now also covers `setup.cfg`, `snap/snapcraft.yaml`
+  and `debian/changelog`; a non-blocking Windows test job was added.
+- Resolved the open CodeQL findings (empty `except`, `import *` shims,
+  unused imports/variables, asserts with side effects).
 
 ### Docs
 - Removed the nonexistent `--alarm` and `--output` flags from the man
