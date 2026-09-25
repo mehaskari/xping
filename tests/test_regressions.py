@@ -456,3 +456,12 @@ class TestTcpUsesResolvedIp:
         ):
             tcp_diag.tcp("example.com", 443, count=1, quiet=True)
         assert connect.call_args.args[0] == "93.184.216.34"
+
+
+class TestUnreadableProfileStore:
+    def test_permission_error_means_no_profiles(self):
+        from xping.diagnostics import profile as profile_diag
+
+        with patch.object(profile_diag.Path, "exists", side_effect=PermissionError(13, "denied")):
+            assert profile_diag.resolve_target("example.com") == "example.com"
+            assert profile_diag.list_profiles(quiet=True).count == 0
