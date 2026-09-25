@@ -3,16 +3,15 @@ xping.ping — Live animated ICMP ping.
 Each reply is printed the moment it arrives — no buffering.
 """
 
-import os
-import select
 import socket
-import struct
 import subprocess
 import sys
 import time
 
+from xping.diagnostics import icmp
 from xping.diagnostics.deps import is_available, require, warn_missing
 from xping.diagnostics.platform_cmds import parse_ping_rtt, ping_command
+from xping.diagnostics.resolve import resolve
 from xping.models.ping import PingResult
 from xping.render import (
     BOLD,
@@ -26,56 +25,11 @@ from xping.render.animations import Spinner
 from xping.render.errors import resolve_error
 from xping.render.views import ping as ping_view
 
-ICMP_ECHO_REQUEST = 8
-ICMP_ECHO_REPLY = 0
-
-
-def _checksum(data: bytes) -> int:
-    s, n = 0, len(data) % 2
-    for i in range(0, len(data) - n, 2):
-        s += data[i] + (data[i + 1] << 8)
-    if n:
-        s += data[-1]
-    while s >> 16:
-        s = (s & 0xFFFF) + (s >> 16)
-    return ~s & 0xFFFF
-
-
-def _build_packet(seq: int, pid: int) -> bytes:
-    header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, 0, pid, seq)
-    payload = b"xping___" * 4
-    chk = _checksum(header + payload)
-    return struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, chk, pid, seq) + payload
-
 
 def _icmp_ping(host: str, seq: int, timeout: float = 2.0) -> float | None:
-    """One ICMP echo. Returns RTT ms, -1.0 on timeout, None on no permission."""
-    pid = os.getpid() & 0xFFFF
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
-    except PermissionError:
-        return None
-
-    sock.settimeout(timeout)
-    dest = socket.gethostbyname(host)
-    packet = _build_packet(seq, pid)
-    sent = time.perf_counter()
-    try:
-        sock.sendto(packet, (dest, 1))
-        while True:
-            if not select.select([sock], [], [], timeout)[0]:
-                return -1.0
-            raw, _ = sock.recvfrom(1024)
-            recv_t = time.perf_counter()
-            ip_len = (raw[0] & 0x0F) * 4
-            icmp = raw[ip_len:]
-            itype, _, _, rid, rseq = struct.unpack("bbHHh", icmp[:8])
-            if itype == ICMP_ECHO_REPLY and rid == pid and rseq == seq:
-                return (recv_t - sent) * 1000
-    except Exception:
-        return -1.0
-    finally:
-        sock.close()
+    """One native ICMP/ICMPv6 echo. Returns RTT ms, -1.0 on timeout, or None
+    when no ICMP socket can be opened (neither unprivileged nor raw)."""
+    return icmp.echo(resolve(host), seq, timeout)
 
 
 def _subprocess_ping_one(host: str, timeout: float) -> float:
@@ -105,14 +59,19 @@ def ping_once_subprocess(host_ip: str, timeout: float = 2.0) -> float:
 
 
 def ping(
-    host: str, count: int = 5, timeout: float = 2.0, interval: float = 0.5, quiet: bool = False
+    host: str,
+    count: int = 5,
+    timeout: float = 2.0,
+    interval: float = 0.5,
+    quiet: bool = False,
+    family: int | None = None,
 ) -> PingResult:
 
     try:
-        ip = socket.gethostbyname(host)
-    except socket.gaierror:
+        ip = resolve(host, family)
+    except socket.gaierror as exc:
         if not quiet:
-            resolve_error(host)
+            resolve_error(host, exc if family else None)
         return PingResult(host=host, ip="?", count=count, resolved=False)
 
     if not quiet:
@@ -138,9 +97,9 @@ def ping(
             t0 = time.perf_counter()
 
             if use_subprocess:
-                rtt = _subprocess_ping_one(host, timeout)
+                rtt = _subprocess_ping_one(ip, timeout)
             else:
-                rtt = _icmp_ping(host, seq, timeout)
+                rtt = _icmp_ping(ip, seq, timeout)
                 if rtt is None:
                     use_subprocess = True
                     if not is_available("ping"):
@@ -155,7 +114,7 @@ def ping(
                             "raw sockets", "using system ping (run as root for native mode)"
                         )
                         spinner = None
-                    rtt = _subprocess_ping_one(host, timeout)
+                    rtt = _subprocess_ping_one(ip, timeout)
 
             elapsed = time.perf_counter() - t0
 
@@ -182,10 +141,12 @@ def ping(
     return result
 
 
-def watch(host: str, timeout: float = 2.0, interval: float = 1.0) -> None:
+def watch(
+    host: str, timeout: float = 2.0, interval: float = 1.0, family: int | None = None
+) -> None:
     """Continuous live ping with in-place sparkline (Ctrl-C to stop)."""
     try:
-        ip = socket.gethostbyname(host)
+        ip = resolve(host, family)
     except socket.gaierror:
         from xping.render.errors import resolve_error
 
@@ -212,12 +173,12 @@ def watch(host: str, timeout: float = 2.0, interval: float = 1.0) -> None:
             t0 = time.perf_counter()
 
             if use_subprocess:
-                rtt = _subprocess_ping_one(host, timeout)
+                rtt = _subprocess_ping_one(ip, timeout)
             else:
-                rtt = _icmp_ping(host, seq, timeout)
+                rtt = _icmp_ping(ip, seq, timeout)
                 if rtt is None:
                     use_subprocess = True
-                    rtt = _subprocess_ping_one(host, timeout)
+                    rtt = _subprocess_ping_one(ip, timeout)
 
             elapsed = time.perf_counter() - t0
             rtts.append(rtt)

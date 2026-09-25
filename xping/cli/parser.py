@@ -70,6 +70,12 @@ def _export_parent() -> argparse.ArgumentParser:
     return parent
 
 
+def _add_family(p: argparse.ArgumentParser) -> None:
+    fam = p.add_mutually_exclusive_group()
+    fam.add_argument("-4", "--ipv4", action="store_true", help="Use IPv4 only")
+    fam.add_argument("-6", "--ipv6", action="store_true", help="Use IPv6 only")
+
+
 def _add_max_loss(p: argparse.ArgumentParser, what: str = "packet loss") -> None:
     p.add_argument(
         "--max-loss",
@@ -175,6 +181,7 @@ Examples:
     p_ping.add_argument(
         "-c", "--count", type=int, default=5, metavar="N", help="Number of packets [default: 5]"
     )
+    _add_family(p_ping)
     p_ping.add_argument(
         "-t",
         "--timeout",
@@ -205,6 +212,7 @@ Examples:
     p_trace.add_argument(
         "-m", "--max-hops", type=int, default=30, metavar="N", help="Maximum hops [default: 30]"
     )
+    _add_family(p_trace)
     p_trace.add_argument(
         "-t",
         "--timeout",
@@ -241,6 +249,7 @@ Examples:
         metavar="N",
         help="Number of connection attempts [default: 3]",
     )
+    _add_family(p_tcp)
     p_tcp.add_argument(
         "-t",
         "--timeout",
@@ -269,6 +278,7 @@ Examples:
         metavar="LIST",
         help="Ports/ranges [default: 1-1024]",
     )
+    _add_family(p_portscan)
     p_portscan.add_argument(
         "-t",
         "--timeout",
@@ -354,6 +364,7 @@ Examples:
     p_all = sub.add_parser(
         "all", parents=[export_parent], help="Run lookup, ping, trace, and TCP checks"
     )
+    _add_family(p_all)
     p_all.add_argument("host", help="Hostname or IP address")
 
     p_rdns = sub.add_parser("rdns", parents=[export_parent], help="Reverse DNS (PTR) lookup")
@@ -370,6 +381,7 @@ Examples:
     p_tls.add_argument(
         "--port", type=_tcp_port, default=443, metavar="PORT", help="TCP port [default: 443]"
     )
+    _add_family(p_tls)
     p_tls.add_argument(
         "-t",
         "--timeout",
@@ -389,6 +401,7 @@ Examples:
     p_http = sub.add_parser(
         "http", parents=[export_parent], help="HTTP diagnostics (status, headers, TTFB)"
     )
+    _add_family(p_http)
     p_http.add_argument("url", help="URL to request (http:// or https://)")
     p_http.add_argument(
         "-t",
@@ -420,6 +433,7 @@ Examples:
         metavar="N",
         help="Ping packets for scoring [default: 8]",
     )
+    _add_family(p_health)
     p_health.add_argument(
         "-t",
         "--timeout",
@@ -433,6 +447,7 @@ Examples:
     p_mtr = sub.add_parser(
         "mtr", parents=[export_parent], help="Combined traceroute + live per-hop ping"
     )
+    _add_family(p_mtr)
     p_mtr.add_argument("host", help="Hostname or IP address")
     p_mtr.add_argument(
         "-c",
@@ -469,6 +484,7 @@ Examples:
     p_mtu.add_argument(
         "--max-mtu", type=int, default=1500, metavar="BYTES", help="Search ceiling [default: 1500]"
     )
+    _add_family(p_mtu)
     p_mtu.add_argument(
         "-t",
         "--timeout",
@@ -518,6 +534,7 @@ Examples:
     p_osdetect = sub.add_parser(
         "osdetect", parents=[export_parent], help="Guess remote OS from TTL fingerprint"
     )
+    _add_family(p_osdetect)
     p_osdetect.add_argument("host", help="Hostname or IP address")
 
     sub.add_parser("deps", help="Check system dependency status")

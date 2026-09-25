@@ -23,6 +23,7 @@ from xping.diagnostics.ping import ping
 from xping.diagnostics.ping import watch as ping_watch
 from xping.diagnostics.portscan import portscan
 from xping.diagnostics.rdns import rdns
+from xping.diagnostics.resolve import family_of
 from xping.diagnostics.speedtest import speedtest
 from xping.diagnostics.sweep import sweep
 from xping.diagnostics.tcp import tcp
@@ -56,6 +57,7 @@ def cmd_ping(args: argparse.Namespace) -> object:
             host=_resolve_host(args.host),
             timeout=args.timeout,
             interval=args.interval,
+            family=family_of(args),
         )
         return
     quiet = output_suppressed(args)
@@ -65,6 +67,7 @@ def cmd_ping(args: argparse.Namespace) -> object:
         timeout=args.timeout,
         interval=args.interval,
         quiet=quiet,
+        family=family_of(args),
     )
     emit_export(result, args)
     return result
@@ -78,6 +81,7 @@ def cmd_trace(args: argparse.Namespace) -> object:
         timeout=args.timeout,
         probes=args.probes,
         quiet=quiet,
+        family=family_of(args),
     )
     emit_export(result, args)
     return result
@@ -104,6 +108,7 @@ def cmd_tcp(args: argparse.Namespace) -> object:
         timeout=args.timeout,
         interval=args.interval,
         quiet=quiet,
+        family=family_of(args),
     )
     emit_export(result, args)
     return result
@@ -118,6 +123,7 @@ def cmd_portscan(args: argparse.Namespace) -> object:
         workers=args.workers,
         grab_banners=getattr(args, "banners", False),
         quiet=quiet,
+        family=family_of(args),
     )
     emit_export(result, args)
     return result
@@ -152,7 +158,7 @@ def cmd_ipscan(args: argparse.Namespace) -> object:
 
 def cmd_all(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
-    result = run_bundle(_resolve_host(args.host), quiet=quiet)
+    result = run_bundle(_resolve_host(args.host), quiet=quiet, family=family_of(args))
     emit_export(result, args)
     return result
 
@@ -166,14 +172,20 @@ def cmd_rdns(args: argparse.Namespace) -> object:
 
 def cmd_tls(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
-    result = tls(host=_resolve_host(args.host), port=args.port, timeout=args.timeout, quiet=quiet)
+    result = tls(
+        host=_resolve_host(args.host),
+        port=args.port,
+        timeout=args.timeout,
+        quiet=quiet,
+        family=family_of(args),
+    )
     emit_export(result, args)
     return result
 
 
 def cmd_http(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
-    result = http_diagnose(url=args.url, timeout=args.timeout, quiet=quiet)
+    result = http_diagnose(url=args.url, timeout=args.timeout, quiet=quiet, family=family_of(args))
     emit_export(result, args)
     return result
 
@@ -195,7 +207,11 @@ def cmd_dnscheck(args: argparse.Namespace) -> object:
 def cmd_health(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
     result = health(
-        host=_resolve_host(args.host), count=args.count, timeout=args.timeout, quiet=quiet
+        host=_resolve_host(args.host),
+        count=args.count,
+        timeout=args.timeout,
+        quiet=quiet,
+        family=family_of(args),
     )
     emit_export(result, args)
     return result
@@ -210,6 +226,7 @@ def cmd_mtr(args: argparse.Namespace) -> object:
         timeout=args.timeout,
         interval=args.interval,
         quiet=quiet,
+        family=family_of(args),
     )
     emit_export(result, args)
     return result
@@ -218,7 +235,11 @@ def cmd_mtr(args: argparse.Namespace) -> object:
 def cmd_mtu(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
     result = mtu(
-        host=_resolve_host(args.host), max_mtu=args.max_mtu, timeout=args.timeout, quiet=quiet
+        host=_resolve_host(args.host),
+        max_mtu=args.max_mtu,
+        timeout=args.timeout,
+        quiet=quiet,
+        family=family_of(args),
     )
     emit_export(result, args)
     return result
@@ -266,7 +287,7 @@ def cmd_listen(args: argparse.Namespace) -> object:
 
 def cmd_osdetect(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
-    result = osdetect(host=_resolve_host(args.host), quiet=quiet)
+    result = osdetect(host=_resolve_host(args.host), quiet=quiet, family=family_of(args))
     emit_export(result, args)
     return result
 

@@ -5,23 +5,15 @@ xping.tcp - Live TCP connectivity diagnostics.
 import socket
 import time
 
+from xping.diagnostics.resolve import resolve
 from xping.models.tcp import TcpAttempt, TcpResult
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 from xping.render.errors import resolve_error
 from xping.render.views import tcp as tcp_view
 
 
-def _resolve(host: str, port: int, timeout: float) -> str:
-    infos = socket.getaddrinfo(
-        host,
-        port,
-        type=socket.SOCK_STREAM,
-        proto=socket.IPPROTO_TCP,
-    )
-    for family, _, _, _, sockaddr in infos:
-        if family in (socket.AF_INET, socket.AF_INET6):
-            return sockaddr[0]
-    raise socket.gaierror(f"no TCP address found for {host}")
+def _resolve(host: str, port: int, timeout: float, family: int | None = None) -> str:
+    return resolve(host, family)
 
 
 def _connect_once(host: str, port: int, timeout: float, seq: int) -> TcpAttempt:
@@ -45,9 +37,10 @@ def tcp(
     timeout: float = 2.0,
     interval: float = 0.5,
     quiet: bool = False,
+    family: int | None = None,
 ) -> TcpResult:
     try:
-        ip = _resolve(host, port, timeout)
+        ip = _resolve(host, port, timeout, family)
     except socket.gaierror as exc:
         if not quiet:
             resolve_error(host, exc)

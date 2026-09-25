@@ -10,6 +10,7 @@ import time
 
 from xping.diagnostics.deps import is_available, require, warn_missing
 from xping.diagnostics.ping import ping_once, ping_once_subprocess
+from xping.diagnostics.resolve import resolve
 from xping.diagnostics.trace import discover_path, discover_path_subprocess
 from xping.models.mtr import MtrHop, MtrResult
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
@@ -31,10 +32,11 @@ def mtr(
     timeout: float = 2.0,
     interval: float = 0.3,
     quiet: bool = False,
+    family: int | None = None,
 ) -> MtrResult:
     """Run a combined traceroute + ping report for *host*."""
     try:
-        dest_ip = socket.gethostbyname(host)
+        dest_ip = resolve(host, family)
     except socket.gaierror:
         if not quiet:
             resolve_error(host)
@@ -59,10 +61,8 @@ def mtr(
             result.error = "No raw-socket permission and no system traceroute available"
             return result
         if not quiet:
-            warn_missing(
-                "raw sockets", "using system traceroute/ping (run as root for native mode)"
-            )
-        path = discover_path_subprocess(host, max_hops=max_hops)
+            warn_missing("ICMP sockets", "using system traceroute/ping")
+        path = discover_path_subprocess(dest_ip, max_hops=max_hops)
         use_subprocess_ping = True
 
     if not path:
