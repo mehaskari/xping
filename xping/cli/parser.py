@@ -38,12 +38,66 @@ def _positive_int(value: str) -> int:
     return number
 
 
+def _non_negative_float(value: str) -> float:
+    try:
+        number = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("value must be a number") from exc
+    if number < 0:
+        raise argparse.ArgumentTypeError("value must not be negative")
+    return number
+
+
+def _score(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("score must be an integer") from exc
+    if not 0 <= number <= 100:
+        raise argparse.ArgumentTypeError("score must be between 0 and 100")
+    return number
+
+
 def _export_parent() -> argparse.ArgumentParser:
     parent = argparse.ArgumentParser(add_help=False)
-    parent.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
-    parent.add_argument("--csv", action="store_true", help="Emit CSV output")
-    parent.add_argument("--markdown", action="store_true", help="Emit Markdown output")
+    out = parent.add_mutually_exclusive_group()
+    out.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    out.add_argument("--csv", action="store_true", help="Emit CSV output")
+    out.add_argument("--markdown", action="store_true", help="Emit Markdown output")
+    out.add_argument(
+        "-q", "--quiet", action="store_true", help="No output — report only via the exit code"
+    )
     return parent
+
+
+def _add_max_loss(p: argparse.ArgumentParser, what: str = "packet loss") -> None:
+    p.add_argument(
+        "--max-loss",
+        type=_non_negative_float,
+        default=None,
+        metavar="PCT",
+        help=f"Exit 1 if {what} exceeds PCT percent",
+    )
+
+
+def _add_max_latency(p: argparse.ArgumentParser, what: str = "average latency") -> None:
+    p.add_argument(
+        "--max-latency",
+        type=_non_negative_float,
+        default=None,
+        metavar="MS",
+        help=f"Exit 1 if {what} exceeds MS milliseconds",
+    )
+
+
+def _add_min_score(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--min-score",
+        type=_score,
+        default=None,
+        metavar="N",
+        help="Exit 1 if the score (0-100) is below N",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -143,6 +197,8 @@ Examples:
         action="store_true",
         help="Continuous live ping with sparkline (Ctrl-C to stop)",
     )
+    _add_max_loss(p_ping)
+    _add_max_latency(p_ping, "average RTT")
 
     p_trace = sub.add_parser("trace", parents=[export_parent], help="Traceroute to a host")
     p_trace.add_argument("host", help="Hostname or IP address")
@@ -201,6 +257,7 @@ Examples:
         metavar="SEC",
         help="Interval between attempts [default: 0.5]",
     )
+    _add_max_latency(p_tcp, "average connect time")
 
     p_portscan = sub.add_parser("portscan", parents=[export_parent], help="Scan TCP ports")
     p_portscan.add_argument("host", help="Hostname or IP address")
@@ -306,6 +363,7 @@ Examples:
         "dnscheck", parents=[export_parent], help="DNS health check — SPF, DMARC, DKIM, MX, NS"
     )
     p_dnscheck.add_argument("domain", help="Domain name to check")
+    _add_min_score(p_dnscheck)
 
     p_tls = sub.add_parser("tls", parents=[export_parent], help="TLS/SSL certificate inspector")
     p_tls.add_argument("host", help="Hostname to connect to")
@@ -320,6 +378,13 @@ Examples:
         metavar="SEC",
         help="Connection timeout [default: 5.0]",
     )
+    p_tls.add_argument(
+        "--min-days",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Exit 1 if the certificate expires in fewer than N days",
+    )
 
     p_http = sub.add_parser(
         "http", parents=[export_parent], help="HTTP diagnostics (status, headers, TTFB)"
@@ -332,6 +397,14 @@ Examples:
         default=8.0,
         metavar="SEC",
         help="Request timeout [default: 8.0]",
+    )
+    _add_max_latency(p_http, "total request time")
+    p_http.add_argument(
+        "--expect-status",
+        type=int,
+        default=None,
+        metavar="CODE",
+        help="Exit 1 unless the final HTTP status is CODE (default: fail on >= 400)",
     )
 
     p_whois = sub.add_parser("whois", parents=[export_parent], help="WHOIS domain lookup")
@@ -355,6 +428,7 @@ Examples:
         metavar="SEC",
         help="Per-packet timeout [default: 2.0]",
     )
+    _add_min_score(p_health)
 
     p_mtr = sub.add_parser(
         "mtr", parents=[export_parent], help="Combined traceroute + live per-hop ping"
@@ -387,6 +461,8 @@ Examples:
         metavar="SEC",
         help="Interval between cycles [default: 0.3]",
     )
+    _add_max_loss(p_mtr, "destination packet loss")
+    _add_max_latency(p_mtr, "destination average RTT")
 
     p_mtu = sub.add_parser("mtu", parents=[export_parent], help="Path MTU discovery")
     p_mtu.add_argument("host", help="Hostname or IP address")

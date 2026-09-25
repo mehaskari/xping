@@ -10,64 +10,28 @@ Usage:
 
 from __future__ import annotations
 
-_COMMANDS = [
-    "ping",
-    "trace",
-    "lookup",
-    "tcp",
-    "portscan",
-    "sweep",
-    "ipscan",
-    "all",
-    "rdns",
-    "dnscheck",
-    "tls",
-    "http",
-    "whois",
-    "health",
-    "mtr",
-    "mtu",
-    "profile",
-    "speedtest",
-    "listen",
-    "osdetect",
-    "completion",
-    "deps",
-    "about",
-]
+import argparse
 
-_FLAGS: dict[str, list[str]] = {
-    "ping": [
-        "--count",
-        "--timeout",
-        "--interval",
-        "--watch",
-        "--json",
-        "--csv",
-        "--markdown",
-    ],
-    "trace": ["--max-hops", "--timeout", "--probes", "--json", "--csv", "--markdown"],
-    "lookup": ["--full", "--server", "--json", "--csv", "--markdown"],
-    "tcp": ["--count", "--timeout", "--interval", "--json", "--csv", "--markdown"],
-    "portscan": ["--ports", "--timeout", "--workers", "--banners", "--json", "--csv", "--markdown"],
-    "sweep": ["--ports", "--timeout", "--workers", "--limit", "--json", "--csv", "--markdown"],
-    "ipscan": ["--timeout", "--workers", "--limit", "--json", "--csv", "--markdown"],
-    "all": ["--json", "--csv", "--markdown"],
-    "rdns": ["--json", "--csv", "--markdown"],
-    "dnscheck": ["--json", "--csv", "--markdown"],
-    "tls": ["--port", "--timeout", "--json", "--csv", "--markdown"],
-    "http": ["--timeout", "--json", "--csv", "--markdown"],
-    "whois": ["--json", "--csv", "--markdown"],
-    "health": ["--count", "--timeout", "--json", "--csv", "--markdown"],
-    "mtr": ["--cycles", "--max-hops", "--timeout", "--interval", "--json", "--csv", "--markdown"],
-    "mtu": ["--max-mtu", "--timeout", "--json", "--csv", "--markdown"],
-    "profile": [],
-    "speedtest": ["--json", "--csv", "--markdown"],
-    "listen": ["--proto", "--json", "--csv", "--markdown"],
-    "osdetect": ["--json", "--csv", "--markdown"],
-    "deps": [],
-    "about": [],
-}
+from xping.cli.parser import build_parser
+
+
+def _from_parser() -> tuple[list[str], dict[str, list[str]]]:
+    """Read subcommands and their long options straight from the argparse
+    parser, so completion can never drift from the real CLI."""
+    parser = build_parser()
+    subparsers = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
+    flags: dict[str, list[str]] = {}
+    for name, sub in subparsers.choices.items():
+        flags[name] = [
+            opt
+            for action in sub._actions
+            for opt in action.option_strings
+            if opt.startswith("--") and opt != "--help"
+        ]
+    return list(subparsers.choices), flags
+
+
+_COMMANDS, _FLAGS = _from_parser()
 
 _PROFILE_SUBCOMMANDS = ["add", "remove", "list", "show"]
 
