@@ -3,6 +3,7 @@
 from . import (
     blocklist,
     check,
+    diff,
     dnscheck,
     doctor,
     health,
@@ -32,6 +33,7 @@ from . import (
 __all__ = [
     "blocklist",
     "check",
+    "diff",
     "dnscheck",
     "doctor",
     "health",

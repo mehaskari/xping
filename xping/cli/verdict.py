@@ -23,6 +23,7 @@ from xping.models import (
     BlocklistResult,
     BundleResult,
     CheckReport,
+    DiffResult,
     DnsCheckResult,
     DnsResult,
     DoctorResult,
@@ -188,6 +189,14 @@ def _blocklist(r: BlocklistResult, _opts) -> list[Failure]:
     return []
 
 
+def _diff(r: DiffResult, _opts) -> list[Failure]:
+    if r.error:
+        return [Failure(r.error)]
+    if r.max_regression is not None and r.regressions:
+        return [Failure("regression: " + ", ".join(r.regressions), True)]
+    return []
+
+
 def _bundle(r: BundleResult, opts) -> list[Failure]:
     failures: list[Failure] = []
     if r.lookup is not None and r.lookup.error:
@@ -232,6 +241,7 @@ def evaluate(result, opts=None) -> list[Failure]:
         (MtrResult, _mtr),
         (BundleResult, _bundle),
         (UdpResult, _udp),
+        (DiffResult, _diff),
         (BlocklistResult, _blocklist),
         (NtpResult, _ntp),
     )

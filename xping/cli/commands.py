@@ -14,6 +14,7 @@ from xping.diagnostics.blocklist import blocklist
 from xping.diagnostics.bundle import run_bundle
 from xping.diagnostics.check import EXAMPLE, ConfigError, run_checks
 from xping.diagnostics.deps import print_deps_status
+from xping.diagnostics.diff import diff
 from xping.diagnostics.dnscheck import dnscheck
 from xping.diagnostics.doctor import doctor
 from xping.diagnostics.health import health
@@ -290,6 +291,20 @@ def cmd_check(args: argparse.Namespace) -> object:
     try:
         result = run_checks(args.file, workers=args.workers, quiet=quiet)
     except ConfigError as exc:
+        raise UsageError(str(exc)) from exc
+    emit_export(result, args)
+    return result
+
+
+def cmd_diff(args: argparse.Namespace) -> object:
+    try:
+        result = diff(
+            args.before,
+            args.after,
+            max_regression=args.max_regression,
+            quiet=output_suppressed(args),
+        )
+    except ValueError as exc:
         raise UsageError(str(exc)) from exc
     emit_export(result, args)
     return result

@@ -3,6 +3,7 @@
 from .blocklist import BlocklistCheck, BlocklistResult
 from .bundle import BundleResult
 from .check import CheckOutcome, CheckReport
+from .diff import DiffResult, MetricChange
 from .dnscheck import DnsCheckItem, DnsCheckResult
 from .doctor import DoctorResult, DoctorStep
 from .health import HealthResult
@@ -66,6 +67,8 @@ __all__ = [
     "NtpSample",
     "UdpAttempt",
     "UdpResult",
+    "DiffResult",
+    "MetricChange",
     "DnsCheckItem",
     "DnsCheckResult",
     "DoctorResult",

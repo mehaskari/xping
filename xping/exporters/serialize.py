@@ -86,6 +86,8 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     "ResolverAnswer": ("answered",),
     "PropagationResult": ("consistent", "distinct_answers", "majority", "matching"),
     "DnsCheckItem": (),
+    "MetricChange": (),
+    "DiffResult": ("worse", "better"),
     "DoctorStep": (),
     "DoctorResult": ("ok", "failed", "warnings"),
     "DnsCheckResult": ("grade", "ok_count", "fail_count", "warn_count", "unknown_count"),

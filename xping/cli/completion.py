@@ -44,6 +44,8 @@ _POSITIONAL_KINDS = {
     "name": "host",  # propagation NAME; profile add NAME is overridden below
     "url": "url",
     "file": "file",
+    "before": "file",
+    "after": "file",
     "target": "none",  # CIDR / IP range; blocklist IP or domain
     "port": "none",
 }

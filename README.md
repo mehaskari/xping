@@ -51,6 +51,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **Watch & wait** — `--watch` / `--until-up` on `tcp`, `udp`, `http` and `health`
 - **Alerts** — `--notify` (desktop notification) and `--webhook URL` (Slack, Discord, Mattermost, any JSON endpoint) when a watched target goes down or comes back
 - **Exit codes & thresholds** — `--max-loss`, `--max-latency`, `--expect-status`, `--min-days`, `--min-score`, `--quiet`
+- **Compare runs** — `xping diff before.json after.json`: what got better or worse (latency, loss, the route of a trace, DNS records, check statuses); `--max-regression` for CI
 - **Batch checks** — `xping check checks.toml` runs many checks in parallel with one exit code
 - **Speed test** — Multi-connection download/upload via Cloudflare
 - **All-in-one** — Run lookup, ping, trace, and TCP checks in a single command
@@ -512,6 +513,20 @@ xping tcp db.local 5432 --until-up -q --notify      # "it's back" and exit
 
   Delivery runs in the background; a failing endpoint is reported once
   and never stops the watch.
+
+### Compare runs
+
+```bash
+xping ping example.net --json > baseline.json
+xping ping example.net --json | xping diff baseline.json -     # - = stdin
+xping http https://example.com --json | xping diff before.json - --max-regression 25
+```
+
+Recognises the kind of result and compares what matters: RTT, jitter and
+loss; each HTTP phase; the route of `trace` / `mtr`; DNS records; and
+the status of every `dnscheck` / `doctor` / `check` item. Changes under
+3% are treated as noise. `--max-regression PCT` exits 1 when something
+got worse by more than PCT, or a status got worse.
 
 ### Batch checks
 

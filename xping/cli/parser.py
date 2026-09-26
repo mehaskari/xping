@@ -195,6 +195,7 @@ Commands:
   ipscan <range>       Discover live IPs with ICMP echo probes
   all    <host>        Run lookup, ping, trace, and TCP checks
   check  <file>        Run many checks from a TOML/JSON file — one exit code
+  diff   <old> <new>   Compare two --json results of the same check (- = stdin)
   rdns   <ip>          Reverse DNS (PTR) lookup
   tls    <host>        TLS/SSL certificate inspector
   http   <url>         HTTP status, headers, redirects, and TTFB
@@ -255,6 +256,7 @@ Examples:
   xping ping prod-db
   xping all cloudflare.com
   xping check --example > checks.toml && xping check checks.toml
+  xping ping example.net --json | xping diff baseline.json -
 
 Exit codes: 0 check passed · 1 check failed · 2 invalid usage · 130 interrupted
 Thresholds (e.g. --max-loss, --max-latency, --min-days) turn checks into alarms;
@@ -574,6 +576,21 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     )
     p_check.add_argument(
         "--example", action="store_true", help="Print an example check file and exit"
+    )
+
+    p_diff = sub.add_parser(
+        "diff",
+        parents=[export_parent],
+        help="Compare two --json results of the same check (what got better or worse)",
+    )
+    p_diff.add_argument("before", help="Earlier --json result (file, or - for stdin)")
+    p_diff.add_argument("after", help="Later --json result (file, or - for stdin)")
+    p_diff.add_argument(
+        "--max-regression",
+        type=_non_negative_float,
+        default=None,
+        metavar="PCT",
+        help="Exit 1 if a metric got worse by more than PCT percent, or a status got worse",
     )
 
     p_rdns = sub.add_parser("rdns", parents=[export_parent], help="Reverse DNS (PTR) lookup")

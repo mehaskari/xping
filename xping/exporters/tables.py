@@ -100,6 +100,15 @@ def sections_for(result: Any) -> list[Section]:
         return [
             Section("Blocklists", ["list", "zone", "subject", "status", "codes", "reason"], rows)
         ]
+    if isinstance(result, m.DiffResult):
+        rows = [
+            [x.label, x.before, x.after, x.unit, x.change_pct, x.verdict] for x in result.metrics
+        ]
+        columns = ["metric", "before", "after", "unit", "change_pct", "verdict"]
+        return [
+            Section("Metrics", columns, rows),
+            Section("Changes", ["change"], [[line] for line in result.changes], primary=False),
+        ]
     if isinstance(result, m.UdpResult):
         rows = [[a.seq, a.state, _ms(a.rtt_ms), a.reply_bytes, a.detail] for a in result.attempts]
         return [Section("Attempts", ["seq", "state", "rtt_ms", "reply_bytes", "detail"], rows)]
