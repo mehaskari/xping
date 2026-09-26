@@ -23,7 +23,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 
 - **Ping** — Live per-packet latency bars, animated spinner, sparkline chart, full statistics
 - **Ping --watch** — Continuous live ping with in-place sparkline; Ctrl-C for final summary
-- **Traceroute** — Real-time hop-by-hop path with RTT colour coding and summary; `--asn` shows each hop's network operator
+- **Traceroute** — Real-time hop-by-hop path with RTT colour coding and summary; `--asn` shows each hop's network operator; `--tcp` traces with TCP SYNs through firewalls that drop ping (no root)
 - **MTR** — Combined live traceroute + per-hop ping, redraws in place each cycle
 - **No root required** — unprivileged ICMP sockets on macOS and Linux for ping, trace and MTR
 - **IPv6** — IPv6-only hosts just work; `-4` / `-6` force a family
@@ -156,7 +156,16 @@ xping trace 8.8.8.8 --max-hops 15
 xping trace example.com --probes 5
 xping trace cloudflare.com --asn     # network operator (AS) of every hop
 xping trace -6 google.com            # over IPv6
+xping trace example.com --tcp        # TCP SYN to port 443 instead of ICMP
+xping trace git.example.com --port 22  # TCP to port 22 (--port implies --tcp)
 ```
+
+Firewalls often drop ICMP, so an ordinary traceroute stops with `* * *`
+halfway. `--tcp` sends connection attempts to a port the service really
+serves; routers still report the expiring TTL, and the destination
+answers with SYN-ACK or RST. It needs no root on Linux (socket error
+queue) and macOS (unprivileged ICMP socket); it is not available on
+Windows.
 
 ### MTR (My Traceroute)
 

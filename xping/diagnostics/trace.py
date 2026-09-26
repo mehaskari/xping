@@ -11,14 +11,14 @@ import sys
 import time
 
 from xping.diagnostics import asn as asn_lookup
-from xping.diagnostics import icmp
+from xping.diagnostics import icmp, tcptrace
 from xping.diagnostics.deps import is_available, require, warn_missing
 from xping.diagnostics.platform_cmds import parse_trace_line, trace_command, trace_tool
 from xping.diagnostics.resolve import is_ipv6, resolve
 from xping.models.trace import Hop
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 from xping.render.animations import Spinner
-from xping.render.errors import resolve_error
+from xping.render.errors import error, resolve_error
 from xping.render.views import trace as trace_view
 
 ICMP_TIME_EXCEEDED = 11
@@ -138,6 +138,20 @@ def _native_hop(dest_ip: str, ttl: int, timeout: float, probes: int) -> Hop | No
     return hop
 
 
+def _tcp_trace_hop(tracer, ttl: int, timeout: float, probes: int) -> Hop:
+    """One TTL level using TCP SYN probes (``trace --tcp``)."""
+    rtts: list[float] = []
+    last_ip = None
+    for _ in range(probes):
+        responder, rtt = tracer.probe(ttl, timeout)
+        rtts.append(rtt)
+        if responder:
+            last_ip = responder
+    timed_out = all(r < 0 for r in rtts)
+    hostname = _reverse(last_ip) if last_ip and not timed_out else None
+    return Hop(ttl=ttl, host=hostname, ip=last_ip, rtts=rtts, timeout=timed_out)
+
+
 def discover_path(
     dest_ip: str, max_hops: int = 30, timeout: float = 2.0, probes: int = 1
 ) -> list[tuple[int, str | None]] | None:
@@ -173,7 +187,10 @@ def trace(
     quiet: bool = False,
     family: int | None = None,
     asn: bool = False,
+    tcp_port: int | None = None,
 ) -> list[Hop]:
+    """Traceroute to *host*. With *tcp_port*, probes are TCP SYNs to that
+    port (gets through firewalls that drop ICMP/UDP) instead of ICMP."""
 
     try:
         dest_ip = resolve(host, family)
@@ -182,24 +199,57 @@ def trace(
             resolve_error(host)
         return []
 
+    tracer = None
+    if tcp_port is not None:
+        if not tcptrace.supported():
+            if not quiet:
+                error(
+                    "TCP traceroute needs Linux or macOS",
+                    hint="Use the default ICMP traceroute on this system.",
+                )
+            return []
+        try:
+            tracer = tcptrace.TcpTracer(dest_ip, tcp_port)
+        except OSError as exc:
+            if not quiet:
+                error(f"TCP traceroute unavailable: {exc}")
+            return []
+
     if not quiet:
         print(section_header(f"TRACEROUTE  {host}", "◎"))
         print(kv("Destination", c(host, BRAND_TEAL, BOLD)))
         print(kv("IP", c(dest_ip, BRAND_INDIGO)))
+        if tcp_port is not None:
+            print(kv("Method", f"TCP SYN to port {tcp_port}"))
         print(kv("Max hops", str(max_hops)))
         print(kv("Probes/hop", str(probes)))
         print()
         trace_view.hop_header()
 
     hops: list[Hop] = []
+    try:
+        hops = _trace_loop(dest_ip, max_hops, timeout, probes, quiet, asn, tracer)
+    finally:
+        if tracer is not None:
+            tracer.close()
 
+    if not quiet:
+        trace_view.print_summary(hops, host, dest_ip)  # opens with its own separator
+    return hops
+
+
+def _trace_loop(dest_ip, max_hops, timeout, probes, quiet, asn, tracer) -> list[Hop]:
+    hops: list[Hop] = []
     for ttl in range(1, max_hops + 1):
         spinner = None
         if not quiet and sys.stdout.isatty():
             spinner = Spinner(c(f"Probing hop {ttl}…", BRAND_TEAL))
             spinner.start()
 
-        hop = _native_hop(dest_ip, ttl, timeout, probes)
+        if tracer is not None:
+            hop = _tcp_trace_hop(tracer, ttl, timeout, probes)
+        else:
+            hop = _native_hop(dest_ip, ttl, timeout, probes)
         if spinner:
             spinner.stop()
 
@@ -228,9 +278,4 @@ def trace(
 
         if hop.ip == dest_ip and not hop.timeout:
             break
-
-    if not quiet:
-        trace_view.hop_separator()
-        print()
-        trace_view.print_summary(hops, host, dest_ip)
     return hops

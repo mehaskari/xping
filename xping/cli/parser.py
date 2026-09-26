@@ -142,7 +142,7 @@ def build_parser() -> argparse.ArgumentParser:
         epilog="""
 Commands:
   ping   <host>        ICMP echo — latency and packet loss  (--watch for live mode)
-  trace  <host>        Hop-by-hop traceroute
+  trace  <host>        Hop-by-hop traceroute  (--tcp through firewalls that drop ping)
   lookup <host>        DNS A, AAAA, MX, NS, TXT records
   tcp    <host> <port> TCP port connectivity and timing
   portscan <host>      TCP port scanner
@@ -177,6 +177,7 @@ Examples:
   xping ping google.com
   xping ping google.com --watch
   xping trace 1.1.1.1 --max-hops 20
+  xping trace example.com --tcp --port 443
   xping lookup github.com --full --markdown
   xping tcp example.com 443 -c 5
   xping portscan example.com --ports 22,80,443
@@ -269,6 +270,19 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     )
     p_trace.add_argument(
         "-p", "--probes", type=int, default=3, metavar="N", help="Probes per hop [default: 3]"
+    )
+    p_trace.add_argument(
+        "-T",
+        "--tcp",
+        action="store_true",
+        help="Probe with TCP SYNs instead of ICMP — gets through firewalls that drop ping",
+    )
+    p_trace.add_argument(
+        "--port",
+        type=_tcp_port,
+        default=None,
+        metavar="PORT",
+        help="TCP port for --tcp (implies --tcp) [default: 443]",
     )
 
     p_lookup = sub.add_parser("lookup", parents=[export_parent], help="DNS lookup for a host")
