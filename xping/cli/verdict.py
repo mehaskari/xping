@@ -20,6 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from xping.models import (
+    BlocklistResult,
     BundleResult,
     CheckReport,
     DnsCheckResult,
@@ -179,6 +180,14 @@ def _ntp(r: NtpResult, opts) -> list[Failure]:
     return []
 
 
+def _blocklist(r: BlocklistResult, _opts) -> list[Failure]:
+    if r.error:
+        return [Failure(r.error)]
+    if r.listed:
+        return [Failure(f"{r.target} is listed on: " + ", ".join(r.listed))]
+    return []
+
+
 def _bundle(r: BundleResult, opts) -> list[Failure]:
     failures: list[Failure] = []
     if r.lookup is not None and r.lookup.error:
@@ -223,6 +232,7 @@ def evaluate(result, opts=None) -> list[Failure]:
         (MtrResult, _mtr),
         (BundleResult, _bundle),
         (UdpResult, _udp),
+        (BlocklistResult, _blocklist),
         (NtpResult, _ntp),
     )
     for cls, handler in handlers:

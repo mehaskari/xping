@@ -9,6 +9,7 @@ from xping.cli.errors import UsageError
 from xping.cli.export import emit_export, export_requested, output_suppressed
 from xping.cli.verdict import evaluate
 from xping.diagnostics import profile as profile_diag
+from xping.diagnostics.blocklist import blocklist
 from xping.diagnostics.bundle import run_bundle
 from xping.diagnostics.check import EXAMPLE, ConfigError, run_checks
 from xping.diagnostics.deps import print_deps_status
@@ -295,6 +296,18 @@ def cmd_check(args: argparse.Namespace) -> object:
 def cmd_rdns(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
     result = rdns(ip=args.ip, quiet=quiet)
+    emit_export(result, args)
+    return result
+
+
+def cmd_blocklist(args: argparse.Namespace) -> object:
+    quiet = output_suppressed(args)
+    result = blocklist(
+        target=_resolve_host(args.target),
+        extra_zones=args.zone,
+        timeout=args.timeout,
+        quiet=quiet,
+    )
     emit_export(result, args)
     return result
 

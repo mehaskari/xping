@@ -31,6 +31,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **IPv6** — IPv6-only hosts just work; `-4` / `-6` force a family
 - **DNS Lookup** — A, AAAA, CNAME, MX, NS, TXT (incl. SPF) with reverse DNS
 - **DNS Health Check** — SPF, DMARC (`_dmarc.`), DKIM (common selectors), NS redundancy, MX backup, 0–100 score
+- **Blocklist check** — `xping blocklist`: is an IP, or a domain and its mail servers, on a spam blocklist (Spamhaus, SpamCop, Barracuda, SURBL, URIBL, …)?
 - **DNS Propagation** — Compare a record across Google, Cloudflare, Quad9, OpenDNS, AdGuard, Control D and your own resolver
 - **Reverse DNS** — PTR lookup with stdlib fallback to 8.8.8.8 for flaky resolvers
 - **TCP Connect** — Live TCP port checks with connect timing, success rate, and timeline
@@ -188,6 +189,19 @@ xping lookup github.com
 xping lookup github.com --full    # includes TXT records (SPF etc.)
 xping dnscheck github.com         # SPF / DMARC / DKIM / NS / MX health check
 ```
+
+### Blocklist (DNSBL) Check
+
+```bash
+xping blocklist 203.0.113.25         # an IP on 8 spam blocklists
+xping blocklist mycompany.com        # the domain on 3 domain lists + its MX / web IPs
+xping blocklist 203.0.113.25 --zone bl.example.org
+```
+
+Each result is *listed*, *policy* (Spamhaus PBL: an end-user address
+range, normal for home connections), *clean*, *refused* (some lists
+refuse queries via public resolvers like 8.8.8.8) or *error*. Exit code 1
+when listed.
 
 ### DNS Propagation
 
@@ -490,7 +504,7 @@ timeout = 3
 
 [[check]]
 name = "Database"
-type = "tcp"            # ping | tcp | udp | ntp | http | tls | lookup | dnscheck | health | propagation
+type = "tcp"            # ping | tcp | udp | ntp | http | tls | lookup | dnscheck | blocklist | health | propagation
 host = "prod-db"        # saved profile names work
 port = 5432
 max_latency = 50
@@ -539,6 +553,7 @@ Diagnostics talk to the host you name. A few features also contact third-party s
 | `trace --asn` / `mtr --asn` | Team Cymru DNS (hop addresses are looked up there); opt-in |
 | `propagation` | Google, Cloudflare, Quad9, OpenDNS, AdGuard and Control D public resolvers |
 | `whois` | IANA and registry WHOIS / RDAP servers |
+| `blocklist` | The blocklists' DNS servers (via your resolver) — they see the IP or domain you check |
 | `--webhook URL` | Only the URL you give, with the target name and check result |
 | `lookup`, `dnscheck` | `8.8.8.8` directly, only when `dig` is not installed (otherwise your resolver) |
 | `rdns` | `8.8.8.8`, only when the system resolver finds no PTR record |

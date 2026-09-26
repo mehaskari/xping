@@ -195,6 +195,7 @@ Commands:
   mtr    <host>        Combined traceroute + live per-hop ping
   mtu    <host>        Path MTU discovery (binary search)
   dnscheck <domain>    DNS health check — SPF, DMARC, DKIM, NS, MX
+  blocklist <ip|domain> Spam blocklist (DNSBL) check — IP, or a domain's mail servers
   propagation <name>   Compare answers from public resolvers (DNS propagation)
   osdetect <host>      Guess remote OS from TTL fingerprint
   speedtest            Download/upload speed via Cloudflare
@@ -232,6 +233,7 @@ Examples:
   xping mtr 1.1.1.1 --cycles 15
   xping mtu 8.8.8.8
   xping dnscheck github.com
+  xping blocklist mail.example.net
   xping propagation example.com --type MX
   xping propagation example.com --expect 93.184.216.34
   xping speedtest --json
@@ -564,6 +566,28 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     )
     p_dnscheck.add_argument("domain", help="Domain name to check")
     _add_min_score(p_dnscheck)
+
+    p_block = sub.add_parser(
+        "blocklist",
+        parents=[export_parent],
+        help="Check an IP or a domain's mail servers against spam blocklists (DNSBL)",
+    )
+    p_block.add_argument("target", help="IPv4 address or domain")
+    p_block.add_argument(
+        "--zone",
+        action="append",
+        default=None,
+        metavar="ZONE",
+        help="Also check this DNSBL zone, e.g. bl.example.org (repeatable)",
+    )
+    p_block.add_argument(
+        "-t",
+        "--timeout",
+        type=_positive_float,
+        default=5.0,
+        metavar="SEC",
+        help="Seconds to wait per lookup [default: 5]",
+    )
 
     p_prop = sub.add_parser(
         "propagation",

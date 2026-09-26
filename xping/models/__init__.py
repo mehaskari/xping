@@ -1,5 +1,6 @@
 """Diagnostic result dataclasses."""
 
+from .blocklist import BlocklistCheck, BlocklistResult
 from .bundle import BundleResult
 from .check import CheckOutcome, CheckReport
 from .dnscheck import DnsCheckItem, DnsCheckResult
@@ -41,6 +42,8 @@ __all__ = [
     "IpProbe",
     "IpScanResult",
     "BundleResult",
+    "BlocklistCheck",
+    "BlocklistResult",
     "CheckOutcome",
     "CheckReport",
     "RdnsResult",

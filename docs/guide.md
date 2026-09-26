@@ -25,7 +25,7 @@ output means, and walks through common tasks.
 4. [Command reference](#4-command-reference)
    - Troubleshooting: [`doctor`](#xping-doctor) · [`net`](#xping-net) · [`health`](#xping-health) · [`all`](#xping-all)
    - Reachability and paths: [`ping`](#xping-ping) · [`trace`](#xping-trace) · [`mtr`](#xping-mtr) · [`tcp`](#xping-tcp) · [`udp`](#xping-udp) · [`mtu`](#xping-mtu)
-   - DNS and domains: [`lookup`](#xping-lookup) · [`rdns`](#xping-rdns) · [`dnscheck`](#xping-dnscheck) · [`propagation`](#xping-propagation) · [`whois`](#xping-whois)
+   - DNS and domains: [`lookup`](#xping-lookup) · [`rdns`](#xping-rdns) · [`dnscheck`](#xping-dnscheck) · [`blocklist`](#xping-blocklist) · [`propagation`](#xping-propagation) · [`whois`](#xping-whois)
    - Web and TLS: [`http`](#xping-http) · [`tls`](#xping-tls)
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
    - Local machine: [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
@@ -706,6 +706,58 @@ xping dnscheck example.com
 xping dnscheck mycompany.com --min-score 80 -q
 ```
 
+#### `xping blocklist`
+
+```
+xping blocklist IP|DOMAIN [--zone ZONE]... [-t SEC]
+```
+
+Checks whether an IP address or a domain's mail servers are on a spam
+**blocklist** (DNSBL). Many mail servers reject mail from listed
+addresses, so this is the first thing to check when e-mail bounces or
+lands in spam.
+
+- **For an IPv4 address**, xping checks it on the IP lists.
+- **For a domain**, it checks the domain on the domain lists, and the
+  IPv4 addresses of its mail servers (MX) and web host (A) on the IP
+  lists, up to 6 addresses. IPv6 addresses are shown but not checked,
+  because few lists support them.
+
+| IP lists | Domain lists |
+|----------|--------------|
+| Spamhaus ZEN, SpamCop, Barracuda, PSBL, Mailspike, UCEPROTECT L1, DroneBL, s5h | Spamhaus DBL, SURBL, URIBL |
+
+How it works: to check 192.0.2.10 against `zen.spamhaus.org`, xping looks
+up `10.2.0.192.zen.spamhaus.org`. An answer in `127.0.0.0/8` means
+*listed*, and the last number says why; "does not exist" means *not
+listed*. Each result is one of:
+
+| Status | Meaning |
+|--------|---------|
+| ✘ **listed** | on the list — the Details column explains why when the list says (e.g. Spamhaus SBL = spam source, XBL = infected host) |
+| ℹ **policy** | Spamhaus PBL only: an end-user address range. Normal for home and mobile connections; a problem only for a mail server, which should not send from such a range |
+| ✔ **clean** | not listed |
+| ? **refused** | the list refused to answer. Spamhaus and URIBL refuse queries that arrive via big public resolvers (8.8.8.8, 1.1.1.1); use your ISP's or your own resolver |
+| ? **error** | the lookup timed out or failed |
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--zone ZONE` | — | Also check this DNSBL zone (repeatable) |
+| `-t`, `--timeout SEC` | 5 | Seconds to wait per lookup |
+
+Exit code 1 when the target is **listed** on any list, or when nothing
+could be checked. *Policy*, *refused* and *error* results do not fail.
+
+Queries go through your system resolver to each list's DNS servers, so
+the list operators see which address or domain you checked.
+
+```bash
+xping blocklist 203.0.113.25
+xping blocklist mycompany.com          # the domain, plus its mail and web servers
+xping blocklist 203.0.113.25 --zone bl.example.org
+xping blocklist mail.mycompany.com -q || echo "we are on a blocklist"
+```
+
 #### `xping propagation`
 
 ```
@@ -1196,6 +1248,7 @@ max_latency = 1500
 | `tls` | `host` | `port` (443), `timeout` (5.0), `family` | `min_days` |
 | `lookup` | `host` | `full` (false), `server` | — |
 | `dnscheck` | `domain` | — | `min_score` |
+| `blocklist` | `target` | `zones` (list), `timeout` (5.0) | — (fails when listed) |
 | `health` | `host` | `count` (8), `timeout` (2.0), `family` | `min_score` |
 | `propagation` | `name_to_query` | `record` ("A"), `servers` (list) | `expect` (string or list) |
 
@@ -1281,10 +1334,11 @@ xping udp 192.168.1.1 53
 xping propagation www.example.com --expect 203.0.113.10
 ```
 
-**Audit a mail domain**
+**Audit a mail domain / "why does my mail bounce?"**
 
 ```bash
-xping dnscheck example.com
+xping dnscheck example.com        # SPF, DMARC, DKIM, MX
+xping blocklist example.com       # the domain and its mail servers on spam blocklists
 xping lookup example.com --full
 ```
 
@@ -1339,6 +1393,7 @@ contact third parties, and only when you use them:
 | `trace --asn`, `mtr --asn` | Team Cymru DNS (hop addresses are looked up there) |
 | `propagation` | Google, Cloudflare, Quad9, OpenDNS, AdGuard and Control D resolvers |
 | `whois` | IANA and registry WHOIS / RDAP servers |
+| `blocklist` | the blocklists' DNS servers (via your resolver), which see the checked IP or domain |
 | `lookup`, `dnscheck` | `8.8.8.8`, only when `dig` is not installed |
 | `rdns` | `8.8.8.8`, only when the system resolver has no PTR record |
 | `--webhook URL` | only the URL you give |

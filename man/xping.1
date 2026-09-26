@@ -146,6 +146,22 @@ Reports a 0-100 score with pass/warn/fail per check.
 Checks whose DNS query failed (e.g. SERVFAIL or timeout) are marked
 as not verified and excluded from the score.
 .TP
+.BR blocklist " \fIIP\fR|\fIDOMAIN\fR [\fIOPTIONS\fR]"
+Check an IPv4 address, or a domain and the IPv4 addresses of its mail
+(MX) and web (A) servers, against spam blocklists (DNSBL/RHSBL):
+Spamhaus ZEN, SpamCop, Barracuda, PSBL, Mailspike, UCEPROTECT L1, DroneBL
+and s5h for addresses; Spamhaus DBL, SURBL and URIBL for domains.
+Each result is
+.BR listed ,
+.B policy
+(Spamhaus PBL only: an end-user address range, normal for home
+connections),
+.BR clean ,
+.B refused
+(the list refuses queries from public resolvers such as 8.8.8.8) or
+.BR error .
+Exits 1 when listed.
+.TP
 .BR rdns " \fIIP\fR [\fIOPTIONS\fR]"
 Reverse-DNS (PTR) lookup for
 .IR IP .
@@ -396,6 +412,7 @@ Supported types:
 .BR tls ,
 .BR lookup ,
 .BR dnscheck ,
+.BR blocklist ,
 .BR health ,
 .BR propagation ,
 each with the same thresholds as the command
@@ -828,6 +845,15 @@ Repeat the check; see
 .BI \-\-min\-score " N"
 Exit 1 if the DNS health score (0\(en100) is below
 .IR N .
+.SS blocklist
+.TP
+.BI \-\-zone " ZONE"
+Also check this DNSBL zone (repeatable).
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Seconds to wait per lookup.
+Default:
+.BR 5 .
 .SS propagation
 .TP
 .BI \-t " TYPE" ", \-\-type " TYPE
@@ -1171,6 +1197,9 @@ Auto-ping Google DNS and display follow-up command suggestions.
 .B xping google.com
 Auto-ping google.com (same shorthand, works with hostnames too).
 .TP
+.B xping blocklist mycompany.com
+Check a domain and its mail servers against spam blocklists.
+.TP
 .B xping udp 1.1.1.1 53
 Check that a DNS server answers over UDP.
 .TP
@@ -1329,7 +1358,9 @@ third parties:
 .B whois
 (IANA and registry WHOIS/RDAP servers),
 .B \-\-webhook
-(only the URL you give), and
+(only the URL you give),
+.B blocklist
+(the blocklists' DNS servers, which see the checked address or domain), and
 .BR lookup ,
 .B dnscheck
 and

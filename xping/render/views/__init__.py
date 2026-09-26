@@ -1,6 +1,7 @@
 """Command-specific view renderers."""
 
 from . import (
+    blocklist,
     check,
     dnscheck,
     doctor,
@@ -29,6 +30,7 @@ from . import (
 )
 
 __all__ = [
+    "blocklist",
     "check",
     "dnscheck",
     "doctor",

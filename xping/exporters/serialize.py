@@ -39,6 +39,8 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     # ipscan
     "IpScanResult": ("scanned", "alive_hosts", "alive_count"),
     "BundleResult": (),
+    "BlocklistCheck": (),
+    "BlocklistResult": ("listed", "listed_count", "answered"),
     # rdns
     "RdnsResult": ("resolved",),
     # tls
