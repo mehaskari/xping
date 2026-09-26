@@ -1,7 +1,7 @@
 name: xping
 title: xping
 base: core22
-version: '1.4.1'
+version: '1.4.5'
 summary: Beautiful CLI network diagnostics
 description: |
   xping is a command-line network diagnostics tool with live,
