@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 
 from xping import __author__, __copyright__, __email__, __license__, __url__, __version__
 from xping.cli.errors import UsageError
@@ -482,6 +483,50 @@ def cmd_completion(args: argparse.Namespace) -> object:
     if not args.shell:
         raise UsageError("name a shell (bash, zsh, fish) or use --install")
     print(completion.generate(args.shell), end="")
+    return True
+
+
+def cmd_config(args: argparse.Namespace) -> object:
+    from xping.cli import config as user_config
+    from xping.render import print_table
+
+    if args.example:
+        print(user_config.EXAMPLE, end="")
+        return True
+    from xping.cli.parser import build_parser
+
+    try:
+        config = user_config.load()
+        user_config.apply(build_parser(), config)  # validate every entry
+    except user_config.ConfigError as exc:
+        print()
+        print(c(f"  ✘ {exc}", BRAND_AMBER, BOLD))
+        print(c("  Fix the file, or run with XPING_CONFIG=none to ignore it.", DIM))
+        print()
+        return False
+    path = user_config.config_path()
+    print()
+    if config.disabled:
+        print(c("  Config disabled (XPING_CONFIG=none) — built-in defaults are used.", BWHITE))
+    elif not config.loaded:
+        print(c(f"  No config file at {path}", BWHITE))
+        print(c("  Create one with:", DIM))
+        print(c(f"    xping config --example > {path}", BRAND_TEAL))
+    else:
+        print(c("  Config file  ", BRAND_SLATE) + c(str(config.path), BRAND_TEAL, BOLD))
+        rows = [
+            [c(f"[{section}]", BRAND_AMBER), key.replace("_", "-"), json.dumps(value)]
+            for section, values in config.sections.items()
+            for key, value in values.items()
+        ]
+        print()
+        if rows:
+            print_table(["Section", "Option", "Value"], rows)
+        else:
+            print(c("  (empty)", DIM))
+        print()
+        print(c("  Options given on the command line always win.", DIM))
+    print()
     return True
 
 

@@ -22,6 +22,7 @@ output means, and walks through common tasks.
    - [Exit codes and thresholds](#34-exit-codes-and-thresholds)
    - [Watch mode and alerts](#35-watch-mode-and-alerts)
    - [Permissions (why no root is needed)](#36-permissions-why-no-root-is-needed)
+   - [Personal defaults (config file)](#37-personal-defaults-config-file)
 4. [Command reference](#4-command-reference)
    - Troubleshooting: [`doctor`](#xping-doctor) · [`net`](#xping-net) · [`health`](#xping-health) · [`all`](#xping-all)
    - Reachability and paths: [`ping`](#xping-ping) · [`trace`](#xping-trace) · [`mtr`](#xping-mtr) · [`tcp`](#xping-tcp) · [`udp`](#xping-udp) · [`mtu`](#xping-mtu)
@@ -30,7 +31,7 @@ output means, and walks through common tasks.
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
    - Local machine: [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
    - Automation: [`check`](#xping-check) · [`profile`](#xping-profile)
-   - Utilities: [`completion`](#xping-completion) · [`deps`](#xping-deps) · [`about`](#xping-about)
+   - Utilities: [`config`](#xping-config) · [`completion`](#xping-completion) · [`deps`](#xping-deps) · [`about`](#xping-about)
 5. [Batch check files](#5-batch-check-files)
 6. [Recipes](#6-recipes)
 7. [Files, environment and privacy](#7-files-environment-and-privacy)
@@ -261,6 +262,50 @@ sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
 ```
 
 `xping deps` shows which mode your system uses.
+
+### 3.7 Personal defaults (config file)
+
+Options you always type can live in `~/.xping/config.toml`:
+
+```toml
+[defaults]            # every command that has the option
+timeout = 3
+ipv4 = true
+
+[ping]                # one command
+count = 10
+interval = 0.2
+
+[lookup]
+doh = "cloudflare"
+
+[ntp]
+server = "time.cloudflare.com"   # optional positional arguments work too
+```
+
+- **Keys** are long option names, written as `max-latency` or
+  `max_latency`. Flags take `true` / `false`. Repeatable options take a
+  list, e.g. `server = ["9.9.9.9"]`.
+- **The command line always wins.** `xping ping host -c 3` sends 3
+  packets even with `count = 10`. When you use one option of an either/or
+  pair on the command line, the file's value for the other is dropped: `-6`
+  beats `ipv4 = true`, and `--server` beats `doh = …`.
+- **Mistakes are errors, not silent no-ops.** An unknown section, an
+  unknown option or a bad value stops xping with exit code 2 and names the
+  file, section and key. `xping config` still works then, and shows what
+  is wrong.
+- **Scope.** The file applies to commands and to the `xping HOST`
+  shorthand (via `[ping]`). It does not apply to `check` files, which have
+  their own `[defaults]`.
+- **Switching it off.** `XPING_CONFIG=/path/to/file` uses another file,
+  and `XPING_CONFIG=none` ignores the config for one run. A flag set to
+  `true` in the file cannot be switched off on the command line; use
+  `XPING_CONFIG=none` for that.
+- TOML config files need Python 3.11+.
+
+Start from the commented example with
+`xping config --example > ~/.xping/config.toml`. Then check what is
+active with [`xping config`](#xping-config).
 
 ---
 
@@ -1166,6 +1211,26 @@ xping profile list
 
 ### Utilities
 
+#### `xping config`
+
+```
+xping config
+xping config --example
+```
+
+Shows which config file is in use and every setting in it, or explains
+why it is invalid. See
+[Personal defaults](#37-personal-defaults-config-file).
+
+| Option | Description |
+|--------|-------------|
+| `--example` | Print a commented example config and exit |
+
+```bash
+xping config --example > ~/.xping/config.toml
+xping config
+```
+
 #### `xping completion`
 
 ```
@@ -1397,6 +1462,7 @@ xping doctor --json > doctor.json
 | `~/.xping/profiles.json` | Saved profiles |
 | `~/.xping/health_history.json` | `health` score history (last 50 per host) |
 | `~/.xping/completions/` | Completion scripts written by `completion --install` |
+| `~/.xping/config.toml` | Your defaults (you write it; xping only reads it) |
 
 `completion --install` also adds a marked block to your shell's rc file
 (or a file under `~/.config/fish/completions/`).
@@ -1407,6 +1473,7 @@ xping doctor --json > doctor.json
 |----------|--------|
 | `NO_COLOR` | Disable colour output |
 | `XPING_DEBUG` | Print full Python tracebacks on errors |
+| `XPING_CONFIG` | Use another config file; `none` ignores the config |
 | `SHELL` | The shell `completion --install` sets up |
 | `ZDOTDIR`, `XDG_CONFIG_HOME` | Honoured by `completion --install` for the zsh rc and fish config locations |
 

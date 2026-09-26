@@ -443,6 +443,14 @@ Check whether the optional system binaries
 are installed, and print the correct package-manager install command
 for the detected Linux distribution or macOS.
 .TP
+.B config [\-\-example]
+Show the config file in use and every setting in it, or what is wrong
+with it;
+.B \-\-example
+prints a commented starter file.
+See
+.BR CONFIGURATION .
+.TP
 .BR completion " [\fISHELL\fR] [\fB\-\-install\fR|\fB\-\-uninstall\fR]"
 Print a tab-completion script for
 .I SHELL
@@ -1064,6 +1072,56 @@ the terminal does not scroll.
 .B mtr
 similarly redraws its hop table in place on every cycle.
 .
+.SH CONFIGURATION
+Options you always type can be stored in
+.IR ~/.xping/config.toml :
+a
+.B [defaults]
+section for every command that has the option, and one section per
+command:
+.PP
+.RS
+.nf
+[defaults]
+timeout = 3
+ipv4 = true
+
+[ping]
+count = 10
+
+[lookup]
+doh = "cloudflare"
+.fi
+.RE
+.PP
+Keys are long option names
+.RB ( max\-latency
+or
+.BR max_latency );
+flags take
+.BR true / false ,
+repeatable options a list, and optional positional arguments (such as
+the
+.B ntp
+server) can be set too.
+The command line always wins; when it uses one option of a mutually
+exclusive pair
+.RB ( \-6 ,
+.BR \-\-server ),
+the file's value for the other
+.RB ( ipv4 ,
+.BR doh )
+is dropped.
+Unknown sections, unknown options and invalid values are errors (exit
+status 2) naming the file, section and key;
+.B xping config
+still runs and explains them.
+The file does not apply to
+.B check
+files, which have their own
+.BR [defaults] .
+TOML config files need Python 3.11+.
+.
 .SH SHELL COMPLETION
 The Debian/Ubuntu package installs completion for bash, zsh and fish
 automatically. For pip, pipx and source installs, run once:
@@ -1186,6 +1244,12 @@ Disable all ANSI colour and style codes (see no-color.org).
 .B XPING_DEBUG
 Print full Python tracebacks on errors instead of the short
 human-readable message.
+.TP
+.B XPING_CONFIG
+Read this config file instead of
+.IR ~/.xping/config.toml ;
+.B none
+ignores the config for this run.
 .
 .SH EXIT STATUS
 .TP
@@ -1359,6 +1423,11 @@ which also adds a marked block to
 .I ~/.bashrc
 or
 .IR ~/.bash_profile .
+.TP
+.I ~/.xping/config.toml
+Personal defaults (see
+.BR CONFIGURATION );
+written by you, only read by xping.
 .TP
 .I /usr/share/man/man1/xping.1.gz
 This manual page (installed by package managers).

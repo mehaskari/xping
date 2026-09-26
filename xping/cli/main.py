@@ -5,12 +5,14 @@ from __future__ import annotations
 import os
 import sys
 
+from xping.cli import config as user_config
 from xping.cli.commands import (
     cmd_about,
     cmd_all,
     cmd_blocklist,
     cmd_check,
     cmd_completion,
+    cmd_config,
     cmd_deps,
     cmd_dnscheck,
     cmd_doctor,
@@ -101,9 +103,13 @@ _DISPATCH = {
     "net": cmd_net,
     "doctor": cmd_doctor,
     "completion": cmd_completion,
+    "config": cmd_config,
     "deps": cmd_deps,
     "about": cmd_about,
 }
+
+
+_WORKS_WITHOUT_CONFIG = {"config", "completion", "about", "deps", "-h", "--help", "-V", "--version"}
 
 
 def _is_bare_host(argv: list[str]) -> str | None:
@@ -118,6 +124,15 @@ def _is_bare_host(argv: list[str]) -> str | None:
 def main() -> None:
     raw_argv = sys.argv[1:]
 
+    parser = build_parser()
+    try:
+        user_config.apply(parser, user_config.load())
+    except user_config.ConfigError as exc:
+        # `xping config` and help must still work — they are how you fix it
+        if not raw_argv or raw_argv[0] not in _WORKS_WITHOUT_CONFIG:
+            parser.exit(2, f"xping: config error: {exc}\n  (check it with: xping config)\n")
+        parser = build_parser()
+
     # ── Bare host: xping 8.8.8.8  or  xping google.com ────────────────────
     bare = _is_bare_host(raw_argv)
     if bare is not None:
@@ -125,9 +140,18 @@ def main() -> None:
         try:
             from xping.diagnostics import profile as profile_diag
             from xping.diagnostics.ping import ping
+            from xping.diagnostics.resolve import family_of
 
+            opts = parser.parse_args(["ping", bare])  # [ping] config applies here too
             resolved = profile_diag.resolve_target(bare)
-            result = ping(host=resolved, count=5, quiet=False)
+            result = ping(
+                host=resolved,
+                count=opts.count,
+                timeout=opts.timeout,
+                interval=opts.interval,
+                quiet=False,
+                family=family_of(opts),
+            )
             if is_tty:
                 _print_next_steps(bare)
         except KeyboardInterrupt:
@@ -135,8 +159,8 @@ def main() -> None:
             sys.exit(130)
         sys.exit(1 if evaluate(result) else 0)
 
-    parser = build_parser()
     args = parser.parse_args()
+    user_config.resolve_conflicts(build_parser(), args, raw_argv)
 
     if args.version:
         print_version()

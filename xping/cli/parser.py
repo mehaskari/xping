@@ -212,6 +212,7 @@ Commands:
   doctor [host]        Why is the internet not working? Step-by-step diagnosis
   deps                 Check system dependency status
   completion [shell]   Tab completion for bash/zsh/fish (--install to set it up)
+  config               Show your defaults from ~/.xping/config.toml (--example)
   about                Show author, license, and attribution info
   profile              Manage saved target profiles
     add <name> <target>   Save a profile
@@ -865,6 +866,11 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         default=443,
         metavar="PORT",
         help="TCP port to test on HOST [default: 443]",
+    )
+
+    p_config = sub.add_parser("config", help="Show personal defaults from ~/.xping/config.toml")
+    p_config.add_argument(
+        "--example", action="store_true", help="Print an example config file and exit"
     )
 
     sub.add_parser("deps", help="Check system dependency status")
