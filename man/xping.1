@@ -454,6 +454,26 @@ Saved profile names work as hosts.
 prints a commented starter file; see
 .BR "SCRIPTING AND MONITORING" .
 .TP
+.BR diff " \fIBEFORE\fR \fIAFTER\fR [\fIOPTIONS\fR]"
+Compare two
+.B \-\-json
+results of the same check (either may be
+.B \-
+for stdin) and show what got better or worse: latency, jitter and loss,
+each HTTP phase, TLS days remaining, the route of
+.B trace
+and
+.B mtr
+(which hops changed), added and removed DNS records, and every
+.BR dnscheck ,
+.BR doctor ,
+.B check
+or
+.B blocklist
+item whose status changed.
+The kind of result is recognised from the JSON; changes under 3% or
+below a small minimum count as unchanged.
+.TP
 .B deps
 Check whether the optional system binaries
 .RB ( ping ,
@@ -941,6 +961,15 @@ Default:
 .TP
 .B \-\-example
 Print an example check file and exit.
+.SS diff
+.TP
+.BI \-\-max\-regression " PCT"
+Exit 1 when a metric got worse by more than
+.I PCT
+percent, or a status got worse.
+Without it,
+.B diff
+only reports and exits 0.
 .SS doctor
 .TP
 .BI \-\-port " PORT"
@@ -1330,6 +1359,9 @@ Check that a DNS server answers over UDP.
 .TP
 .B xping ntp \-\-max\-offset 500
 Exit 1 if the system clock is off by more than half a second.
+.TP
+.B xping ping example.net \-\-json | xping diff baseline.json \-
+Compare a new run with a saved baseline.
 .TP
 .B xping wifi \-\-nearby
 Wi-Fi signal, noise and channel, with the networks nearby.

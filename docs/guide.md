@@ -30,7 +30,7 @@ output means, and walks through common tasks.
    - Web and TLS: [`http`](#xping-http) · [`tls`](#xping-tls)
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
    - Local machine: [`wifi`](#xping-wifi) · [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
-   - Automation: [`check`](#xping-check) · [`profile`](#xping-profile)
+   - Automation: [`check`](#xping-check) · [`diff`](#xping-diff) · [`profile`](#xping-profile)
    - Utilities: [`config`](#xping-config) · [`completion`](#xping-completion) · [`deps`](#xping-deps) · [`about`](#xping-about)
 5. [Batch check files](#5-batch-check-files)
 6. [Recipes](#6-recipes)
@@ -1234,6 +1234,54 @@ xping check checks.toml
 xping check checks.toml --markdown > status.md
 ```
 
+#### `xping diff`
+
+```
+xping diff BEFORE AFTER [--max-regression PCT]
+```
+
+Compares two `--json` results of the same check and shows what got
+better or worse: "latency is 40% higher than yesterday", "the route
+changed at hop 7", "DMARC went from ok to fail". Either file may be `-`
+to read from stdin, so a fresh run can be piped straight in:
+
+```bash
+xping ping example.net --json > baseline.json     # once
+xping ping example.net --json | xping diff baseline.json -
+```
+
+The kind of result is recognised from the JSON, and the numbers that
+matter are compared, each with the direction that counts as better:
+
+| Kind | Compared |
+|------|----------|
+| `ping`, `health` | average / min / max RTT, jitter, packet loss (health: score, DNS time) |
+| `tcp`, `udp` | average connect / reply time, success rate |
+| `http` | total time and each phase (DNS, TCP, TLS, server, download); status, final URL, HTTP version and missing security headers |
+| `tls` | days remaining; issuer, expiry date, protocol |
+| `trace`, `mtr` | the **route** (which hops changed), final / destination RTT and loss |
+| `lookup`, `propagation` | added and removed records, per resolver |
+| `dnscheck`, `doctor`, `check`, `blocklist` | score / listings, and every check, step or outcome whose status changed |
+| `speedtest`, `ntp`, `wifi` | download / upload / latency, clock offset and delay, signal, SNR, link rate |
+| anything else | every numeric field |
+
+Changes under 3%, or smaller than a minimum amount (1 ms, 1 percentage
+point, 2 dBm, …), count as *same*, so normal jitter is not reported as a
+change.
+
+| Option | Description |
+|--------|-------------|
+| `--max-regression PCT` | Exit 1 when a metric got worse by more than PCT percent, or a status got worse (e.g. a check went from pass to fail). Without it, diff only reports and exits 0. |
+
+Comparing results of different kinds, or a file that is not xping JSON,
+exits 2.
+
+```bash
+xping http https://example.com --json > before.json
+xping http https://example.com --json | xping diff before.json - --max-regression 25
+xping check checks.toml --json > today.json && xping diff yesterday.json today.json
+```
+
 #### `xping profile`
 
 ```
@@ -1503,6 +1551,14 @@ xping doctor        # router, internet, DNS, …
 xping net                          # your subnet and gateway
 xping ipscan 192.168.1.0/24        # hosts that answer ping
 xping sweep 192.168.1.0/24 -p 22,80,443,3389
+```
+
+**Did it get worse since last time?**
+
+```bash
+xping mtr example.net --json > mtr-monday.json
+# later
+xping mtr example.net --json | xping diff mtr-monday.json -   # route and loss changes
 ```
 
 **Save a report**

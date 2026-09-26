@@ -3,6 +3,17 @@
 ## [Unreleased]
 
 ### Added
+- **`xping diff BEFORE AFTER`** — compare two `--json` results of the
+  same check. Either side can be `-` for stdin.
+  - It recognises the kind of result and compares the numbers that
+    matter, each with its "better" direction: RTT, jitter, loss, HTTP
+    phases, TLS days, speed, clock offset, Wi-Fi signal and so on.
+  - It shows the route changes of `trace` / `mtr`, added and removed DNS
+    records, and status changes in `dnscheck` / `doctor` / `check` /
+    `blocklist`.
+  - Changes under 3% count as noise.
+  - `--max-regression PCT` exits 1 on a bigger regression or a worse
+    status.
 - **`xping wifi`** — Wi-Fi link quality.
   - It shows signal and noise (dBm) with a grade, the SNR, the channel,
     band and width, the link rate and MCS, the standard, the security,
