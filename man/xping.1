@@ -828,6 +828,43 @@ or
 .B \-\-expect\-status
 also decide UP / DOWN.
 Export formats cannot be combined with watch mode.
+.PP
+These, and
+.BR "ping \-\-watch" ,
+also accept alerts:
+.TP
+.B \-\-notify
+Show a desktop notification on every DOWN / UP change (Notification
+Center on macOS,
+.BR notify\-send (1)
+on Linux, the terminal bell elsewhere).
+.TP
+.BI \-\-webhook " URL"
+POST one JSON object per DOWN / UP change to
+.I URL
+(http or https).
+The fields are
+.BR source ,
+.BR event " (down or up),"
+.BR target ,
+.BR check ,
+.BR detail ,
+.BR latency_ms ,
+.BR time ,
+.BR machine ,
+and a ready-made message in both
+.B text
+(Slack, Mattermost, Google Chat) and
+.B content
+(Discord).
+Delivery happens in the background; a failure is reported once.
+.PP
+The first check only sets the baseline, except that
+.B \-\-until\-up
+always announces the final UP.
+The UP message includes how long the outage lasted.
+.B ping \-\-watch
+counts a host as down after three consecutive lost pings.
 .
 .SH SCRIPTING AND MONITORING
 .RS
@@ -1183,7 +1220,9 @@ third parties:
 .B propagation
 (six public resolvers),
 .B whois
-(IANA and registry WHOIS/RDAP servers), and
+(IANA and registry WHOIS/RDAP servers),
+.B \-\-webhook
+(only the URL you give), and
 .BR lookup ,
 .B dnscheck
 and

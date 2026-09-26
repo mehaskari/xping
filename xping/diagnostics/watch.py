@@ -21,6 +21,7 @@ def watch(
     quiet: bool = False,
     clock: Callable[[], float] = time.time,
     sleep: Callable[[float], None] = time.sleep,
+    notifier=None,
 ) -> WatchResult:
     """Run *probe* every *every* seconds.
 
@@ -28,6 +29,7 @@ def watch(
     function returns as soon as a check passes; otherwise it runs until
     Ctrl-C and then prints a summary. Ctrl-C in --until-up mode propagates
     (exit code 130) because the awaited state was never reached.
+    *notifier* (see diagnostics.notify) is told about every up/down change.
     """
     result = WatchResult(target=target, check=check, until_up=until_up)
     if not quiet:
@@ -38,6 +40,14 @@ def watch(
         print(kv("Stop", "when up" if until_up else "Ctrl-C"))
         print()
 
+    try:
+        return _loop(result, probe, every, until_up, quiet, clock, sleep, notifier)
+    finally:
+        if notifier is not None:
+            notifier.flush()
+
+
+def _loop(result, probe, every, until_up, quiet, clock, sleep, notifier) -> WatchResult:
     seq = 0
     try:
         while True:
@@ -49,6 +59,14 @@ def watch(
             result.samples.append(sample)
             if not quiet:
                 watch_view.print_sample(sample, previous, result)
+            if notifier is not None:
+                notifier.observe(
+                    ok,
+                    previous.ok if previous else None,
+                    detail,
+                    latency,
+                    final=until_up and ok,
+                )
             if until_up and ok:
                 if not quiet:
                     watch_view.print_up(result)

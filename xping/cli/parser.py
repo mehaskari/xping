@@ -83,6 +83,29 @@ def _positive_float(value: str) -> float:
     return number
 
 
+def _webhook_url(value: str) -> str:
+    from xping.diagnostics.notify import valid_webhook
+
+    if not valid_webhook(value):
+        raise argparse.ArgumentTypeError("webhook must be an http:// or https:// URL")
+    return value
+
+
+def _add_notify(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--notify",
+        action="store_true",
+        help="Desktop notification when the target goes down or comes back (watch mode)",
+    )
+    p.add_argument(
+        "--webhook",
+        type=_webhook_url,
+        default=None,
+        metavar="URL",
+        help="POST a JSON event to URL on every down/up change (Slack, Discord, …)",
+    )
+
+
 def _add_watch(p: argparse.ArgumentParser, every: float) -> None:
     p.add_argument(
         "--watch",
@@ -101,6 +124,7 @@ def _add_watch(p: argparse.ArgumentParser, every: float) -> None:
         metavar="SEC",
         help=f"Seconds between checks in watch mode [default: {every:g}]",
     )
+    _add_notify(p)
 
 
 def _add_max_loss(p: argparse.ArgumentParser, what: str = "packet loss") -> None:
@@ -176,6 +200,8 @@ Commands:
 Examples:
   xping ping google.com
   xping ping google.com --watch
+  xping tcp db.local 5432 --watch --notify
+  xping http https://example.com --watch --webhook https://hooks.slack.com/services/…
   xping trace 1.1.1.1 --max-hops 20
   xping trace example.com --tcp --port 443
   xping lookup github.com --full --markdown
@@ -246,6 +272,7 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         action="store_true",
         help="Continuous live ping with sparkline (Ctrl-C to stop)",
     )
+    _add_notify(p_ping)
     _add_max_loss(p_ping)
     _add_max_latency(p_ping, "average RTT")
 

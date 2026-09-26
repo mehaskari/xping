@@ -22,6 +22,7 @@ from xping.diagnostics.lookup import lookup
 from xping.diagnostics.mtr import mtr
 from xping.diagnostics.mtu import mtu
 from xping.diagnostics.net import net
+from xping.diagnostics.notify import Notifier
 from xping.diagnostics.osdetect import osdetect
 from xping.diagnostics.ping import ping
 from xping.diagnostics.ping import watch as ping_watch
@@ -56,6 +57,24 @@ def _watch_requested(args: argparse.Namespace) -> bool:
     return bool(getattr(args, "watch", False) or getattr(args, "until_up", False))
 
 
+def _notifier(args: argparse.Namespace, target: str, check: str):
+    """Notifier for --notify / --webhook, or None when neither was given."""
+    desktop = getattr(args, "notify", False)
+    webhook = getattr(args, "webhook", None)
+    if not (desktop or webhook):
+        return None
+    return Notifier(target, check, desktop=desktop, webhook=webhook)
+
+
+def _require_watch_for_notify(args: argparse.Namespace) -> None:
+    if (getattr(args, "notify", False) or getattr(args, "webhook", None)) and not (
+        _watch_requested(args)
+    ):
+        flag = "--notify" if getattr(args, "notify", False) else "--webhook"
+        watch_flags = "--watch" if args.command == "ping" else "--watch or --until-up"
+        raise UsageError(f"{flag} only works in watch mode ({watch_flags})")
+
+
 def _run_watch(args: argparse.Namespace, target: str, check: str, run_once, describe) -> object:
     """Shared --watch / --until-up driver: judge every run with the same
     verdict (and thresholds) as the exit code, and hand it to watch()."""
@@ -77,10 +96,12 @@ def _run_watch(args: argparse.Namespace, target: str, check: str, run_once, desc
         every=args.every,
         until_up=getattr(args, "until_up", False),
         quiet=getattr(args, "quiet", False),
+        notifier=_notifier(args, target, check),
     )
 
 
 def cmd_ping(args: argparse.Namespace) -> object:
+    _require_watch_for_notify(args)
     if getattr(args, "watch", False):
         if output_suppressed(args):
             raise UsageError(
@@ -92,6 +113,7 @@ def cmd_ping(args: argparse.Namespace) -> object:
             timeout=args.timeout,
             interval=args.interval,
             family=family_of(args),
+            notifier=_notifier(args, args.host, "ping"),
         )
         return None
     quiet = output_suppressed(args)
@@ -136,6 +158,7 @@ def cmd_lookup(args: argparse.Namespace) -> object:
 
 
 def cmd_tcp(args: argparse.Namespace) -> object:
+    _require_watch_for_notify(args)
     if _watch_requested(args):
         host = _resolve_host(args.host)
         return _run_watch(
@@ -265,6 +288,7 @@ def cmd_tls(args: argparse.Namespace) -> object:
 
 
 def cmd_http(args: argparse.Namespace) -> object:
+    _require_watch_for_notify(args)
     if _watch_requested(args):
         return _run_watch(
             args,
@@ -296,6 +320,7 @@ def cmd_dnscheck(args: argparse.Namespace) -> object:
 
 
 def cmd_health(args: argparse.Namespace) -> object:
+    _require_watch_for_notify(args)
     if _watch_requested(args):
         host = _resolve_host(args.host)
         return _run_watch(

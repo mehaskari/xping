@@ -141,10 +141,21 @@ def ping(
     return result
 
 
+DOWN_AFTER_LOSSES = 3  # consecutive lost pings before --notify reports "down"
+
+
 def watch(
-    host: str, timeout: float = 2.0, interval: float = 1.0, family: int | None = None
+    host: str,
+    timeout: float = 2.0,
+    interval: float = 1.0,
+    family: int | None = None,
+    notifier=None,
 ) -> None:
-    """Continuous live ping with in-place sparkline (Ctrl-C to stop)."""
+    """Continuous live ping with in-place sparkline (Ctrl-C to stop).
+
+    With a *notifier*, the host counts as down after DOWN_AFTER_LOSSES
+    consecutive lost pings and as up again at the next reply — a single
+    lost packet is not an outage."""
     try:
         ip = resolve(host, family)
     except socket.gaierror:
@@ -165,6 +176,8 @@ def watch(
     rtts: list[float] = []
     use_subprocess = False
     printed_rows = 0
+    state: bool | None = None  # up/down as reported to the notifier
+    losses = 0
 
     try:
         seq = 0
@@ -183,6 +196,15 @@ def watch(
             elapsed = time.perf_counter() - t0
             rtts.append(rtt)
             printed_rows = ping_view.redraw_watch(rtts, printed_rows)
+            if notifier is not None:
+                losses = 0 if rtt >= 0 else losses + 1
+                new_state = True if rtt >= 0 else False if losses >= DOWN_AFTER_LOSSES else state
+                if new_state is not None:
+                    detail = (
+                        f"reply in {rtt:.1f} ms" if new_state else f"{losses} pings lost in a row"
+                    )
+                    notifier.observe(new_state, state, detail, rtt if rtt >= 0 else None)
+                    state = new_state
 
             remaining = interval - elapsed
             if remaining > 0:
@@ -191,3 +213,6 @@ def watch(
         print()
         result = PingResult(host=host, ip=ip, count=len(rtts), rtts=rtts)
         ping_view.print_summary(result)
+    finally:
+        if notifier is not None:
+            notifier.flush()
