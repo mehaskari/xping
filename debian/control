@@ -10,7 +10,7 @@ Build-Depends:
  python3-setuptools,
  python3-certifi
 Standards-Version: 4.6.2
-Homepage: https://github.com/mehdiaskari/xping
+Homepage: https://github.com/mehaskari/xping
 
 Package: xping
 Architecture: all

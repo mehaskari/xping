@@ -4,8 +4,8 @@
 
 | Version | Supported |
 |---------|-----------|
-| 1.3.x   | ✅ Active |
-| < 1.3   | ❌ No longer supported |
+| 1.4.x   | ✅ Active |
+| < 1.4   | ❌ No longer supported |
 
 ## Reporting a Vulnerability
 
@@ -27,6 +27,26 @@ Include: description, reproduction steps, potential impact.
 ## Security Design
 
 xping is a **read-only diagnostic tool**: no daemon, no server, no
-stored credentials. Raw socket access is optional and falls back to
-the system `ping` binary. `--output` file writes are opt-in with
-user-supplied paths. No `eval`/`exec` anywhere.
+stored credentials, no `eval`/`exec`.
+
+- **Privileges:** no root needed on macOS or Linux — ICMP uses
+  unprivileged ping sockets where the OS allows them. Raw sockets are
+  used only when xping already runs as root, and the system `ping` /
+  `traceroute` are the fallback. xping never asks for elevation.
+- **TLS:** every HTTPS/TLS connection (`tls`, `http`, `whois` RDAP,
+  `speedtest`, `net`) verifies certificates against the system store
+  plus `certifi` and refuses anything older than TLS 1.2. There is no
+  option to disable verification.
+- **Files written:** only under `~/.xping/` (profiles, health history,
+  completion scripts). `xping completion --install` additionally adds a
+  clearly marked block to the shell rc file, only when asked, and
+  `--uninstall` removes exactly that block.
+- **Network:** diagnostics contact the host you name. Features that
+  contact third parties (Cloudflare for `net`/`speedtest`, Team Cymru
+  DNS for `--asn`, public resolvers for `propagation`, WHOIS/RDAP
+  registries for `whois`) are listed in the README under
+  "Files & privacy"; `--asn` is opt-in and `net --no-public` keeps
+  everything local.
+- **Subprocesses:** system tools (`ping`, `traceroute`, `dig`, `ss`,
+  `netstat`, `ip`, `ifconfig`, …) are run with argument lists, never
+  through a shell.

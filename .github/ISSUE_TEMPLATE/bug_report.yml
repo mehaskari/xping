@@ -20,6 +20,24 @@ body:
         - Windows
     validations:
       required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed via
+      options:
+        - pipx / pip (PyPI)
+        - Ubuntu PPA (apt)
+        - Snap
+        - From source
+    validations:
+      required: true
+  - type: input
+    id: shell
+    attributes:
+      label: Shell (for tab-completion issues)
+      placeholder: "e.g. zsh 5.9 with oh-my-zsh, bash 3.2 (macOS), fish 3.7"
+    validations:
+      required: false
   - type: input
     id: command
     attributes:

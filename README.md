@@ -1,6 +1,6 @@
 # xping
 
-**Beautiful CLI network diagnostics — ping, traceroute, network scanning, port scanning, TCP checks, and DNS lookup.**
+**Beautiful CLI network diagnostics — ping, traceroute, MTR, DNS, TLS, HTTP, port and network scanning, health checks, and more.**
 
 Pure stdlib apart from `certifi` (CA bundle for TLS checks). Linux, macOS & Windows. IPv4 and IPv6.
 No root needed for ping, traceroute and MTR on macOS and Linux. Every command returns a meaningful exit code, so it works in scripts and monitoring as well as in your terminal.
@@ -15,7 +15,7 @@ No root needed for ping, traceroute and MTR on macOS and Linux. Every command re
   network diagnostics  ·  beautiful by default
 ```
 
-Created by **[Mehdi Askari](https://github.com/mehdiaskari)** — see [LICENSE](LICENSE) for attribution terms.
+Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LICENSE) for attribution terms.
 
 ---
 
@@ -47,6 +47,9 @@ Created by **[Mehdi Askari](https://github.com/mehdiaskari)** — see [LICENSE](
 - **Batch checks** — `xping check checks.toml` runs many checks in parallel with one exit code
 - **Speed test** — Multi-connection download/upload via Cloudflare
 - **All-in-one** — Run lookup, ping, trace, and TCP checks in a single command
+- **Listening ports** — `xping listen`: local TCP/UDP listeners with process names (Linux)
+- **OS fingerprint** — `xping osdetect`: guess a remote OS from the ICMP TTL
+- **Tab completion** — bash, zsh and fish, with descriptions, hostnames and saved profiles
 - **Dependency checker** — `xping deps` detects missing tools and shows the correct install command for your distro
 - **Machine-readable export** — `--json`, plus `--csv` / `--markdown` as real tables (one row per reply, hop, port, record…)
 - **man page included** — `man xping` works after installation
@@ -66,11 +69,11 @@ xping trace cloudflare.com
 xping deps
 ```
 
-`xping deps` prints install hints for missing `ping`, `tracert`, and `dig` when available through winget or chocolatey.
+`xping deps` shows which tools are available and how to install missing ones. Tab completion is available for bash, zsh and fish (e.g. in WSL or Git Bash); PowerShell completion is not provided yet.
 
 ## Installation
 
-### Ubuntu / Debian / Linux Mint / Pop!\_OS — PPA (recommended)
+### Ubuntu 24.04 / Linux Mint 22 / Pop!\_OS 24.04 — PPA (recommended)
 
 ```bash
 sudo add-apt-repository ppa:mehdiaskari/xping
@@ -78,7 +81,7 @@ sudo apt update
 sudo apt install xping
 ```
 
-Supported: Ubuntu 22.04 LTS, 24.04 LTS, Linux Mint 21+, Pop!\_OS 22.04+
+Built for Ubuntu 24.04 LTS (noble) and distributions based on it (Linux Mint 22, Pop!\_OS 24.04). This package also sets up tab completion for bash, zsh and fish.
 
 ### PyPI (all platforms)
 
@@ -86,23 +89,28 @@ Supported: Ubuntu 22.04 LTS, 24.04 LTS, Linux Mint 21+, Pop!\_OS 22.04+
 pipx install xping
 ```
 
+Requires Python 3.10 or newer. Then set up tab completion once: `xping completion --install`.
+
+### Snap
+
+```bash
+sudo snap install xping          # stable channel
+sudo snap install xping --edge   # latest build from main
+```
+
+The snap includes bash completion.
+
 ### From source
 
 ```bash
-git clone https://github.com/mehdiaskari/xping
+git clone https://github.com/mehaskari/xping
 cd xping
 pip install .
 ```
 
-### Arch Linux (AUR)
-
-```bash
-yay -S python-xping
-```
-
 ### Tab completion
 
-The Ubuntu/Debian package sets up completion for bash, zsh and fish automatically. With pip, pipx or a source install, run once:
+The PPA package sets up completion for bash, zsh and fish automatically. With pip, pipx or a source install, run once:
 
 ```bash
 xping completion --install     # detects your shell; re-run after upgrading
@@ -239,6 +247,7 @@ xping mtu example.com --max-mtu 9000  # for jumbo frames
 xping profile add prod-db 10.0.0.5 --port 5432 --note "Production DB"
 xping profile add staging-api staging.example.com
 xping profile list
+xping profile list --names        # bare names, one per line (for scripts)
 xping profile show prod-db
 xping profile remove prod-db
 
@@ -265,6 +274,14 @@ xping speedtest -d 5 --json    # 5-second download phase, JSON output
 ```
 
 A single stream under-reports fast links. The default uses up to ~40 MB down and 8 MB up.
+
+### Listening Ports & OS Fingerprint
+
+```bash
+xping listen                 # local TCP/UDP listeners (process names on Linux)
+xping listen --proto tcp
+xping osdetect 192.168.1.1   # guess the remote OS from the ICMP TTL (a heuristic)
+```
 
 ### Port Scan
 
@@ -381,12 +398,40 @@ sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
 
 ---
 
+## Files & privacy
+
+xping keeps its state under `~/.xping/`:
+
+| Path | Contents |
+|------|----------|
+| `~/.xping/profiles.json` | Saved target profiles |
+| `~/.xping/health_history.json` | `xping health` score history (last 50 per host) |
+| `~/.xping/completions/` | Completion scripts written by `xping completion --install` |
+
+`xping completion --install` also adds a clearly marked block to your shell's rc file; `--uninstall` removes it.
+
+Diagnostics talk to the host you name. A few features also contact third-party services, and each is used only by the command that needs it:
+
+| Command | Contacts |
+|---------|----------|
+| `net` | `1.1.1.1` (Cloudflare) to report your public IP; skip with `--no-public` |
+| `speedtest` | `speed.cloudflare.com` |
+| `trace --asn` / `mtr --asn` | Team Cymru DNS (hop addresses are looked up there); opt-in |
+| `propagation` | Google, Cloudflare, Quad9, OpenDNS, AdGuard and Control D public resolvers |
+| `whois` | IANA and registry WHOIS / RDAP servers |
+| `lookup`, `dnscheck` | `8.8.8.8` directly, only when `dig` is not installed (otherwise your resolver) |
+| `rdns` | `8.8.8.8`, only when the system resolver finds no PTR record |
+
+---
+
 ## Environment variables
 
 | Variable      | Effect                                  |
 |---------------|-----------------------------------------|
 | `NO_COLOR`    | Disable all ANSI colour output          |
 | `XPING_DEBUG` | Print full Python tracebacks on errors  |
+| `SHELL`       | Shell that `xping completion --install` sets up |
+| `ZDOTDIR`, `XDG_CONFIG_HOME` | Honoured by `completion --install` (zsh rc / fish config location) |
 
 ---
 
@@ -394,9 +439,11 @@ sudo sysctl -w net.ipv4.ping_group_range="0 2147483647"
 
 1. Fork and clone the repository
 2. `pip install -e ".[dev]"`
-3. Make your changes
-4. Run `python -m pytest tests/`
-5. Open a pull request
+3. Make your changes, with tests
+4. Run `pytest` and `ruff check xping/ --config ruff.toml`
+5. Open a pull request. CI runs the tests on Linux, macOS and Windows.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full checklist, including how to add a new command.
 
 ---
 
