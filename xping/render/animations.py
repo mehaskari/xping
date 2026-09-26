@@ -1,15 +1,14 @@
 """Animated terminal widgets."""
 
-import re
 import sys
 import threading
 import time
 
-from .ansi import BOLD, BRAND_TEAL, c
+from .ansi import ANSI_RE, BOLD, BRAND_TEAL, c
 from .layout import terminal_width
 
 SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-_ANSI = re.compile(r"\033\[[0-9;]*m")
+_ANSI = ANSI_RE
 
 
 def fit(text: str, width: int) -> str:

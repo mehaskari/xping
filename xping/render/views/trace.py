@@ -11,6 +11,7 @@ from ..ansi import (
     BWHITE,
     DIM,
     c,
+    pad,
 )
 from ..latency import latency_color
 from ..tables import print_table
@@ -38,7 +39,7 @@ def print_hop(hop) -> None:
         rtt_s = c(f"  {'* * *':^{_RTT_W}}", DIM)
         host_s = c("  no response", DIM)
     else:
-        rtt_s = f"  {latency_color(hop.avg_rtt)}"
+        rtt_s = f"  {pad(latency_color(hop.avg_rtt), _RTT_W, '^')}"
         label = hop.label or "?"
         if len(label) > _HOST_W - 2:
             label = label[: _HOST_W - 5] + "…"

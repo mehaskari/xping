@@ -53,6 +53,11 @@
 - The progress spinner (used by `doctor`, `http`, `trace`, `net`, …)
   printed its message on one line per animation frame when the message
   was wider than the terminal. It is now cut to fit, with "…".
+- Misaligned columns in `http` (timing, connection, security and
+  response headers), `trace` (host column after the RTT) and `all`
+  (summary). Padding counted the invisible colour codes, so columns
+  drifted, especially with colour off (`NO_COLOR`, piped output).
+  Coloured text is now padded by its visible width.
 - `xping trace` printed the separator line twice before its summary.
 - `xping http`: the last line of the redirect chain always showed
   status 200, even when the final response was an error.

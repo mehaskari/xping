@@ -1,6 +1,7 @@
 """ANSI escape helpers — all terminal colour codes live here."""
 
 import os
+import re
 import sys
 
 ESC = "\033["
@@ -70,6 +71,26 @@ def supports_color() -> bool:
 
 
 COLOR = supports_color()
+
+
+ANSI_RE = re.compile(r"\033\[[0-9;]*m")
+
+
+def visible_len(text: str) -> int:
+    """Length of *text* as shown on screen (colour codes take no space)."""
+    return len(ANSI_RE.sub("", text))
+
+
+def pad(text: str, width: int, align: str = "<") -> str:
+    """Pad *text* to *width* visible columns. f-string padding counts the
+    invisible colour codes, which misaligns columns — and differently with
+    colour on and off — so padding of coloured text must go through here."""
+    gap = max(0, width - visible_len(text))
+    if align == ">":
+        return " " * gap + text
+    if align == "^":
+        return " " * (gap // 2) + text + " " * (gap - gap // 2)
+    return text + " " * gap
 
 
 def c(text: str, *codes: str) -> str:
