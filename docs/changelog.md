@@ -32,6 +32,20 @@
   format) to `cloudflare`, `google`, `quad9` or any `https://` URL.
   It gets past resolvers that filter, rewrite or hijack plain DNS. JSON
   output now includes `transport` (`dig`, `udp` or `doh`) and `resolver`.
+- **Personal defaults in `~/.xping/config.toml`.**
+  - A `[defaults]` section applies to every command, and there is one
+    section per command (e.g. `[ping] count = 10`,
+    `[lookup] doh = "cloudflare"`). Keys are long option names.
+  - The command line always wins. In mutually exclusive pairs, the flag
+    given on the command line drops the file's value for the other one
+    (`-6` beats `ipv4 = true`).
+  - Unknown sections, options or values are errors that name the file,
+    section and key.
+  - `xping config` shows the active settings or explains what is wrong,
+    and `xping config --example` prints a starter file.
+  - `XPING_CONFIG` selects another file, and `XPING_CONFIG=none` ignores
+    it.
+  - The `xping HOST` shorthand uses the `[ping]` section.
 - **`xping ntp [SERVER]`** — the system clock offset against an NTP
   server (default `pool.ntp.org`) over SNTP. It shows the offset, the
   delay, the stratum, the reference and whether the server is

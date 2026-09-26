@@ -56,6 +56,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **All-in-one** — Run lookup, ping, trace, and TCP checks in a single command
 - **Listening ports** — `xping listen`: local TCP/UDP listeners with process names (Linux)
 - **OS fingerprint** — `xping osdetect`: guess a remote OS from the ICMP TTL
+- **Personal defaults** — `~/.xping/config.toml` for options you always type (`[defaults]` and per-command sections); `xping config` shows them
 - **Tab completion** — bash, zsh and fish, with descriptions, hostnames and saved profiles
 - **Dependency checker** — `xping deps` detects missing tools and shows the correct install command for your distro
 - **Machine-readable export** — `--json`, plus `--csv` / `--markdown` as real tables (one row per reply, hop, port, record…)
@@ -417,6 +418,28 @@ xping all example.com --json
 
 Runs full DNS lookup, 4-packet ping, traceroute, and TCP checks on ports 443 and 80.
 
+### Personal defaults
+
+```bash
+xping config --example > ~/.xping/config.toml   # commented starter file
+xping config                                    # what is active
+```
+
+```toml
+[defaults]
+timeout = 3
+
+[ping]
+count = 10
+
+[lookup]
+doh = "cloudflare"
+```
+
+Keys are long option names; the command line always wins (and `-6`
+beats `ipv4 = true`, `--server` beats `doh`). Typos and bad values are
+reported, never ignored. `XPING_CONFIG=none` ignores the file for one run.
+
 ### Export formats
 
 Every diagnostic command accepts structured output flags (interactive rendering is suppressed). Redirect to save to a file:
@@ -540,6 +563,7 @@ xping keeps its state under `~/.xping/`:
 | `~/.xping/profiles.json` | Saved target profiles |
 | `~/.xping/health_history.json` | `xping health` score history (last 50 per host) |
 | `~/.xping/completions/` | Completion scripts written by `xping completion --install` |
+| `~/.xping/config.toml` | Your personal defaults (written by you, only read by xping) |
 
 `xping completion --install` also adds a clearly marked block to your shell's rc file; `--uninstall` removes it.
 
@@ -569,6 +593,7 @@ Diagnostics talk to the host you name. A few features also contact third-party s
 |---------------|-----------------------------------------|
 | `NO_COLOR`    | Disable all ANSI colour output          |
 | `XPING_DEBUG` | Print full Python tracebacks on errors  |
+| `XPING_CONFIG` | Another config file; `none` ignores `~/.xping/config.toml` |
 | `SHELL`       | Shell that `xping completion --install` sets up |
 | `ZDOTDIR`, `XDG_CONFIG_HOME` | Honoured by `completion --install` (zsh rc / fish config location) |
 

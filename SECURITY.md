@@ -38,7 +38,8 @@ stored credentials, no `eval`/`exec`.
   plus `certifi` and refuses anything older than TLS 1.2. There is no
   option to disable verification.
 - **Files written:** only under `~/.xping/` (profiles, health history,
-  completion scripts). `xping completion --install` additionally adds a
+  completion scripts). `~/.xping/config.toml` is only ever read, and its
+  values go through the same validation as command-line options. `xping completion --install` additionally adds a
   clearly marked block to the shell rc file, only when asked, and
   `--uninstall` removes exactly that block.
 - **Network:** diagnostics contact the host you name. Features that
