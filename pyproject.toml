@@ -37,6 +37,7 @@ xping = "xping.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/mehaskari/xping"
+Documentation = "https://github.com/mehaskari/xping/blob/main/docs/guide.md"
 Repository = "https://github.com/mehaskari/xping"
 Issues = "https://github.com/mehaskari/xping/issues"
 

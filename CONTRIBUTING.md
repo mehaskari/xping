@@ -112,7 +112,9 @@ No new external dependencies without discussion — xping is stdlib +
 11. `xping/cli/main.py` — dispatch table entry
 12. `man/xping.1` — COMMANDS entry, OPTIONS section and an example
 13. `README.md` — usage section; `docs/changelog.md` — entry
-14. Write real tests, mock all network calls, and **run them**.
+14. `docs/guide.md` — a `#### \`xping NAME\`` section with every option
+    (a test checks that each command and long option is documented)
+15. Write real tests, mock all network calls, and **run them**.
 
 Shell completion needs no changes: `xping/cli/completion.py` reads
 commands, options, choices and help text from the parser. If a new

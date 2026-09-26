@@ -62,6 +62,14 @@
   also works on Python builds without a usable system CA store.
 
 ### Docs
+- **New user guide, [`docs/guide.md`](guide.md).** It covers every
+  command with all options and defaults, what the output means, and how
+  scores are computed (`health`, `dnscheck`, `speedtest`, `osdetect`).
+  It also has the check-file reference, recipes, files/privacy, platform
+  notes and a FAQ. It is linked from the README and the PyPI project
+  links. A test fails if a command or long option is missing from it.
+- Man page: `--proto udp` in the `listen` description rendered as
+  `--protoudp`.
 - README: current install options (PPA for Ubuntu 24.04 and derivatives,
   Snap with stable/edge channels, PyPI with the completion step). The
   non-existent AUR package is removed. New sections for listening
