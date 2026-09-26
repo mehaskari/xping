@@ -1,5 +1,6 @@
 """Animated terminal widgets."""
 
+import re
 import sys
 import threading
 import time
@@ -8,6 +9,29 @@ from .ansi import BOLD, BRAND_TEAL, c
 from .layout import terminal_width
 
 SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+_ANSI = re.compile(r"\033\[[0-9;]*m")
+
+
+def fit(text: str, width: int) -> str:
+    """Cut *text* to *width* visible characters, keeping its ANSI colour
+    codes (and closing them), and ending with "…" when it was cut."""
+    if width <= 0:
+        return ""
+    if len(_ANSI.sub("", text)) <= width:
+        return text
+    out, visible, pos = [], 0, 0
+    for m in _ANSI.finditer(text):
+        chunk = text[pos : m.start()]
+        take = chunk[: max(0, width - 1 - visible)]
+        out.append(take)
+        visible += len(take)
+        if visible >= width - 1:
+            break
+        out.append(m.group())
+        pos = m.end()
+    else:
+        out.append(text[pos:][: max(0, width - 1 - visible)])
+    return "".join(out) + "…" + ("\033[0m" if _ANSI.search(text) else "")
 
 
 class Spinner:
@@ -22,7 +46,11 @@ class Spinner:
         i = 0
         while not self._stop.is_set():
             frame = c(SPINNER_FRAMES[i % len(SPINNER_FRAMES)], BRAND_TEAL, BOLD)
-            sys.stdout.write(f"\r  {frame}  {self._prefix}")
+            # One line only: text that wraps can't be redrawn with "\r" and
+            # would pile up on narrow terminals. 5 = "  ⠋  "; the last column
+            # stays free because writing into it wraps on some terminals.
+            prefix = fit(self._prefix, terminal_width() - 6)
+            sys.stdout.write(f"\r  {frame}  {prefix}")
             sys.stdout.flush()
             time.sleep(0.08)
             i += 1
@@ -33,5 +61,5 @@ class Spinner:
     def stop(self):
         self._stop.set()
         self._thread.join()
-        sys.stdout.write("\r" + " " * terminal_width() + "\r")
+        sys.stdout.write("\r" + " " * (terminal_width() - 1) + "\r")
         sys.stdout.flush()

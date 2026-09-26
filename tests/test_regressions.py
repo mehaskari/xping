@@ -5,6 +5,7 @@ failures vs. absent records, and speedtest/osdetect export flags.
 """
 
 import struct
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -491,3 +492,33 @@ class TestRdapBootstrapTls:
         ):
             assert whois_diag._rdap_url_for("zz-not-hardcoded") is None
         assert urlopen.call_args.kwargs["context"] is sentinel
+
+
+class TestSpinnerWidth:
+    """A spinner line longer than the terminal wrapped, so each "\\r" redraw
+    started a new line and the text piled up (seen with `doctor`)."""
+
+    def test_fit_plain_and_colored(self):
+        from xping.render.animations import _ANSI, fit
+
+        assert fit("short", 10) == "short"
+        assert fit("abcdefghij", 5) == "abcd…"
+        colored = "\033[96mChecking connection quality\033[0m"
+        cut = fit(colored, 10)
+        assert _ANSI.sub("", cut) == "Checking …" and cut.endswith("\033[0m")
+        assert fit("anything", 0) == ""
+
+    def test_spinner_line_fits_terminal(self, monkeypatch):
+        import io
+
+        from xping.render import animations
+
+        out = io.StringIO()
+        monkeypatch.setattr(animations.sys, "stdout", out)
+        monkeypatch.setattr(animations, "terminal_width", lambda: 40)
+        spinner = animations.Spinner("Checking connection quality, login pages and HTTPS…")
+        spinner.start()
+        time.sleep(0.1)
+        spinner.stop()
+        frames = [f for f in out.getvalue().split("\r") if f.strip()]
+        assert frames and all(len(animations._ANSI.sub("", f)) < 40 for f in frames)
