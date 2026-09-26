@@ -325,6 +325,25 @@ Steps that depend on a failed one are skipped.
 It ends with one plain-language diagnosis and what to do.
 Exits 1 when any step fails.
 .TP
+.B wifi [\fIOPTIONS\fR]
+Wi-Fi link quality: signal and noise in dBm, signal-to-noise ratio,
+channel, band and width, link rate, standard, security, and how many
+nearby networks share the channel, with advice (move closer, switch to
+5 GHz, a less used 2.4 GHz channel).
+Read without root from
+.BR system_profiler (8)
+on macOS (which hides network names without Location Services
+permission),
+.BR iw (8)
+and
+.BR nmcli (1)
+on Linux, and
+.B netsh wlan
+on Windows.
+Exits 1 when no Wi-Fi interface is connected or
+.B \-\-min\-signal
+is not met.
+.TP
 .B net [\fIOPTIONS\fR]
 Your own network at a glance: hostname, the local IPv4/IPv6 source
 addresses used for outbound traffic, default gateways, DNS resolvers,
@@ -929,6 +948,19 @@ TCP port tested on
 .IR HOST .
 Default:
 .BR 443 .
+.SS wifi
+.TP
+.BI \-i " NAME" ", \-\-interface " NAME
+Use this Wi-Fi interface.
+.TP
+.B \-\-nearby
+List nearby networks, strongest first.
+.TP
+.BI \-\-min\-signal " DBM"
+Exit 1 if the signal is weaker than
+.I DBM
+(write negative values as
+.BR \-\-min\-signal=\-67 ).
 .SS net
 .TP
 .B \-\-no\-public
@@ -1298,6 +1330,9 @@ Check that a DNS server answers over UDP.
 .TP
 .B xping ntp \-\-max\-offset 500
 Exit 1 if the system clock is off by more than half a second.
+.TP
+.B xping wifi \-\-nearby
+Wi-Fi signal, noise and channel, with the networks nearby.
 .TP
 .B xping doctor
 Diagnose why the internet is not working, step by step.

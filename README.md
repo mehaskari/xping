@@ -46,6 +46,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **Network Health Score** — 0–100 score combining DNS time, packet loss, latency, and jitter
 - **Path MTU Discovery** — Binary-search for the largest unfragmented packet size
 - **Saved Profiles** — `xping profile add prod-db 10.0.0.5` then use `xping ping prod-db`
+- **Wi-Fi** — `xping wifi`: signal and noise (dBm), SNR, channel and width, link rate, security, how many nearby networks share your channel, and what to do about it
 - **Connectivity doctor** — `xping doctor`: finds out *why* the internet (or a host) is not working — interface, router, internet, DNS, captive portal, HTTPS, clock — and says what to do
 - **Network overview** — `xping net`: interfaces, gateway, DNS servers, public IPv4/IPv6
 - **Watch & wait** — `--watch` / `--until-up` on `tcp`, `udp`, `http` and `health`
@@ -359,6 +360,21 @@ to do about it. Exit code 1 when any step fails.
   ✘ The internet works, but name lookups (DNS) fail.
     Switch DNS to 1.1.1.1 or 8.8.8.8 (or restart the router, which usually provides DNS).
 ```
+
+### Wi-Fi
+
+```bash
+xping wifi                    # signal, noise, SNR, channel, link rate, security
+xping wifi --nearby           # plus the networks around you, strongest first
+xping wifi --min-signal=-67 -q || echo "weak Wi-Fi"
+```
+
+Grades the signal (Excellent ≥ −55 dBm … Very weak), flags a low
+signal-to-noise ratio and crowded channels, and suggests a fix (move
+closer, switch to 5 GHz, or the least used of channels 1 / 6 / 11). Uses
+`system_profiler` (macOS), `iw` / `nmcli` (Linux) or `netsh` (Windows);
+macOS hides network names unless the terminal has Location Services
+permission.
 
 ### Network Overview
 
