@@ -1,3 +1,17 @@
+xping (1.4.6-1) noble; urgency=medium
+
+  * New: xping udp HOST PORT - UDP service probe (DNS, NTP, SNMP or raw
+    payload): open / closed / no response.
+  * New: xping ntp [SERVER] - system clock offset over SNTP, with
+    --max-offset.
+  * New: xping blocklist IP|DOMAIN - spam blocklist (DNSBL/RHSBL) check,
+    including a domain's mail and web servers.
+  * xping dnscheck checks DNSSEC (signed, DS at parent, validates, bogus).
+  * xping lookup --doh: DNS over HTTPS (Cloudflare, Google, Quad9, URL).
+  * Personal defaults in ~/.xping/config.toml; new xping config command.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Sat, 26 Sep 2026 18:36:42 +0000
+
 xping (1.4.5-1) noble; urgency=medium
 
   * New: xping doctor [host] - step-by-step "why is the internet not

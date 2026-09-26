@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.4.6] - 2026-09-26
 
 ### Added
 - **`xping udp HOST PORT`** — is a UDP service answering? Each probe is
