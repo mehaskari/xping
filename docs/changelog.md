@@ -58,6 +58,9 @@
   (summary). Padding counted the invisible colour codes, so columns
   drifted, especially with colour off (`NO_COLOR`, piped output).
   Coloured text is now padded by its visible width.
+- Summary tables (trace, ping, watch, speedtest, …) had a misaligned
+  value column and uneven borders whenever a cell was coloured; the
+  table renderer measured cells including their colour codes.
 - `xping trace` printed the separator line twice before its summary.
 - `xping http`: the last line of the redirect chain always showed
   status 200, even when the final response was an error.

@@ -522,3 +522,25 @@ class TestSpinnerWidth:
         spinner.stop()
         frames = [f for f in out.getvalue().split("\r") if f.strip()]
         assert frames and all(len(animations._ANSI.sub("", f)) < 40 for f in frames)
+
+
+class TestTableAlignment:
+    """print_table measured coloured cells with len(), counting the colour
+    codes, so the Value column and the borders drifted (trace summary)."""
+
+    def test_columns_and_borders_line_up_with_and_without_colour(self, capsys):
+        from xping.render import ansi, tables
+
+        for colour in (False, True):
+            with patch.object(ansi, "COLOR", colour), patch.object(tables, "COLOR", colour):
+                rows = [
+                    ["Total hops", "19"],
+                    ["Responding hops", ansi.c("14", ansi.BRAND_MINT)],
+                    ["Final hop RTT", ansi.c("117.96 ms", ansi.BOLD, ansi.BRAND_MINT)],
+                ]
+                tables.print_table(["Metric", "Value"], rows)
+            lines = [ansi.ANSI_RE.sub("", ln) for ln in capsys.readouterr().out.splitlines()]
+            assert len({len(ln) for ln in lines}) == 1, (colour, lines)  # same width
+            # the column divider sits in the same place on every line
+            divider = {next(i for i, ch in enumerate(ln) if ch in "┬│┼┴" and i > 3) for ln in lines}
+            assert len(divider) == 1, (colour, lines)
