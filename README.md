@@ -29,8 +29,8 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **MTR** — Combined live traceroute + per-hop ping, redraws in place each cycle
 - **No root required** — unprivileged ICMP sockets on macOS and Linux for ping, trace and MTR
 - **IPv6** — IPv6-only hosts just work; `-4` / `-6` force a family
-- **DNS Lookup** — A, AAAA, CNAME, MX, NS, TXT (incl. SPF) with reverse DNS
-- **DNS Health Check** — SPF, DMARC (`_dmarc.`), DKIM (common selectors), NS redundancy, MX backup, 0–100 score
+- **DNS Lookup** — A, AAAA, CNAME, MX, NS, TXT (incl. SPF) with reverse DNS; `--doh` asks over encrypted DNS-over-HTTPS (Cloudflare, Google, Quad9, any URL)
+- **DNS Health Check** — SPF, DMARC (`_dmarc.`), DKIM (common selectors), DNSSEC (signed, DS at the parent, validates — or broken), NS redundancy, MX backup, 0–100 score
 - **Blocklist check** — `xping blocklist`: is an IP, or a domain and its mail servers, on a spam blocklist (Spamhaus, SpamCop, Barracuda, SURBL, URIBL, …)?
 - **DNS Propagation** — Compare a record across Google, Cloudflare, Quad9, OpenDNS, AdGuard, Control D and your own resolver
 - **Reverse DNS** — PTR lookup with stdlib fallback to 8.8.8.8 for flaky resolvers
@@ -187,7 +187,8 @@ xping mtr 1.1.1.1 --asn           # add an AS / operator column
 ```bash
 xping lookup github.com
 xping lookup github.com --full    # includes TXT records (SPF etc.)
-xping dnscheck github.com         # SPF / DMARC / DKIM / NS / MX health check
+xping lookup example.com --doh cloudflare   # DNS-over-HTTPS: past resolvers that filter or rewrite
+xping dnscheck github.com         # SPF / DMARC / DKIM / DNSSEC / NS / MX health check
 ```
 
 ### Blocklist (DNSBL) Check
@@ -556,6 +557,8 @@ Diagnostics talk to the host you name. A few features also contact third-party s
 | `blocklist` | The blocklists' DNS servers (via your resolver) — they see the IP or domain you check |
 | `--webhook URL` | Only the URL you give, with the target name and check result |
 | `lookup`, `dnscheck` | `8.8.8.8` directly, only when `dig` is not installed (otherwise your resolver) |
+| `lookup --doh` | The DoH provider you choose (Cloudflare, Google, Quad9 or your URL) |
+| `dnscheck` | `1.1.1.1` (fallback `8.8.8.8`) for the DNSSEC check |
 | `rdns` | `8.8.8.8`, only when the system resolver finds no PTR record |
 
 ---

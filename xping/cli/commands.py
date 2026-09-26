@@ -154,6 +154,7 @@ def cmd_lookup(args: argparse.Namespace) -> object:
         host=_resolve_host(args.host),
         full=args.full,
         server=getattr(args, "server", None),
+        doh=getattr(args, "doh", None),
         quiet=quiet,
     )
     emit_export(result, args)
