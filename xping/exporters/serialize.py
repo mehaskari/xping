@@ -76,7 +76,7 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     "NetInterface": ("loopback",),
     "NetResult": (),
     "NtpSample": (),
-    "NtpResult": ("offset_ms", "delay_ms", "synchronized"),
+    "NtpResult": ("offset_ms", "delay_ms", "uncertainty_ms", "synchronized"),
     "UdpAttempt": (),
     "UdpResult": ("state", "replies", "avg_rtt_ms"),
     "CheckOutcome": (),

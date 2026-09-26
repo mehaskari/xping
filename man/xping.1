@@ -298,7 +298,8 @@ Measure how far the system clock is from an NTP server (default
 .IR pool.ntp.org )
 with SNTP over UDP port 123.
 Shows the clock offset (server minus local; positive means the local
-clock is behind), the round-trip delay, the server's stratum and
+clock is behind), its accuracy (half the round trip), the round-trip
+delay, the server's stratum and
 reference, and whether the server is synchronised.
 Several samples are taken and the one with the lowest delay is used.
 Exits 1 when nothing answers, the server is unsynchronised (stratum 16
@@ -878,6 +879,10 @@ Exit 1 if the DNS health score (0\(en100) is below
 .TP
 .BI \-\-zone " ZONE"
 Also check this DNSBL zone (repeatable).
+.TP
+.B \-\-all
+Show every list for every address instead of the summary (one row per
+address, with the non-clean results in full).
 .TP
 .BI \-t " SEC" ", \-\-timeout " SEC
 Seconds to wait per lookup.

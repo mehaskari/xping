@@ -136,7 +136,8 @@ def udp(
     if not quiet:
         print(section_header(f"UDP PROBE  {host}:{port}", "◌"))
         print(kv("Target", c(host, BRAND_TEAL, BOLD)))
-        print(kv("IP", c(result.ip, BRAND_INDIGO)))
+        if result.ip != host:
+            print(kv("IP", c(result.ip, BRAND_INDIGO)))
         print(kv("Probe", kind))
         print(kv("Attempts", str(count)))
         print()

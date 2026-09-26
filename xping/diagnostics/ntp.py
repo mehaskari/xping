@@ -115,7 +115,8 @@ def ntp(
     if not quiet:
         print(section_header(f"NTP CLOCK CHECK  {server}", "◷"))
         print(kv("Server", c(server, BRAND_TEAL, BOLD)))
-        print(kv("IP", c(result.ip, BRAND_INDIGO)))
+        if result.ip != server:
+            print(kv("IP", c(result.ip, BRAND_INDIGO)))
         print(kv("Samples", str(count)))
         print()
 

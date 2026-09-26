@@ -309,6 +309,7 @@ def cmd_blocklist(args: argparse.Namespace) -> object:
         extra_zones=args.zone,
         timeout=args.timeout,
         quiet=quiet,
+        show_all=args.all,
     )
     emit_export(result, args)
     return result

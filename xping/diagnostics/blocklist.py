@@ -173,6 +173,7 @@ def blocklist(
     extra_zones: list[str] | None = None,
     timeout: float = 5.0,
     quiet: bool = False,
+    show_all: bool = False,
 ) -> BlocklistResult:
     target = target.strip().rstrip(".").lower()
     kind = "ip" if _is_ip(target) else "domain"
@@ -211,5 +212,5 @@ def blocklist(
     if not result.error and result.checks and not result.answered:
         result.error = "no blocklist answered (DNS blocked or offline?)"
     if not quiet:
-        blocklist_view.print_result(result)
+        blocklist_view.print_result(result, show_all=show_all)
     return result

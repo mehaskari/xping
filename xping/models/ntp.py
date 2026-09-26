@@ -49,6 +49,13 @@ class NtpResult:
         return best.delay_ms if best else None
 
     @property
+    def uncertainty_ms(self) -> float | None:
+        """The offset is exact only if both directions took equally long;
+        in the worst case it is off by half the round trip."""
+        delay = self.delay_ms
+        return delay / 2 if delay is not None else None
+
+    @property
     def synchronized(self) -> bool:
         return self.leap != 3 and self.stratum is not None and 1 <= self.stratum <= 15
 

@@ -198,6 +198,7 @@ xping dnscheck github.com         # SPF / DMARC / DKIM / DNSSEC / NS / MX health
 xping blocklist 203.0.113.25         # an IP on 8 spam blocklists
 xping blocklist mycompany.com        # the domain on 3 domain lists + its MX / web IPs
 xping blocklist 203.0.113.25 --zone bl.example.org
+xping blocklist mycompany.com --all  # every list for every address, not the summary
 ```
 
 Each result is *listed*, *policy* (Spamhaus PBL: an end-user address
@@ -253,9 +254,9 @@ xping ntp                         # offset against pool.ntp.org
 xping ntp time.cloudflare.com --max-offset 100 -q || echo "clock drift"
 ```
 
-Shows the clock offset (a positive value means your clock is behind), the
-round-trip delay, and the server's stratum and reference, using the
-lowest-delay sample of several.
+Shows the clock offset (a positive value means your clock is behind), its
+accuracy (± half the round trip), the round-trip delay, and the server's
+stratum and reference, using the lowest-delay sample of several.
 
 ### TLS Inspector
 

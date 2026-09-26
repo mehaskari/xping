@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- `xping blocklist` shows a compact summary instead of one row per list
+  per address, which was 43 rows for a typical domain.
+  - Each checked address or domain gets one row, e.g. "clean on 8/8 IP
+    lists".
+  - Any result that is not clean is still shown in full.
+  - `--all` restores the full table.
+  - The closing line now says "43 checks on 11 lists" instead of the
+    misleading "43 lists".
+- `xping ntp` shows the measurement accuracy (± half the round trip),
+  and says when the offset is within it. JSON output has a new
+  `uncertainty_ms` field.
+- `xping udp` and `xping ntp` no longer repeat the address on an "IP"
+  line when the target already is an IP.
+
 ## [1.4.6] - 2026-09-26
 
 ### Added
