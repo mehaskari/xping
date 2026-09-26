@@ -2,6 +2,39 @@
 
 ## [Unreleased]
 
+### Fixed
+- Project links pointed to `github.com/mehdiaskari/xping`, which does not
+  exist. The correct repository, `github.com/mehaskari/xping`, is now used
+  in the PyPI metadata (`pyproject.toml`, `setup.cfg`), `xping about`, the
+  man page, the snap and Debian metadata, README and CONTRIBUTING.
+- The WHOIS/RDAP bootstrap download (`data.iana.org`) now uses the same
+  TLS context as every other HTTPS request (certifi, TLS 1.2+), so it
+  also works on Python builds without a usable system CA store.
+
+### Docs
+- README: current install options (PPA for Ubuntu 24.04 and derivatives,
+  Snap with stable/edge channels, PyPI with the completion step). The
+  non-existent AUR package is removed. New sections for listening
+  ports, OS fingerprint and "Files & privacy" (what is stored, which
+  commands contact third parties), plus completion environment
+  variables.
+- CONTRIBUTING: PR workflow with branch protection, an up-to-date
+  "add a new command" checklist (verdicts, CSV tables; completion is
+  automatic), and notes on the real-shell completion tests.
+- RELEASE: the PR-based release flow, macOS-compatible `sed`, the
+  current CI matrix, snap edge → stable promotion, and a correct
+  rollback (PyPI yanking happens on the website; `twine yank` does not
+  exist).
+- SECURITY: 1.4.x supported; the design section describes unprivileged
+  ICMP, strict TLS, which files are written, third-party contacts, and
+  shell-free subprocesses. The obsolete `--output` mention is removed.
+- PACKAGING: completion packaging, snap channels, six-file version
+  checklist, and the corrected PPA series (noble).
+- Man page: PRIVACY section, accurate DEPENDENCIES, completions in FILES.
+- Debian: a real `README.Debian` instead of the template placeholder,
+  and the unused `xping-docs.docs` is dropped. The bug report template
+  asks for the install method and shell.
+
 ---
 
 ## [1.4.1] - 2026-09-25

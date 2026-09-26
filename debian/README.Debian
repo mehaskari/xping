@@ -1,6 +1,27 @@
-xping for Debian
----------------
+xping for Debian / Ubuntu
+-------------------------
 
-<Possible notes regarding this package - if none, delete this file.>
+Shell completion
+  Tab completion for bash, zsh and fish is installed with this package
+  and works in new shells without any setup:
+    bash  /usr/share/bash-completion/completions/xping
+    zsh   /usr/share/zsh/vendor-completions/_xping
+    fish  /usr/share/fish/vendor_completions.d/xping.fish
+  bash needs the bash-completion package (installed by default on Ubuntu).
+  You do not need "xping completion --install" with this package.
 
- -- Mehdi Askari <iorganamis@gmail.com>  Fri, 10 Jul 2026 16:48:44 +0000
+ICMP without root
+  ping, trace, mtr and health use unprivileged ICMP ("ping") sockets,
+  which Ubuntu allows by default (net.ipv4.ping_group_range). If your
+  system restricts them, xping falls back to the ping/traceroute
+  binaries (package Recommends: iputils-ping, traceroute). "xping deps"
+  shows which mode is in use.
+
+Files
+  ~/.xping/profiles.json        saved profiles (xping profile add ...)
+  ~/.xping/health_history.json  xping health score history
+
+Documentation
+  man xping, and https://github.com/mehaskari/xping
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Sat, 26 Sep 2026 09:00:00 +0000

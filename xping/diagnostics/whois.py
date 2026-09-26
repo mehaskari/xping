@@ -148,7 +148,7 @@ def _rdap_url_for(tld: str) -> str | None:
     if known:
         return known
     try:
-        with urllib.request.urlopen(RDAP_BOOTSTRAP, timeout=5) as resp:
+        with urllib.request.urlopen(RDAP_BOOTSTRAP, context=secure_context(), timeout=5) as resp:
             data = json.loads(resp.read())
         for entry in data.get("services", []):
             tlds, urls = entry

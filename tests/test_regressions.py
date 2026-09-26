@@ -465,3 +465,17 @@ class TestUnreadableProfileStore:
         with patch.object(profile_diag.Path, "exists", side_effect=PermissionError(13, "denied")):
             assert profile_diag.resolve_target("example.com") == "example.com"
             assert profile_diag.list_profiles(quiet=True).count == 0
+
+
+class TestRdapBootstrapTls:
+    def test_bootstrap_uses_shared_tls_context(self):
+        """The IANA bootstrap fetch must use certifi + TLS 1.2+ like every other HTTPS call."""
+        from xping.diagnostics import whois as whois_diag
+
+        sentinel = object()
+        with (
+            patch.object(whois_diag, "secure_context", return_value=sentinel),
+            patch.object(whois_diag.urllib.request, "urlopen", side_effect=OSError("offline")) as urlopen,
+        ):
+            assert whois_diag._rdap_url_for("zz-not-hardcoded") is None
+        assert urlopen.call_args.kwargs["context"] is sentinel

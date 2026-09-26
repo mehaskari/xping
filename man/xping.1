@@ -1086,8 +1086,37 @@ Saved target profiles (created automatically by
 Health score history per host (appended by
 .BR "xping health" ).
 .TP
+.I ~/.xping/completions/
+Completion scripts written by
+.BR "xping completion \-\-install" ,
+which also adds a marked block to
+.IR ~/.zshrc ,
+.I ~/.bashrc
+or
+.IR ~/.bash_profile .
+.TP
 .I /usr/share/man/man1/xping.1.gz
 This manual page (installed by package managers).
+.
+.SH PRIVACY
+Diagnostics contact the host you name. These commands also contact
+third parties:
+.B net
+(1.1.1.1, for your public IP; skip with
+.BR \-\-no\-public ),
+.B speedtest
+(speed.cloudflare.com),
+.B trace/mtr \-\-asn
+(Team Cymru DNS; opt-in),
+.B propagation
+(six public resolvers),
+.B whois
+(IANA and registry WHOIS/RDAP servers), and
+.BR lookup ,
+.B dnscheck
+and
+.B rdns
+(8.8.8.8, only as a fallback).
 .
 .SH DEPENDENCIES
 .B certifi
@@ -1100,16 +1129,26 @@ Optional system packages for full functionality:
 .BR iputils-ping " (Debian/Ubuntu)  /  " iputils " (Fedora/Arch)"
 Provides
 .BR ping (8):
-required fallback when raw ICMP sockets are unavailable.
+used by
+.BR ipscan ,
+.BR mtu
+and
+.BR osdetect ,
+and as the fallback for
+.BR ping ,
+.B mtr
+and
+.B health
+when no ICMP socket can be opened (always on Windows).
 .TP
 .B traceroute
 Provides
 .BR traceroute (8):
-required fallback for
+fallback for
 .B trace
 and
 .B mtr
-when raw sockets are unavailable.
+when no ICMP socket can be opened.
 .br
 Install:
 .B sudo apt install traceroute
@@ -1119,7 +1158,9 @@ or
 .BR dnsutils " (Debian/Ubuntu)  /  " bind-utils " (Fedora/Arch)"
 Provides
 .BR dig (1):
-enables MX, NS, TXT, and custom-server DNS queries.
+preferred for DNS queries (it honours your resolver configuration);
+without it xping sends its own queries to 8.8.8.8 or the chosen
+.BR \-\-server .
 .TP
 .BR iproute2 " (Linux)"
 Provides
@@ -1144,14 +1185,14 @@ to list open ports with process names.
 .
 .SH BUGS
 Report bugs at:
-.UR https://github.com/mehdiaskari/xping/issues
+.UR https://github.com/mehaskari/xping/issues
 .UE
 .
 .SH AUTHOR
 .B Mehdi Askari
 .RI < iorganamis@gmail.com >
 .PP
-Source: https://github.com/mehdiaskari/xping
+Source: https://github.com/mehaskari/xping
 .PP
 Any fork, derivative work, or redistribution of this software must
 visibly credit the original author per the license terms.
@@ -1161,5 +1202,5 @@ Copyright \(co 2026 Mehdi Askari.
 Licensed under the MIT License with Mandatory Attribution.
 See
 .I /usr/share/doc/xping/LICENSE
-or https://github.com/mehdiaskari/xping/blob/main/LICENSE
+or https://github.com/mehaskari/xping/blob/main/LICENSE
 for the full text.
