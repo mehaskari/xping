@@ -234,6 +234,19 @@ def _run_blocklist(e: dict):
     )
 
 
+def _run_smtp(e: dict):
+    from xping.diagnostics.smtp import smtp
+
+    return smtp(
+        host=_host(e),
+        port=int(e.get("port", 25)),
+        timeout=float(e.get("timeout", 10.0)),
+        use_mx=not e.get("no_mx", False),
+        quiet=True,
+        family=_family(e),
+    )
+
+
 # type -> (runner, required keys, target key)
 CHECK_TYPES: dict[str, tuple[Callable[[dict], Any], tuple[str, ...], str]] = {
     "ping": (_run_ping, ("host",), "host"),
@@ -242,6 +255,7 @@ CHECK_TYPES: dict[str, tuple[Callable[[dict], Any], tuple[str, ...], str]] = {
     "ntp": (_run_ntp, (), "server"),
     "http": (_run_http, ("url",), "url"),
     "tls": (_run_tls, ("host",), "host"),
+    "smtp": (_run_smtp, ("host",), "host"),
     "lookup": (_run_lookup, ("host",), "host"),
     "dnscheck": (_run_dnscheck, ("domain",), "domain"),
     "blocklist": (_run_blocklist, ("target",), "target"),
@@ -255,6 +269,7 @@ THRESHOLD_KEYS = (
     "min_days",
     "min_score",
     "max_offset",
+    "require_tls",
 )
 
 

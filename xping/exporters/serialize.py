@@ -70,6 +70,7 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     # mtu
     "MtuResult": ("max_payload",),
     "SpeedResult": ("grade",),
+    "SmtpResult": ("tls", "cert_days"),
     "ListenEntry": ("address",),
     "ListenResult": ("count",),
     "OsDetectResult": (),

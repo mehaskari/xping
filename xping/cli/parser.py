@@ -198,6 +198,7 @@ Commands:
   diff   <old> <new>   Compare two --json results of the same check (- = stdin)
   rdns   <ip>          Reverse DNS (PTR) lookup
   tls    <host>        TLS/SSL certificate inspector
+  smtp   <host>        Mail server check: greeting, STARTTLS, certificate (domain → MX)
   http   <url>         HTTP status, headers, redirects, and TTFB
   whois  <domain>      WHOIS registration lookup
   health <host>        Network health score (DNS + loss + latency + jitter)
@@ -239,6 +240,7 @@ Examples:
   xping ipscan 192.168.1.0/24
   xping rdns 8.8.8.8
   xping tls github.com
+  xping smtp gmail.com
   xping http https://example.com
   xping whois cloudflare.com
   xping health google.com
@@ -676,6 +678,44 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         help="Connection timeout [default: 5.0]",
     )
     p_tls.add_argument(
+        "--min-days",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Exit 1 if the certificate expires in fewer than N days",
+    )
+
+    p_smtp = sub.add_parser(
+        "smtp",
+        parents=[export_parent],
+        help="Mail server check: greeting, STARTTLS, certificate, AUTH (a domain uses its MX)",
+    )
+    p_smtp.add_argument("host", help="Mail server, or a mail domain (its preferred MX is used)")
+    p_smtp.add_argument(
+        "--port",
+        type=_tcp_port,
+        default=25,
+        metavar="PORT",
+        help="25 (SMTP), 587 (submission) or 465 (implicit TLS) [default: 25]",
+    )
+    p_smtp.add_argument(
+        "--no-mx", action="store_true", help="Test HOST itself even if it has MX records"
+    )
+    _add_family(p_smtp)
+    p_smtp.add_argument(
+        "-t",
+        "--timeout",
+        type=_positive_float,
+        default=10.0,
+        metavar="SEC",
+        help="Seconds to wait for each server reply [default: 10]",
+    )
+    p_smtp.add_argument(
+        "--require-tls",
+        action="store_true",
+        help="Exit 1 unless TLS works and the certificate verifies",
+    )
+    p_smtp.add_argument(
         "--min-days",
         type=int,
         default=None,

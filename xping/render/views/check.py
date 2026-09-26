@@ -24,6 +24,8 @@ def describe(result) -> str:
         return f"score {result.score} ({result.grade})"
     if name == "BlocklistResult":
         return f"not listed ({result.answered} lists answered)"
+    if name == "SmtpResult":
+        return f"{result.banner_code} {'TLS ' + result.tls_version if result.tls else 'no TLS'}"
     if name == "UdpResult":
         return f"replied in {result.avg_rtt_ms:.1f} ms"
     if name == "NtpResult":

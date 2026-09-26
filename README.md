@@ -40,6 +40,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **Port Scanner** — Concurrent TCP port scans with service names and open-port summary
 - **IP Scan** — Discover live hosts across CIDR blocks or IP ranges using ICMP echo probes
 - **IP Sweep** — Scan CIDR blocks or IP ranges for hosts with open TCP services
+- **SMTP check** — `xping smtp`: a mail server's greeting, STARTTLS, certificate, AUTH methods, size limit and reverse DNS; a mail domain uses its MX (no mail is sent)
 - **TLS Inspector** — Certificate details, expiry countdown, cipher, and SAN list
 - **HTTP Diagnostics** — Status, redirect chain, a per-phase timing waterfall (DNS · TCP · TLS · server · download, like `curl -w`), TLS version/cipher, HTTP/2 detection, and a security-header audit (HSTS, CSP, X-Frame-Options, …)
 - **WHOIS** — Domain registration data via port 43 with automatic RDAP fallback over HTTPS
@@ -267,6 +268,20 @@ xping tls github.com              # certificate details and expiry
 xping tls example.com --port 8443
 xping tls github.com --json
 ```
+
+### SMTP (Mail Server) Check
+
+```bash
+xping smtp gmail.com                        # the domain's preferred MX on port 25
+xping smtp smtp.gmail.com --port 465        # implicit TLS; shows AUTH methods
+xping smtp mail.mycompany.com --require-tls --min-days 21
+```
+
+Greeting, EHLO extensions, STARTTLS (or implicit TLS on 465), certificate
+verification for the server's name, AUTH mechanisms, the maximum message
+size, and whether the server's reverse DNS resolves back. It ends with
+QUIT and never sends mail. Missing TLS is a warning unless
+`--require-tls` is given.
 
 ### HTTP Diagnostics
 
@@ -560,7 +575,7 @@ timeout = 3
 
 [[check]]
 name = "Database"
-type = "tcp"            # ping | tcp | udp | ntp | http | tls | lookup | dnscheck | blocklist | health | propagation
+type = "tcp"            # ping | tcp | udp | ntp | http | tls | smtp | lookup | dnscheck | blocklist | health | propagation
 host = "prod-db"        # saved profile names work
 port = 5432
 max_latency = 50

@@ -217,6 +217,25 @@ Shows protocol version, cipher suite, subject, issuer, SAN list,
 expiry date, days remaining, a lifetime progress bar, and (on Python
 3.13+) the full certificate chain from leaf to root CA.
 .TP
+.BR smtp " \fIHOST\fR [\fIOPTIONS\fR]"
+Check a mail server: the greeting,
+.B EHLO
+extensions,
+.B STARTTLS
+(or implicit TLS on port 465), certificate verification for the
+server's name, the AUTH mechanisms and size limit offered over TLS, and
+whether the server address's reverse DNS resolves back.
+A mail domain (a name with MX records) is tested through its preferred
+MX server unless
+.B \-\-no\-mx
+is given.
+The session ends with
+.BR QUIT ;
+no mail is sent.
+Exits 1 when the server is unreachable or refuses the session; missing
+or unverifiable TLS fails only with
+.BR \-\-require\-tls .
+.TP
 .BR http " \fIURL\fR [\fIOPTIONS\fR]"
 Perform an HTTP GET to
 .IR URL ,
@@ -437,6 +456,7 @@ Supported types:
 .BR ntp ,
 .BR http ,
 .BR tls ,
+.BR smtp ,
 .BR lookup ,
 .BR dnscheck ,
 .BR blocklist ,
@@ -448,7 +468,8 @@ each with the same thresholds as the command
 .BR expect_status ,
 .BR min_days ,
 .BR min_score ,
-.BR max_offset ).
+.BR max_offset ,
+.BR require_tls ).
 Saved profile names work as hosts.
 .B "xping check \-\-example"
 prints a commented starter file; see
@@ -794,6 +815,30 @@ Default:
 Exit 1 if the certificate expires in fewer than
 .I N
 days (an expired certificate always fails).
+.SS smtp
+.TP
+.BI \-\-port " PORT"
+25 (SMTP), 587 (submission) or 465 (implicit TLS).
+Default:
+.BR 25 .
+.TP
+.B \-\-no\-mx
+Test
+.I HOST
+itself even if it has MX records.
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Seconds to wait for each server reply.
+Default:
+.BR 10 .
+.TP
+.B \-\-require\-tls
+Exit 1 unless TLS works and the certificate verifies.
+.TP
+.BI \-\-min\-days " N"
+Exit 1 if the certificate expires in fewer than
+.I N
+days.
 .SS http
 .TP
 .BI \-t " SEC" ", \-\-timeout " SEC
@@ -1350,6 +1395,9 @@ Auto-ping google.com (same shorthand, works with hostnames too).
 .TP
 .B xping lookup example.com \-\-doh cloudflare
 Look up over DNS-over-HTTPS, bypassing the local resolver.
+.TP
+.B xping smtp gmail.com
+Check a mail domain's preferred MX: greeting, STARTTLS and certificate.
 .TP
 .B xping blocklist mycompany.com
 Check a domain and its mail servers against spam blocklists.
