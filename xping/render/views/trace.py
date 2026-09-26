@@ -20,10 +20,11 @@ from ._asn import short_name
 _HOP_W = 5
 _RTT_W = 14
 _HOST_W = 48
+_SEP_W = _HOP_W + _RTT_W + _HOST_W + 8  # every rule in the trace view has this width
 
 
 def hop_header() -> None:
-    sep = c("  " + "─" * (_HOP_W + _RTT_W + _HOST_W + 8), DIM)
+    sep = c("  " + "─" * _SEP_W, DIM)
     hdr = (
         c(f"  {'HOP':>{_HOP_W}}", BRAND_INDIGO, BOLD)
         + c(f"  {'AVG RTT':^{_RTT_W}}", BRAND_INDIGO, BOLD)
@@ -65,7 +66,7 @@ def print_summary(hops: list, host: str, dest_ip: str) -> None:
     responding = [h for h in hops if not h.timeout]
     timeouts = [h for h in hops if h.timeout]
 
-    print(c("  " + "─" * 64, DIM))
+    print(c("  " + "─" * _SEP_W, DIM))
     print()
 
     badge = (
@@ -90,4 +91,4 @@ def print_summary(hops: list, host: str, dest_ip: str) -> None:
 
 
 def hop_separator() -> None:
-    print(c("  " + "─" * 64, DIM))
+    print(c("  " + "─" * _SEP_W, DIM))
