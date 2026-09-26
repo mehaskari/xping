@@ -100,6 +100,20 @@ def sections_for(result: Any) -> list[Section]:
         return [
             Section("Blocklists", ["list", "zone", "subject", "status", "codes", "reason"], rows)
         ]
+    if isinstance(result, m.WifiResult):
+        rows = [
+            [
+                n.ssid or "",
+                n.bssid or "",
+                n.channel or "",
+                n.band or "",
+                n.signal_dbm,
+                n.security or "",
+            ]
+            for n in result.nearby
+        ]
+        columns = ["ssid", "bssid", "channel", "band", "signal_dbm", "security"]
+        return [Section("Nearby networks", columns, rows, primary=False)]
     if isinstance(result, m.UdpResult):
         rows = [[a.seq, a.state, _ms(a.rtt_ms), a.reply_bytes, a.detail] for a in result.attempts]
         return [Section("Attempts", ["seq", "state", "rtt_ms", "reply_bytes", "detail"], rows)]

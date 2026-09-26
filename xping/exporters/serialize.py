@@ -75,6 +75,8 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     "OsDetectResult": (),
     "NetInterface": ("loopback",),
     "NetResult": (),
+    "WifiNetwork": ("snr_db",),
+    "WifiResult": ("quality", "same_channel"),
     "NtpSample": (),
     "NtpResult": ("offset_ms", "delay_ms", "uncertainty_ms", "synchronized"),
     "UdpAttempt": (),

@@ -29,7 +29,7 @@ output means, and walks through common tasks.
    - DNS and domains: [`lookup`](#xping-lookup) · [`rdns`](#xping-rdns) · [`dnscheck`](#xping-dnscheck) · [`blocklist`](#xping-blocklist) · [`propagation`](#xping-propagation) · [`whois`](#xping-whois)
    - Web and TLS: [`http`](#xping-http) · [`tls`](#xping-tls)
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
-   - Local machine: [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
+   - Local machine: [`wifi`](#xping-wifi) · [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
    - Automation: [`check`](#xping-check) · [`profile`](#xping-profile)
    - Utilities: [`config`](#xping-config) · [`completion`](#xping-completion) · [`deps`](#xping-deps) · [`about`](#xping-about)
 5. [Batch check files](#5-batch-check-files)
@@ -172,6 +172,7 @@ directly in scripts, cron jobs, CI pipelines and monitoring systems.
 | `--max-loss PCT` | `ping`, `mtr` | packet loss (at the destination, for `mtr`) is above PCT % |
 | `--max-latency MS` | `ping`, `mtr`, `tcp`, `udp`, `http` | average RTT / connect time / reply time / total request time is above MS |
 | `--max-offset MS` | `ntp` | the system clock differs from the NTP server by more than MS |
+| `--min-signal DBM` | `wifi` | the Wi-Fi signal is weaker than DBM (e.g. `--min-signal=-67`) |
 | `--expect-status CODE` | `http` | the final status is not CODE (without it, any status ≥ 400 fails) |
 | `--min-days N` | `tls` | the certificate expires in fewer than N days |
 | `--min-score N` | `health`, `dnscheck` | the 0–100 score is below N |
@@ -1077,6 +1078,50 @@ xping osdetect 192.168.1.1
 
 ### Local machine
 
+#### `xping wifi`
+
+```
+xping wifi [-i NAME] [--nearby] [--min-signal DBM]
+```
+
+Shows how good your Wi-Fi link is, and why it might be slow:
+
+| Line | Meaning |
+|------|---------|
+| Signal | received strength in dBm with a grade: Excellent ≥ −55, Good ≥ −67 (the usual minimum for calls and video), Fair ≥ −75, Weak ≥ −85, Very weak below |
+| Noise / SNR | background noise and signal-to-noise ratio: ≥ 25 dB is good, below 15 dB loses speed |
+| Channel | channel number, band (2.4 / 5 / 6 GHz) and channel width |
+| Link rate | the current PHY rate (and MCS index) — the ceiling for your speed, not the speed itself |
+| Standard, Security | e.g. 802.11ax, WPA3 Personal. Open, WEP and WPA1 are shown in red |
+| Nearby | how many other networks are around, and how many share your channel. On 2.4 GHz, channels closer than 5 apart overlap |
+
+Below that, xping gives concrete advice when something is off:
+
+- a weak signal: move closer, or add an access point;
+- a low SNR: interference;
+- a crowded channel: switch to 5 GHz, or change channel. On 2.4 GHz it
+  names the least used of channels 1, 6 and 11;
+- a strong signal on 2.4 GHz: 5 GHz would likely be faster.
+
+| Option | Description |
+|--------|-------------|
+| `-i`, `--interface NAME` | Use this Wi-Fi interface (e.g. `en0`, `wlan0`) |
+| `--nearby` | List the nearby networks, strongest first, marking those on your channel |
+| `--min-signal DBM` | Exit 1 if the signal is weaker than DBM. Write negative values as `--min-signal=-67` |
+
+Exit code 1 when there is no Wi-Fi interface, it is not connected, or
+`--min-signal` is not met. The data comes from the OS without root:
+`system_profiler` on macOS (takes about 5 seconds), `iw` and `nmcli` on
+Linux, `netsh wlan` on Windows. macOS hides network names (SSIDs) from
+programs without Location Services permission; everything else is shown.
+Nothing is sent over the network.
+
+```bash
+xping wifi
+xping wifi --nearby
+xping wifi --min-signal=-67 -q || echo "move closer to the router"
+```
+
 #### `xping listen`
 
 ```
@@ -1445,6 +1490,13 @@ xping blocklist example.com       # the domain and its mail servers on spam bloc
 xping lookup example.com --full
 ```
 
+**Is it the Wi-Fi or the internet?**
+
+```bash
+xping wifi          # signal, noise, channel crowding
+xping doctor        # router, internet, DNS, …
+```
+
 **Find devices on the LAN**
 
 ```bash
@@ -1528,6 +1580,7 @@ lists, never through a shell.
 - `mtu -6` needs root for the IPv6 don't-fragment probe.
 - `listen` shows ports, but no process names.
 - `--notify` alerts appear in Notification Center.
+- `wifi` cannot show network names without Location Services permission.
 
 **Windows.**
 

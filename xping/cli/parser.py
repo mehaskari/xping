@@ -209,6 +209,7 @@ Commands:
   speedtest            Download/upload speed via Cloudflare
   listen               Show locally listening TCP/UDP ports
   net                  Local network overview: interfaces, gateway, DNS, public IP
+  wifi                 Wi-Fi signal, noise, channel, link rate and nearby networks
   doctor [host]        Why is the internet not working? Step-by-step diagnosis
   deps                 Check system dependency status
   completion [shell]   Tab completion for bash/zsh/fish (--install to set it up)
@@ -248,6 +249,7 @@ Examples:
   xping propagation example.com --expect 93.184.216.34
   xping speedtest --json
   xping net
+  xping wifi --nearby
   xping doctor
   xping doctor github.com --port 22
   xping profile add prod-db 10.0.0.5 --port 5432 --note "Production DB"
@@ -853,6 +855,25 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     )
     p_net.add_argument(
         "--all", action="store_true", help="Also list interfaces with only link-local addresses"
+    )
+
+    p_wifi = sub.add_parser(
+        "wifi",
+        parents=[export_parent],
+        help="Wi-Fi link quality: signal, noise, channel, rate, nearby networks",
+    )
+    p_wifi.add_argument(
+        "-i", "--interface", default=None, metavar="NAME", help="Wi-Fi interface (e.g. en0, wlan0)"
+    )
+    p_wifi.add_argument(
+        "--nearby", action="store_true", help="List the nearby networks, strongest first"
+    )
+    p_wifi.add_argument(
+        "--min-signal",
+        type=int,
+        default=None,
+        metavar="DBM",
+        help="Exit 1 if the signal is weaker than DBM (e.g. -67)",
     )
 
     p_doctor = sub.add_parser(

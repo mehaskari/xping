@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+- **`xping wifi`** — Wi-Fi link quality.
+  - It shows signal and noise (dBm) with a grade, the SNR, the channel,
+    band and width, the link rate and MCS, the standard, the security,
+    and how many nearby networks share (or on 2.4 GHz overlap) your
+    channel.
+  - It gives advice: move closer, interference, switch to 5 GHz, or the
+    least used of channels 1 / 6 / 11.
+  - `--nearby` lists the networks around you. `--min-signal DBM` makes it
+    an alarm.
+  - Data comes from `system_profiler` (macOS), `iw` / `nmcli` (Linux) or
+    `netsh wlan` (Windows), with no root and no network traffic.
+
 ### Changed
 - `xping blocklist` shows a compact summary instead of one row per list
   per address, which was 43 rows for a typical domain.

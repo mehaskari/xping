@@ -28,6 +28,7 @@ from .trace import Hop
 from .udp import UdpAttempt, UdpResult
 from .watch import WatchResult, WatchSample
 from .whois import WhoisResult
+from .wifi import WifiNetwork, WifiResult
 
 __all__ = [
     "PingResult",
@@ -52,6 +53,8 @@ __all__ = [
     "RedirectHop",
     "SecurityHeader",
     "WhoisResult",
+    "WifiNetwork",
+    "WifiResult",
     "HealthResult",
     "ProfileEntry",
     "ProfileListResult",
