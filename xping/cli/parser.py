@@ -58,6 +58,17 @@ def _score(value: str) -> int:
     return number
 
 
+def _hex_payload(value: str) -> str:
+    cleaned = value.replace(" ", "").replace(":", "")
+    try:
+        bytes.fromhex(cleaned)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "payload must be hex bytes, e.g. 0d0a or 'de ad be ef'"
+        ) from exc
+    return cleaned
+
+
 def _export_parent() -> argparse.ArgumentParser:
     parent = argparse.ArgumentParser(add_help=False)
     out = parent.add_mutually_exclusive_group()
@@ -169,6 +180,8 @@ Commands:
   trace  <host>        Hop-by-hop traceroute  (--tcp through firewalls that drop ping)
   lookup <host>        DNS A, AAAA, MX, NS, TXT records
   tcp    <host> <port> TCP port connectivity and timing
+  udp    <host> <port> UDP service probe (DNS, NTP, SNMP, or raw payload)
+  ntp    [server]      System clock offset against an NTP server
   portscan <host>      TCP port scanner
   sweep  <range>       TCP sweep across CIDR / start-end IP range
   ipscan <range>       Discover live IPs with ICMP echo probes
@@ -206,6 +219,8 @@ Examples:
   xping trace example.com --tcp --port 443
   xping lookup github.com --full --markdown
   xping tcp example.com 443 -c 5
+  xping udp 1.1.1.1 53
+  xping ntp --max-offset 500
   xping portscan example.com --ports 22,80,443
   xping sweep 192.168.1.0/24 --ports 22,80,443
   xping ipscan 192.168.1.0/24
@@ -355,6 +370,74 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         help="Interval between attempts [default: 0.5]",
     )
     _add_max_latency(p_tcp, "average connect time")
+
+    p_udp = sub.add_parser(
+        "udp", parents=[export_parent], help="Probe a UDP service (DNS, NTP, SNMP, raw)"
+    )
+    p_udp.add_argument("host", help="Hostname or IP address")
+    p_udp.add_argument("port", type=_tcp_port, help="UDP port number")
+    p_udp.add_argument(
+        "-c",
+        "--count",
+        type=_positive_int,
+        default=3,
+        metavar="N",
+        help="Probes to send [default: 3]",
+    )
+    p_udp.add_argument(
+        "--probe",
+        choices=["auto", "dns", "ntp", "snmp", "empty"],
+        default="auto",
+        help="Request to send [default: auto — by port: 53 dns, 123 ntp, 161 snmp]",
+    )
+    p_udp.add_argument(
+        "--payload", type=_hex_payload, default=None, metavar="HEX", help="Send these bytes instead"
+    )
+    _add_family(p_udp)
+    _add_watch(p_udp, 5.0)
+    p_udp.add_argument(
+        "-t",
+        "--timeout",
+        type=_positive_float,
+        default=2.0,
+        metavar="SEC",
+        help="Seconds to wait for a reply [default: 2.0]",
+    )
+    p_udp.add_argument(
+        "-i",
+        "--interval",
+        type=_non_negative_float,
+        default=0.5,
+        metavar="SEC",
+        help="Interval between probes [default: 0.5]",
+    )
+    _add_max_latency(p_udp, "average reply time")
+
+    p_ntp = sub.add_parser(
+        "ntp", parents=[export_parent], help="Check the system clock against an NTP server"
+    )
+    p_ntp.add_argument(
+        "server", nargs="?", default="pool.ntp.org", help="NTP server [default: pool.ntp.org]"
+    )
+    p_ntp.add_argument(
+        "-c", "--count", type=_positive_int, default=4, metavar="N", help="Samples [default: 4]"
+    )
+    _add_family(p_ntp)
+    p_ntp.add_argument(
+        "-t",
+        "--timeout",
+        type=_positive_float,
+        default=2.0,
+        metavar="SEC",
+        help="Seconds to wait per sample [default: 2.0]",
+    )
+    p_ntp.add_argument(
+        "--max-offset",
+        type=_non_negative_float,
+        default=None,
+        metavar="MS",
+        help="Exit 1 if the clock is off by more than MS milliseconds",
+    )
 
     p_portscan = sub.add_parser("portscan", parents=[export_parent], help="Scan TCP ports")
     p_portscan.add_argument("host", help="Hostname or IP address")

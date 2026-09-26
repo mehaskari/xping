@@ -24,11 +24,11 @@ output means, and walks through common tasks.
    - [Permissions (why no root is needed)](#36-permissions-why-no-root-is-needed)
 4. [Command reference](#4-command-reference)
    - Troubleshooting: [`doctor`](#xping-doctor) · [`net`](#xping-net) · [`health`](#xping-health) · [`all`](#xping-all)
-   - Reachability and paths: [`ping`](#xping-ping) · [`trace`](#xping-trace) · [`mtr`](#xping-mtr) · [`tcp`](#xping-tcp) · [`mtu`](#xping-mtu)
+   - Reachability and paths: [`ping`](#xping-ping) · [`trace`](#xping-trace) · [`mtr`](#xping-mtr) · [`tcp`](#xping-tcp) · [`udp`](#xping-udp) · [`mtu`](#xping-mtu)
    - DNS and domains: [`lookup`](#xping-lookup) · [`rdns`](#xping-rdns) · [`dnscheck`](#xping-dnscheck) · [`propagation`](#xping-propagation) · [`whois`](#xping-whois)
    - Web and TLS: [`http`](#xping-http) · [`tls`](#xping-tls)
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
-   - Local machine: [`listen`](#xping-listen) · [`speedtest`](#xping-speedtest)
+   - Local machine: [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
    - Automation: [`check`](#xping-check) · [`profile`](#xping-profile)
    - Utilities: [`completion`](#xping-completion) · [`deps`](#xping-deps) · [`about`](#xping-about)
 5. [Batch check files](#5-batch-check-files)
@@ -125,8 +125,8 @@ therefore just work. To force a family, use:
 | `-4`, `--ipv4` | Use IPv4 only |
 | `-6`, `--ipv6` | Use IPv6 only |
 
-These options are available on `ping`, `trace`, `mtr`, `tcp`, `portscan`,
-`tls`, `http`, `health`, `mtu`, `osdetect` and `all`.
+These options are available on `ping`, `trace`, `mtr`, `tcp`, `udp`, `ntp`,
+`portscan`, `tls`, `http`, `health`, `mtu`, `osdetect` and `all`.
 
 ### 3.3 Output: interactive, JSON, CSV, Markdown, quiet
 
@@ -169,7 +169,8 @@ directly in scripts, cron jobs, CI pipelines and monitoring systems.
 | Threshold | Commands | Fails when |
 |-----------|----------|------------|
 | `--max-loss PCT` | `ping`, `mtr` | packet loss (at the destination, for `mtr`) is above PCT % |
-| `--max-latency MS` | `ping`, `mtr`, `tcp`, `http` | average RTT / connect time / total request time is above MS |
+| `--max-latency MS` | `ping`, `mtr`, `tcp`, `udp`, `http` | average RTT / connect time / reply time / total request time is above MS |
+| `--max-offset MS` | `ntp` | the system clock differs from the NTP server by more than MS |
 | `--expect-status CODE` | `http` | the final status is not CODE (without it, any status ≥ 400 fails) |
 | `--min-days N` | `tls` | the certificate expires in fewer than N days |
 | `--min-score N` | `health`, `dnscheck` | the 0–100 score is below N |
@@ -185,13 +186,13 @@ xping tls example.com --min-days 14 -q || echo "renew the certificate"
 
 ### 3.5 Watch mode and alerts
 
-`tcp`, `http` and `health` can repeat themselves:
+`tcp`, `udp`, `http` and `health` can repeat themselves:
 
 | Option | Effect |
 |--------|--------|
 | `--watch` | Repeat every `--every` seconds until Ctrl-C. Prints one line per check, highlights DOWN/UP changes with the downtime, and ends with a summary (uptime %, state changes, longest outage, average latency). The exit code reflects the final state. |
 | `--until-up` | Repeat until the check passes, then exit 0. Combine with `-q` to wait silently in scripts. Ctrl-C exits 130. |
-| `--every SEC` | Seconds between checks. Defaults: `tcp` 2, `http` 5, `health` 30. |
+| `--every SEC` | Seconds between checks. Defaults: `tcp` 2, `udp` 5, `http` 5, `health` 30. |
 
 Each round is judged exactly like a single run. Thresholds such as
 `--max-latency` or `--expect-status` therefore decide UP and DOWN too.
@@ -200,7 +201,7 @@ Each round is judged exactly like a single run. Thresholds such as
 redrawn sparkline and running statistics.
 
 **Alerts.** In any watch mode (`ping --watch`, and `--watch` /
-`--until-up` on `tcp`, `http`, `health`) you can be told about changes:
+`--until-up` on `tcp`, `udp`, `http`, `health`) you can be told about changes:
 
 | Option | Effect |
 |--------|--------|
@@ -555,6 +556,53 @@ Exit code 1 when every attempt is refused or times out.
 xping tcp example.com 443
 xping tcp db.internal 5432 --until-up -q && ./run-migrations
 xping tcp prod-db 5432 --watch --webhook https://hooks.slack.com/services/…
+```
+
+#### `xping udp`
+
+```
+xping udp HOST PORT [-c N] [-t SEC] [-i SEC] [--probe KIND] [--payload HEX] [--max-latency MS] [--watch | --until-up]
+```
+
+Checks whether a UDP service answers. UDP has no handshake, so the only
+proof that a service is there is a reply. xping therefore sends a request
+the service understands and classifies each attempt:
+
+| State | Meaning |
+|-------|---------|
+| **open** | a reply came back — the service is there |
+| **closed** | the host answered ICMP "port unreachable" — nothing listens on that port |
+| **no response** | nothing came back: the port is filtered by a firewall, **or** the service ignored the request. UDP cannot tell these apart. |
+
+The request is chosen by port (`--probe auto`), or set explicitly:
+
+| Probe | Sends | Default for port |
+|-------|-------|------------------|
+| `dns` | a root `NS` query | 53, 5353 |
+| `ntp` | an SNTP client request | 123 |
+| `snmp` | SNMPv2c GET `sysDescr.0` with community `public` | 161 |
+| `empty` | an empty datagram | everything else |
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-c`, `--count N` | 3 | Probes to send |
+| `-t`, `--timeout SEC` | 2.0 | Seconds to wait for each reply |
+| `-i`, `--interval SEC` | 0.5 | Interval between probes |
+| `--probe KIND` | auto | `auto`, `dns`, `ntp`, `snmp` or `empty` |
+| `--payload HEX` | — | Send these bytes instead, e.g. `--payload "de ad be ef"` |
+| `--max-latency MS` | — | Exit 1 if the average reply time is above MS |
+| `--watch`, `--until-up`, `--every SEC`, `--notify`, `--webhook URL` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
+| `-4`, `-6` | — | Address family |
+
+Exit code 0 only when a reply came back; *closed* and *no response* both
+exit 1.
+
+```bash
+xping udp 1.1.1.1 53                   # is this DNS server answering?
+xping udp time.example.com 123
+xping udp switch.lan 161               # SNMP agent with community "public"?
+xping udp game.example.com 27015 --payload "ffffffff54536f7572636520456e67696e6520517565727900"
+xping udp dns.internal 53 --watch --notify
 ```
 
 #### `xping mtu`
@@ -915,6 +963,46 @@ xping listen
 xping listen --proto tcp --json
 ```
 
+#### `xping ntp`
+
+```
+xping ntp [SERVER] [-c N] [-t SEC] [--max-offset MS]
+```
+
+Measures how far this machine's clock is from an NTP server. It uses
+SNTP (one small UDP packet to port 123 per sample). A wrong clock breaks
+HTTPS certificate checks, logins with one-time codes (TOTP), Kerberos, log
+correlation and more.
+
+From the four timestamps of each exchange, xping computes:
+
+- the **offset**: the server's clock minus yours. A positive offset means
+  your clock is behind.
+- the **round-trip delay**.
+
+It takes several samples and reports the one with the lowest delay,
+because network asymmetry is the main source of error. It also shows the
+server's **stratum** (1 = attached to a reference clock such as GPS, 2 =
+synchronised to a stratum-1 server, …), its reference, and whether the
+server itself is synchronised.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `SERVER` | pool.ntp.org | NTP server to ask (e.g. `time.apple.com`, `time.google.com`, or your own) |
+| `-c`, `--count N` | 4 | Samples |
+| `-t`, `--timeout SEC` | 2.0 | Seconds to wait per sample |
+| `--max-offset MS` | — | Exit 1 if the clock is off by more than MS milliseconds |
+| `-4`, `-6` | — | Address family |
+
+Exit code 1 when no sample got a reply, when the server reports it is
+not synchronised (stratum 16 or leap indicator 3), or when
+`--max-offset` is exceeded.
+
+```bash
+xping ntp
+xping ntp time.cloudflare.com --max-offset 100 -q || echo "clock drift"
+```
+
 #### `xping speedtest`
 
 ```
@@ -1102,6 +1190,8 @@ max_latency = 1500
 |------|----------|----------|------------|
 | `ping` | `host` | `count` (4), `timeout` (2.0), `interval` (0.2), `family` | `max_loss`, `max_latency` |
 | `tcp` | `host`, `port` | `count` (1), `timeout` (2.0), `interval` (0.2), `family` | `max_latency` |
+| `udp` | `host`, `port` | `count` (1), `timeout` (2.0), `interval` (0.2), `probe` ("auto"), `payload` (hex), `family` | `max_latency` |
+| `ntp` | — | `server` ("pool.ntp.org"), `count` (2), `timeout` (2.0), `family` | `max_offset` |
 | `http` | `url` | `timeout` (8.0), `family` | `expect_status`, `max_latency` |
 | `tls` | `host` | `port` (443), `timeout` (5.0), `family` | `min_days` |
 | `lookup` | `host` | `full` (false), `server` | — |
@@ -1158,6 +1248,18 @@ xping tcp app.internal 22 --until-up -q --notify && ssh app.internal
 ```bash
 xping http https://example.com --watch --every 60 \
       --webhook https://hooks.slack.com/services/T000/B000/XXXX
+```
+
+**Is this machine's clock right?**
+
+```bash
+xping ntp --max-offset 500
+```
+
+**Is the DNS server (UDP) answering?**
+
+```bash
+xping udp 192.168.1.1 53
 ```
 
 **Certificate expiry alarm (cron)**
@@ -1232,6 +1334,7 @@ contact third parties, and only when you use them:
 |---------|----------|
 | `doctor` | 1.1.1.1, 8.8.8.8, 9.9.9.9 (TCP 443, ping, one DNS query); `captive.apple.com` (HTTP); `www.cloudflare.com` (HTTPS) |
 | `net` | `1.1.1.1` for your public IP — skip with `--no-public` |
+| `ntp` | `pool.ntp.org` unless you name another server |
 | `speedtest` | `speed.cloudflare.com` |
 | `trace --asn`, `mtr --asn` | Team Cymru DNS (hop addresses are looked up there) |
 | `propagation` | Google, Cloudflare, Quad9, OpenDNS, AdGuard and Control D resolvers |

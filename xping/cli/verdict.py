@@ -9,7 +9,8 @@ can rely on `$?`:
     130  interrupted with Ctrl-C
 
 Thresholds are read from *opts* by attribute name (``max_loss``,
-``max_latency``, ``expect_status``, ``min_days``, ``min_score``); any that
+``max_latency``, ``expect_status``, ``min_days``, ``min_score``,
+``max_offset``); any that
 are missing or None are simply not applied. That lets the same function
 serve argparse namespaces and `xping check` config entries alike.
 """
@@ -32,6 +33,7 @@ from xping.models import (
     MtrResult,
     MtuResult,
     NetResult,
+    NtpResult,
     OsDetectResult,
     PingResult,
     PortScanResult,
@@ -41,6 +43,7 @@ from xping.models import (
     SweepResult,
     TcpResult,
     TlsResult,
+    UdpResult,
     WatchResult,
     WhoisResult,
 )
@@ -149,6 +152,33 @@ def _mtr(r: MtrResult, opts) -> list[Failure]:
     return _latency(dest.avg, _opt(opts, "max_latency"), "destination average RTT")
 
 
+def _udp(r: UdpResult, opts) -> list[Failure]:
+    if r.error:
+        return [Failure(r.error)]
+    if r.state == "closed":
+        return [Failure(f"{r.host}:{r.port}/udp is closed (ICMP port unreachable)")]
+    if r.state != "open":
+        return [
+            Failure(
+                f"no reply from {r.host}:{r.port}/udp (filtered, or the service ignored the probe)"
+            )
+        ]
+    return _latency(r.avg_rtt_ms, _opt(opts, "max_latency"), "average reply time")
+
+
+def _ntp(r: NtpResult, opts) -> list[Failure]:
+    if r.error:
+        return [Failure(r.error)]
+    if not r.synchronized:
+        return [Failure(f"{r.server} is not synchronised (stratum {r.stratum}, leap {r.leap})")]
+    limit = _opt(opts, "max_offset")
+    if limit is not None and r.offset_ms is not None and abs(r.offset_ms) > limit:
+        return [
+            Failure(f"clock offset {r.offset_ms:+.1f} ms exceeds --max-offset {limit:g} ms", True)
+        ]
+    return []
+
+
 def _bundle(r: BundleResult, opts) -> list[Failure]:
     failures: list[Failure] = []
     if r.lookup is not None and r.lookup.error:
@@ -192,6 +222,8 @@ def evaluate(result, opts=None) -> list[Failure]:
         (DnsCheckResult, _dnscheck),
         (MtrResult, _mtr),
         (BundleResult, _bundle),
+        (UdpResult, _udp),
+        (NtpResult, _ntp),
     )
     for cls, handler in handlers:
         if isinstance(result, cls):

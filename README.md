@@ -34,6 +34,8 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **DNS Propagation** — Compare a record across Google, Cloudflare, Quad9, OpenDNS, AdGuard, Control D and your own resolver
 - **Reverse DNS** — PTR lookup with stdlib fallback to 8.8.8.8 for flaky resolvers
 - **TCP Connect** — Live TCP port checks with connect timing, success rate, and timeline
+- **UDP probe** — `xping udp`: is a UDP service answering? DNS, NTP and SNMP requests are built in (or send any payload); open / closed / no response
+- **Clock check** — `xping ntp`: how far off is this machine's clock (SNTP offset, delay, stratum); `--max-offset` alarm
 - **Port Scanner** — Concurrent TCP port scans with service names and open-port summary
 - **IP Scan** — Discover live hosts across CIDR blocks or IP ranges using ICMP echo probes
 - **IP Sweep** — Scan CIDR blocks or IP ranges for hosts with open TCP services
@@ -45,7 +47,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **Saved Profiles** — `xping profile add prod-db 10.0.0.5` then use `xping ping prod-db`
 - **Connectivity doctor** — `xping doctor`: finds out *why* the internet (or a host) is not working — interface, router, internet, DNS, captive portal, HTTPS, clock — and says what to do
 - **Network overview** — `xping net`: interfaces, gateway, DNS servers, public IPv4/IPv6
-- **Watch & wait** — `--watch` / `--until-up` on `tcp`, `http` and `health`
+- **Watch & wait** — `--watch` / `--until-up` on `tcp`, `udp`, `http` and `health`
 - **Alerts** — `--notify` (desktop notification) and `--webhook URL` (Slack, Discord, Mattermost, any JSON endpoint) when a watched target goes down or comes back
 - **Exit codes & thresholds** — `--max-loss`, `--max-latency`, `--expect-status`, `--min-days`, `--min-score`, `--quiet`
 - **Batch checks** — `xping check checks.toml` runs many checks in parallel with one exit code
@@ -214,6 +216,30 @@ xping tcp api.example.com 8443 -t 3 -i 1
 xping tcp db.internal 5432 --watch      # live up/down log, uptime summary on Ctrl-C
 xping tcp db.internal 5432 --until-up   # wait until the port accepts connections
 ```
+
+### UDP Probe
+
+```bash
+xping udp 1.1.1.1 53              # DNS server answering? (probe chosen by port)
+xping udp time.apple.com 123      # NTP
+xping udp switch.lan 161          # SNMP agent (community "public")
+xping udp host 9999 --payload "de ad be ef"
+```
+
+UDP has no handshake, so a reply is the only proof a service is there:
+**open** (it replied), **closed** (ICMP port unreachable) or **no response**
+(filtered, or the service ignored the request). Only *open* exits 0.
+
+### Clock Check (NTP)
+
+```bash
+xping ntp                         # offset against pool.ntp.org
+xping ntp time.cloudflare.com --max-offset 100 -q || echo "clock drift"
+```
+
+Shows the clock offset (a positive value means your clock is behind), the
+round-trip delay, and the server's stratum and reference, using the
+lowest-delay sample of several.
 
 ### TLS Inspector
 
@@ -419,7 +445,7 @@ xping tcp db.internal 5432 --until-up -q && ./migrate
 ### Alerts: `--notify` and `--webhook`
 
 In watch mode (`ping --watch`, and `--watch` / `--until-up` on `tcp`,
-`http`, `health`), xping can tell you when the state changes:
+`udp`, `http`, `health`), xping can tell you when the state changes:
 
 ```bash
 xping tcp db.local 5432 --watch --notify            # desktop notification
@@ -464,7 +490,7 @@ timeout = 3
 
 [[check]]
 name = "Database"
-type = "tcp"            # ping | tcp | http | tls | lookup | dnscheck | health | propagation
+type = "tcp"            # ping | tcp | udp | ntp | http | tls | lookup | dnscheck | health | propagation
 host = "prod-db"        # saved profile names work
 port = 5432
 max_latency = 50
@@ -508,6 +534,7 @@ Diagnostics talk to the host you name. A few features also contact third-party s
 |---------|----------|
 | `net` | `1.1.1.1` (Cloudflare) to report your public IP; skip with `--no-public` |
 | `doctor` | `1.1.1.1`, `8.8.8.8`, `9.9.9.9` (TCP 443, ping, one DNS query), `captive.apple.com` (HTTP) and `www.cloudflare.com` (HTTPS) |
+| `ntp` | `pool.ntp.org`, unless you name another server |
 | `speedtest` | `speed.cloudflare.com` |
 | `trace --asn` / `mtr --asn` | Team Cymru DNS (hop addresses are looked up there); opt-in |
 | `propagation` | Google, Cloudflare, Quad9, OpenDNS, AdGuard and Control D public resolvers |

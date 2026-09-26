@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **`xping udp HOST PORT`** — is a UDP service answering? Each probe is
+  *open* (a reply came back), *closed* (ICMP port unreachable) or *no
+  response* (filtered, or the service ignored the request). The request
+  is chosen by port — a DNS root query for 53/5353, SNTP for 123, SNMPv2c
+  GET sysDescr (community `public`) for 161 — or set with `--probe` /
+  `--payload HEX`. It supports `--max-latency`, `--watch`, `--until-up`
+  and alerts, and is a `udp` type in check files.
+- **`xping ntp [SERVER]`** — the system clock offset against an NTP
+  server (default `pool.ntp.org`) over SNTP. It shows the offset, the
+  delay, the stratum, the reference and whether the server is
+  synchronised, using the lowest-delay of several samples.
+  `--max-offset MS` makes it an alarm. It is an `ntp` type (threshold
+  `max_offset`) in check files.
+
 ## [1.4.5] - 2026-09-26
 
 ### Added

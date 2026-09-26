@@ -12,6 +12,7 @@ from .lookup import DnsResult
 from .mtr import MtrHop, MtrResult
 from .mtu import MtuResult
 from .net import NetInterface, NetResult
+from .ntp import NtpResult, NtpSample
 from .osdetect import OsDetectResult
 from .ping import PingResult
 from .portscan import PortResult, PortScanResult
@@ -23,6 +24,7 @@ from .sweep import HostProbe, SweepResult
 from .tcp import TcpAttempt, TcpResult
 from .tls import TlsResult
 from .trace import Hop
+from .udp import UdpAttempt, UdpResult
 from .watch import WatchResult, WatchSample
 from .whois import WhoisResult
 
@@ -57,6 +59,10 @@ __all__ = [
     "MtuResult",
     "NetInterface",
     "NetResult",
+    "NtpResult",
+    "NtpSample",
+    "UdpAttempt",
+    "UdpResult",
     "DnsCheckItem",
     "DnsCheckResult",
     "DoctorResult",
