@@ -84,7 +84,7 @@ def test_command_lists_stay_in_sync():
 
     parser, subparsers = _subcommand_parsers()
     assert set(subparsers) == set(_DISPATCH)
-    assert set(completion._COMMANDS) == set(_DISPATCH)
+    assert set(completion._from_parser()[0]) == set(_DISPATCH)
     for command in _DISPATCH:
         assert f"\n  {command} " in parser.epilog, f"{command} missing from --help epilog"
 
@@ -93,6 +93,7 @@ def test_completion_flags_match_parser():
     from xping.cli import completion
 
     _, subparsers = _subcommand_parsers()
+    _, flags = completion._from_parser()
     for command, sub in subparsers.items():
         long_opts = {
             opt
@@ -100,7 +101,7 @@ def test_completion_flags_match_parser():
             for opt in action.option_strings
             if opt.startswith("--") and opt != "--help"
         }
-        assert set(completion._FLAGS.get(command, [])) == long_opts, command
+        assert set(flags.get(command, [])) == long_opts, command
 
 
 def test_bare_host_detection():

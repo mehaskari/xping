@@ -92,7 +92,7 @@ def cmd_ping(args: argparse.Namespace) -> object:
             interval=args.interval,
             family=family_of(args),
         )
-        return
+        return None
     quiet = output_suppressed(args)
     result = ping(
         host=_resolve_host(args.host),

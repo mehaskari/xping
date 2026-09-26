@@ -150,9 +150,6 @@ def _from_parser() -> tuple[list[str], dict[str, list[str]]]:
     return list(root.subcommands), flags
 
 
-_COMMANDS, _FLAGS = _from_parser()
-
-
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
