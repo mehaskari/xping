@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.4.5] - 2026-09-26
 
 ### Added
 - **`xping doctor [host]`** — answers "why is my internet not working?".

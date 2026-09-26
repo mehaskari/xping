@@ -1,3 +1,20 @@
+xping (1.4.5-1) noble; urgency=medium
+
+  * New: xping doctor [host] - step-by-step "why is the internet not
+    working?" diagnosis (interface, gateway, internet, DNS, captive
+    portal, HTTPS, clock) with a plain-language verdict.
+  * New: xping trace --tcp / --port - TCP SYN traceroute without root,
+    for paths where firewalls drop ICMP.
+  * New: --notify and --webhook alerts in watch mode (ping, tcp, http,
+    health).
+  * xping http: separate TLS timing, per-phase waterfall, TLS details and
+    a security-header audit.
+  * Fixed column and table alignment with colour codes, the progress
+    spinner in narrow terminals, and the project URLs.
+  * New user guide (docs/guide.md).
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Sat, 26 Sep 2026 17:00:00 +0000
+
 xping (1.4.1-1) noble; urgency=medium
 
   * Tab completion now works in bash (including macOS bash 3.2), zsh and
