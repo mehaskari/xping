@@ -117,6 +117,7 @@ def cmd_trace(args: argparse.Namespace) -> object:
         quiet=quiet,
         family=family_of(args),
         asn=args.asn,
+        tcp_port=(args.port or 443) if (args.tcp or args.port) else None,
     )
     emit_export(result, args)
     return result

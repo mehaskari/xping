@@ -26,11 +26,19 @@
     `tls_version`, `tls_cipher`, `security`, `security_missing`. CSV /
     Markdown gain a "Security headers" table.
 
+- **`xping trace --tcp` / `--port N`** — traceroute with TCP SYN probes
+  to a real service port (443 by default; `--port` implies `--tcp`).
+  It gets through firewalls that drop ICMP, where a normal traceroute
+  ends in `* * *`. No root needed: Linux reads the router from the TCP
+  socket's error queue (`IP_RECVERR`), macOS from an unprivileged ICMP
+  socket. IPv4 and IPv6; not available on Windows.
+
 ### Changed
 - `xping http`: `tcp_ms` is now the TCP connect time alone. It used to
   include the TLS handshake, which is now reported as `tls_ms`.
 
 ### Fixed
+- `xping trace` printed the separator line twice before its summary.
 - `xping http`: the last line of the redirect chain always showed
   status 200, even when the final response was an error.
 - Project links pointed to `github.com/mehdiaskari/xping`, which does not

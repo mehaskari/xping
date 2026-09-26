@@ -96,6 +96,9 @@ Each hop is printed in real time. RTT values are colour-coded:
 green < 30 ms, amber < 100 ms, yellow < 300 ms, red otherwise.
 The summary includes total hops, responding hops and final-hop RTT.
 Probes are hop-limited ICMP echoes (no root needed on macOS/Linux);
+.B \-\-tcp
+uses TCP SYNs to a real service port instead, which gets through
+firewalls that drop ICMP;
 .B \-\-asn
 adds each hop's network operator.
 .TP
@@ -500,6 +503,25 @@ Show the origin AS number and operator of every hop, looked up over DNS
 via Team Cymru
 .RI ( origin.asn.cymru.com ).
 Opt-in because hop addresses are sent to Cymru's DNS servers.
+.TP
+.BR \-T ", " \-\-tcp
+Probe with TCP connection attempts (SYN) instead of ICMP echoes.
+A router whose TTL expires answers with ICMP time exceeded, quoting the
+TCP header; the destination answers with SYN-ACK (open) or RST (closed),
+and either counts as reached.
+No root is needed: on Linux the router is read from the socket's error
+queue
+.RB ( IP_RECVERR ),
+on macOS from an unprivileged ICMP socket.
+Not available on Windows.
+.TP
+.BI \-\-port " PORT"
+TCP port for
+.BR \-\-tcp ;
+implies
+.BR \-\-tcp .
+Default:
+.BR 443 .
 .SS mtr
 .TP
 .BI \-c " N" ", \-\-cycles " N
@@ -1030,6 +1052,9 @@ Continuous live ping with sparkline and running statistics.
 .TP
 .B xping trace 8.8.8.8 \-\-max\-hops 15
 Trace the path to Google DNS, up to 15 hops.
+.TP
+.B xping trace example.com \-\-tcp \-\-port 443
+Trace with TCP SYNs to port 443 when ICMP is filtered.
 .TP
 .B xping trace cloudflare.com \-\-asn
 Trace with the network operator (AS number and name) of every hop.
