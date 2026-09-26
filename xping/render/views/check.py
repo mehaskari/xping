@@ -22,6 +22,8 @@ def describe(result) -> str:
         return f"score {result.score} ({result.grade})"
     if name == "HealthResult":
         return f"score {result.score} ({result.grade})"
+    if name == "BlocklistResult":
+        return f"not listed ({result.answered} lists answered)"
     if name == "UdpResult":
         return f"replied in {result.avg_rtt_ms:.1f} ms"
     if name == "NtpResult":

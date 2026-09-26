@@ -8,6 +8,7 @@ import sys
 from xping.cli.commands import (
     cmd_about,
     cmd_all,
+    cmd_blocklist,
     cmd_check,
     cmd_completion,
     cmd_deps,
@@ -85,6 +86,7 @@ _DISPATCH = {
     "check": cmd_check,
     "rdns": cmd_rdns,
     "dnscheck": cmd_dnscheck,
+    "blocklist": cmd_blocklist,
     "propagation": cmd_propagation,
     "tls": cmd_tls,
     "http": cmd_http,

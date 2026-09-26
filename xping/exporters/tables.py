@@ -92,6 +92,14 @@ def sections_for(result: Any) -> list[Section]:
         return [_tcp_section(result)]
     if isinstance(result, m.DnsResult):
         return [_dns_section(result)]
+    if isinstance(result, m.BlocklistResult):
+        rows = [
+            [ch.list_name, ch.zone, ch.subject, ch.status, " ".join(ch.codes), ch.reason]
+            for ch in result.checks
+        ]
+        return [
+            Section("Blocklists", ["list", "zone", "subject", "status", "codes", "reason"], rows)
+        ]
     if isinstance(result, m.UdpResult):
         rows = [[a.seq, a.state, _ms(a.rtt_ms), a.reply_bytes, a.detail] for a in result.attempts]
         return [Section("Attempts", ["seq", "state", "rtt_ms", "reply_bytes", "detail"], rows)]

@@ -223,6 +223,17 @@ def _run_ntp(e: dict):
     )
 
 
+def _run_blocklist(e: dict):
+    from xping.diagnostics.blocklist import blocklist
+
+    return blocklist(
+        target=_host(e, "target"),
+        extra_zones=e.get("zones"),
+        timeout=float(e.get("timeout", 5.0)),
+        quiet=True,
+    )
+
+
 # type -> (runner, required keys, target key)
 CHECK_TYPES: dict[str, tuple[Callable[[dict], Any], tuple[str, ...], str]] = {
     "ping": (_run_ping, ("host",), "host"),
@@ -233,6 +244,7 @@ CHECK_TYPES: dict[str, tuple[Callable[[dict], Any], tuple[str, ...], str]] = {
     "tls": (_run_tls, ("host",), "host"),
     "lookup": (_run_lookup, ("host",), "host"),
     "dnscheck": (_run_dnscheck, ("domain",), "domain"),
+    "blocklist": (_run_blocklist, ("target",), "target"),
     "health": (_run_health, ("host",), "host"),
     "propagation": (_run_propagation, ("name_to_query",), "name_to_query"),
 }

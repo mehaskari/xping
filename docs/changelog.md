@@ -10,6 +10,16 @@
   GET sysDescr (community `public`) for 161 — or set with `--probe` /
   `--payload HEX`. It supports `--max-latency`, `--watch`, `--until-up`
   and alerts, and is a `udp` type in check files.
+- **`xping blocklist IP|DOMAIN`** — checks spam blocklists (DNSBL).
+  - An IP is checked on Spamhaus ZEN, SpamCop, Barracuda, PSBL,
+    Mailspike, UCEPROTECT L1, DroneBL and s5h.
+  - A domain is checked on Spamhaus DBL, SURBL and URIBL, and the IPv4
+    addresses of its MX and A hosts are checked on the IP lists.
+  - Results are *listed*, *policy* (Spamhaus PBL end-user ranges, which
+    don't fail), *clean*, *refused* (lists that refuse public resolvers)
+    or *error*.
+  - `--zone` adds more lists. It is a `blocklist` type in check files and
+    exits 1 when the target is listed.
 - **`xping ntp [SERVER]`** — the system clock offset against an NTP
   server (default `pool.ntp.org`) over SNTP. It shows the offset, the
   delay, the stratum, the reference and whether the server is
