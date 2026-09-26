@@ -31,7 +31,7 @@ def _info(**overrides) -> NetResult:
 def healthy(monkeypatch):
     """Every probe succeeds; tests override the one they break."""
     probes = {
-        "network_info": lambda: _info(),
+        "network_info": _info,
         "ping_ip": lambda ip, count=3, timeout=1.5: [5.0] * count,
         "tcp_connect": lambda ip, port=443, timeout=3.0: 20.0,
         "system_resolve": lambda name, timeout=5.0: ("104.16.1.1", 12.0),
