@@ -21,6 +21,7 @@ from .portscan import PortResult, PortScanResult
 from .profile import ProfileEntry, ProfileListResult
 from .propagation import PropagationResult, ResolverAnswer
 from .rdns import RdnsResult
+from .smtp import SmtpResult
 from .speedtest import SpeedResult
 from .sweep import HostProbe, SweepResult
 from .tcp import TcpAttempt, TcpResult
@@ -77,6 +78,7 @@ __all__ = [
     "DoctorResult",
     "DoctorStep",
     "SpeedResult",
+    "SmtpResult",
     "ListenEntry",
     "ListenResult",
     "OsDetectResult",

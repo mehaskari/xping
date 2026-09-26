@@ -3,6 +3,17 @@
 ## [Unreleased]
 
 ### Added
+- **`xping smtp HOST`** — checks a mail server.
+  - It checks the greeting, the EHLO extensions, STARTTLS (or implicit
+    TLS on 465) and certificate verification for the server's name.
+  - It shows the AUTH mechanisms and size limit offered over TLS, and
+    whether the server's reverse DNS resolves back.
+  - A mail domain is tested through its preferred MX; `--no-mx` tests
+    the host itself.
+  - It ends with QUIT and never sends mail.
+  - `--port 25|587|465`. Missing or invalid TLS is a warning unless
+    `--require-tls` is given. `--min-days` checks certificate expiry.
+  - It is an `smtp` type in check files.
 - **`xping diff BEFORE AFTER`** — compare two `--json` results of the
   same check. Either side can be `-` for stdin.
   - It recognises the kind of result and compares the numbers that

@@ -41,6 +41,7 @@ from xping.models import (
     PortScanResult,
     PropagationResult,
     RdnsResult,
+    SmtpResult,
     SpeedResult,
     SweepResult,
     TcpResult,
@@ -208,6 +209,25 @@ def _wifi(r: WifiResult, opts) -> list[Failure]:
     return []
 
 
+def _smtp(r: SmtpResult, opts) -> list[Failure]:
+    if r.error:
+        return [Failure(r.error)]
+    if r.banner_code != 220:
+        return [
+            Failure(f"{r.server} refused the session: {r.banner_code} {r.banner or ''}".strip())
+        ]
+    if _opt(opts, "require_tls"):
+        if r.cert_error:
+            return [Failure(f"TLS certificate does not verify: {r.cert_error}", True)]
+        if not r.tls:
+            return [Failure(f"{r.server} offers no TLS (--require-tls)", True)]
+    min_days = _opt(opts, "min_days")
+    days = r.cert_days
+    if min_days is not None and days is not None and days < min_days:
+        return [Failure(f"certificate expires in {days} days (< --min-days {min_days})", True)]
+    return []
+
+
 def _bundle(r: BundleResult, opts) -> list[Failure]:
     failures: list[Failure] = []
     if r.lookup is not None and r.lookup.error:
@@ -252,6 +272,7 @@ def evaluate(result, opts=None) -> list[Failure]:
         (MtrResult, _mtr),
         (BundleResult, _bundle),
         (UdpResult, _udp),
+        (SmtpResult, _smtp),
         (DiffResult, _diff),
         (WifiResult, _wifi),
         (BlocklistResult, _blocklist),

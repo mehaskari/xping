@@ -34,6 +34,7 @@ from xping.diagnostics.portscan import portscan
 from xping.diagnostics.propagation import propagation
 from xping.diagnostics.rdns import rdns
 from xping.diagnostics.resolve import family_of
+from xping.diagnostics.smtp import smtp
 from xping.diagnostics.speedtest import speedtest
 from xping.diagnostics.sweep import sweep
 from xping.diagnostics.tcp import tcp
@@ -351,6 +352,20 @@ def cmd_tls(args: argparse.Namespace) -> object:
         host=_resolve_host(args.host),
         port=args.port,
         timeout=args.timeout,
+        quiet=quiet,
+        family=family_of(args),
+    )
+    emit_export(result, args)
+    return result
+
+
+def cmd_smtp(args: argparse.Namespace) -> object:
+    quiet = output_suppressed(args)
+    result = smtp(
+        host=_resolve_host(args.host),
+        port=args.port,
+        timeout=args.timeout,
+        use_mx=not args.no_mx,
         quiet=quiet,
         family=family_of(args),
     )

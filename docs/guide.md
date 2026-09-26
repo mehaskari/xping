@@ -27,7 +27,7 @@ output means, and walks through common tasks.
    - Troubleshooting: [`doctor`](#xping-doctor) · [`net`](#xping-net) · [`health`](#xping-health) · [`all`](#xping-all)
    - Reachability and paths: [`ping`](#xping-ping) · [`trace`](#xping-trace) · [`mtr`](#xping-mtr) · [`tcp`](#xping-tcp) · [`udp`](#xping-udp) · [`mtu`](#xping-mtu)
    - DNS and domains: [`lookup`](#xping-lookup) · [`rdns`](#xping-rdns) · [`dnscheck`](#xping-dnscheck) · [`blocklist`](#xping-blocklist) · [`propagation`](#xping-propagation) · [`whois`](#xping-whois)
-   - Web and TLS: [`http`](#xping-http) · [`tls`](#xping-tls)
+   - Web, mail and TLS: [`http`](#xping-http) · [`tls`](#xping-tls) · [`smtp`](#xping-smtp)
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
    - Local machine: [`wifi`](#xping-wifi) · [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
    - Automation: [`check`](#xping-check) · [`diff`](#xping-diff) · [`profile`](#xping-profile)
@@ -174,7 +174,8 @@ directly in scripts, cron jobs, CI pipelines and monitoring systems.
 | `--max-offset MS` | `ntp` | the system clock differs from the NTP server by more than MS |
 | `--min-signal DBM` | `wifi` | the Wi-Fi signal is weaker than DBM (e.g. `--min-signal=-67`) |
 | `--expect-status CODE` | `http` | the final status is not CODE (without it, any status ≥ 400 fails) |
-| `--min-days N` | `tls` | the certificate expires in fewer than N days |
+| `--min-days N` | `tls`, `smtp` | the certificate expires in fewer than N days |
+| `--require-tls` | `smtp` | the mail server offers no TLS, or its certificate does not verify |
 | `--min-score N` | `health`, `dnscheck` | the 0–100 score is below N |
 | `--expect VALUE` | `propagation` | any answering resolver does not return VALUE |
 
@@ -885,7 +886,7 @@ xping whois cloudflare.com
 
 ---
 
-### Web and TLS
+### Web, mail and TLS
 
 #### `xping http`
 
@@ -972,6 +973,58 @@ Certificates with 14 days or less left are highlighted.
 xping tls github.com
 xping tls mail.example.com --port 993
 xping tls example.com --min-days 21 -q || echo "renew soon"
+```
+
+#### `xping smtp`
+
+```
+xping smtp HOST [--port PORT] [--no-mx] [-t SEC] [--require-tls] [--min-days N]
+```
+
+Checks a mail server the way another mail server sees it:
+
+1. connects and reads the greeting (`220 …`);
+2. sends `EHLO` to see what the server supports;
+3. upgrades the connection with `STARTTLS`, or uses implicit TLS on port
+   465, and **verifies the certificate** for the server's name;
+4. sends `EHLO` again over TLS, which shows the AUTH mechanisms and the
+   maximum message size;
+5. sends `QUIT`. **No mail is sent**: xping never issues `MAIL FROM`.
+
+Give it a **mail domain** and it tests the domain's preferred MX server
+(`xping smtp gmail.com` → `gmail-smtp-in.l.google.com`), listing all MX
+records. Give it a server name, or use `--no-mx`, to test that host
+directly.
+
+It also checks the server address's **reverse DNS**. Receiving servers
+often distrust senders whose PTR name is missing, or does not resolve
+back to the same address.
+
+| Port | Use |
+|------|-----|
+| 25 | server-to-server mail (STARTTLS) — the default |
+| 587 | submission from mail clients (STARTTLS, then AUTH) |
+| 465 | submission over implicit TLS (SMTPS) |
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--port PORT` | 25 | 25, 587 or 465 |
+| `--no-mx` | — | Test HOST itself even if it has MX records |
+| `-t`, `--timeout SEC` | 10 | Seconds to wait for each server reply |
+| `--require-tls` | — | Exit 1 unless TLS works and the certificate verifies |
+| `--min-days N` | — | Exit 1 if the certificate expires in fewer than N days |
+| `-4`, `-6` | — | Address family |
+
+Exit code 1 when the server cannot be reached or refuses the session
+(a greeting other than 220). A missing STARTTLS or an invalid
+certificate is shown as a warning, because it is common on port 25;
+`--require-tls` turns it into a failure. Many ISPs and cloud providers
+block outbound port 25. If it times out, try `--port 587`.
+
+```bash
+xping smtp gmail.com                         # the domain's MX, port 25
+xping smtp smtp.gmail.com --port 465         # implicit TLS, shows AUTH methods
+xping smtp mail.mycompany.com --require-tls --min-days 21 -q || echo "mail TLS problem"
 ```
 
 ---
@@ -1442,6 +1495,7 @@ max_latency = 1500
 | `ntp` | — | `server` ("pool.ntp.org"), `count` (2), `timeout` (2.0), `family` | `max_offset` |
 | `http` | `url` | `timeout` (8.0), `family` | `expect_status`, `max_latency` |
 | `tls` | `host` | `port` (443), `timeout` (5.0), `family` | `min_days` |
+| `smtp` | `host` | `port` (25), `timeout` (10.0), `no_mx` (false), `family` | `require_tls`, `min_days` |
 | `lookup` | `host` | `full` (false), `server` | — |
 | `dnscheck` | `domain` | — | `min_score` |
 | `blocklist` | `target` | `zones` (list), `timeout` (5.0) | — (fails when listed) |
@@ -1535,6 +1589,7 @@ xping propagation www.example.com --expect 203.0.113.10
 ```bash
 xping dnscheck example.com        # SPF, DMARC, DKIM, MX
 xping blocklist example.com       # the domain and its mail servers on spam blocklists
+xping smtp example.com            # the MX answers, offers STARTTLS, valid certificate
 xping lookup example.com --full
 ```
 
