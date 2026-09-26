@@ -233,6 +233,24 @@ IPv6 is supported on Linux and macOS (macOS needs root for the
 don't-fragment IPv6 probe) but not on Windows.
 .SS Local machine
 .TP
+.BR doctor " [\fIHOST\fR] [\fIOPTIONS\fR]"
+Answer \(lqwhy is the internet not working?\(rq.
+Checks, in order: a network interface with a usable address
+(a 169.254.x.x address means DHCP failed), the default gateway
+(ping), the internet by IP address without DNS (TCP 443 to 1.1.1.1,
+8.8.8.8 and 9.9.9.9), DNS through the system resolver (on failure, a
+direct query to 1.1.1.1 tells a broken resolver apart from blocked DNS
+traffic), connection quality (loss and latency to 1.1.1.1), a captive
+portal (Wi-Fi login page, via captive.apple.com), HTTPS with certificate
+verification (interception; Cloudflare's timestamp also reveals a wrong
+system clock), IPv6 (informational only) and, when given,
+.I HOST
+on the TCP port set with
+.BR \-\-port .
+Steps that depend on a failed one are skipped.
+It ends with one plain-language diagnosis and what to do.
+Exits 1 when any step fails.
+.TP
 .B net [\fIOPTIONS\fR]
 Your own network at a glance: hostname, the local IPv4/IPv6 source
 addresses used for outbound traffic, default gateways, DNS resolvers,
@@ -710,6 +728,13 @@ Default:
 .TP
 .B \-\-example
 Print an example check file and exit.
+.SS doctor
+.TP
+.BI \-\-port " PORT"
+TCP port tested on
+.IR HOST .
+Default:
+.BR 443 .
 .SS net
 .TP
 .B \-\-no\-public
@@ -974,6 +999,12 @@ Auto-ping Google DNS and display follow-up command suggestions.
 .B xping google.com
 Auto-ping google.com (same shorthand, works with hostnames too).
 .TP
+.B xping doctor
+Diagnose why the internet is not working, step by step.
+.TP
+.B xping doctor db.example.com \-\-port 5432
+Check the basics, then whether db.example.com accepts connections on 5432.
+.TP
 .B xping ping google.com
 Explicit ping with 5 packets.
 .TP
@@ -1106,6 +1137,8 @@ third parties:
 .BR \-\-no\-public ),
 .B speedtest
 (speed.cloudflare.com),
+.B doctor
+(1.1.1.1, 8.8.8.8 and 9.9.9.9; captive.apple.com; www.cloudflare.com),
 .B trace/mtr \-\-asn
 (Team Cymru DNS; opt-in),
 .B propagation

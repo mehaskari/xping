@@ -41,6 +41,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **Network Health Score** — 0–100 score combining DNS time, packet loss, latency, and jitter
 - **Path MTU Discovery** — Binary-search for the largest unfragmented packet size
 - **Saved Profiles** — `xping profile add prod-db 10.0.0.5` then use `xping ping prod-db`
+- **Connectivity doctor** — `xping doctor`: finds out *why* the internet (or a host) is not working — interface, router, internet, DNS, captive portal, HTTPS, clock — and says what to do
 - **Network overview** — `xping net`: interfaces, gateway, DNS servers, public IPv4/IPv6
 - **Watch & wait** — `--watch` / `--until-up` on `tcp`, `http` and `health`
 - **Exit codes & thresholds** — `--max-loss`, `--max-latency`, `--expect-status`, `--min-days`, `--min-score`, `--quiet`
@@ -257,6 +258,32 @@ xping tcp prod-db 5432
 xping health staging-api
 ```
 
+### Connectivity Doctor
+
+```bash
+xping doctor                     # why is the internet not working?
+xping doctor github.com          # ...and is this host reachable (TCP 443)?
+xping doctor db.local --port 5432
+```
+
+Checks, in order: network interface (and DHCP), default gateway, internet
+by IP (no DNS), DNS (your resolvers vs. a public one), connection quality,
+captive portal (Wi-Fi login page), HTTPS (interception, system clock),
+IPv6, and the optional host. It ends with one plain-language diagnosis —
+e.g. *"The router works, but there is no internet behind it"* — and what
+to do about it. Exit code 1 when any step fails.
+
+```
+  ✔  Network interface       en0 192.168.1.20
+  ✔  Default gateway         192.168.1.1 replied in 3.1 ms
+  ✔  Internet (by IP)        reached 3/3 — 1.1.1.1 in 18.4 ms
+  ✘  DNS                     your DNS servers (192.168.1.1) do not answer, but public DNS does
+  –  Captive portal          DNS is not working
+  ...
+  ✘ The internet works, but name lookups (DNS) fail.
+    Switch DNS to 1.1.1.1 or 8.8.8.8 (or restart the router, which usually provides DNS).
+```
+
 ### Network Overview
 
 ```bash
@@ -415,6 +442,7 @@ Diagnostics talk to the host you name. A few features also contact third-party s
 | Command | Contacts |
 |---------|----------|
 | `net` | `1.1.1.1` (Cloudflare) to report your public IP; skip with `--no-public` |
+| `doctor` | `1.1.1.1`, `8.8.8.8`, `9.9.9.9` (TCP 443, ping, one DNS query), `captive.apple.com` (HTTP) and `www.cloudflare.com` (HTTPS) |
 | `speedtest` | `speed.cloudflare.com` |
 | `trace --asn` / `mtr --asn` | Team Cymru DNS (hop addresses are looked up there); opt-in |
 | `propagation` | Google, Cloudflare, Quad9, OpenDNS, AdGuard and Control D public resolvers |

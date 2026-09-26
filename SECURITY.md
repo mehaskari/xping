@@ -42,7 +42,8 @@ stored credentials, no `eval`/`exec`.
   clearly marked block to the shell rc file, only when asked, and
   `--uninstall` removes exactly that block.
 - **Network:** diagnostics contact the host you name. Features that
-  contact third parties (Cloudflare for `net`/`speedtest`, Team Cymru
+  contact third parties (Cloudflare for `net`/`speedtest`/`doctor`, Apple's captive-portal
+  check for `doctor`, Team Cymru
   DNS for `--asn`, public resolvers for `propagation`, WHOIS/RDAP
   registries for `whois`) are listed in the README under
   "Files & privacy"; `--asn` is opt-in and `net --no-public` keeps
