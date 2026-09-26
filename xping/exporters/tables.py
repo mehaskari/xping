@@ -207,6 +207,11 @@ def sections_for(result: Any) -> list[Section]:
                 row.append(result.matches(a))
             rows.append(row)
         return [Section("Resolvers", columns, rows)]
+    if isinstance(result, m.DoctorResult):
+        rows = [
+            [s.key, s.name, s.status, s.detail, s.hint, _ms(s.elapsed_ms)] for s in result.steps
+        ]
+        return [Section("Steps", ["step", "name", "status", "detail", "hint", "elapsed_ms"], rows)]
     if isinstance(result, m.CheckReport):
         rows = [[o.name, o.type, o.target, o.ok, o.detail, o.elapsed_ms] for o in result.outcomes]
         columns = ["name", "type", "target", "ok", "detail", "elapsed_ms"]

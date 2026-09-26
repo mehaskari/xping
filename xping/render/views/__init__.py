@@ -3,6 +3,7 @@
 from . import (
     check,
     dnscheck,
+    doctor,
     health,
     http,
     ipscan,
@@ -28,6 +29,7 @@ from . import (
 __all__ = [
     "check",
     "dnscheck",
+    "doctor",
     "health",
     "http",
     "ipscan",

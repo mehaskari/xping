@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+- **`xping doctor [host]`** — answers "why is my internet not working?".
+  It checks, in order: network interface (and DHCP), default gateway,
+  internet by IP (no DNS), DNS (your resolvers vs. a public one),
+  connection quality, captive portal, HTTPS (interception and system
+  clock), IPv6 and, optionally, a host (`--port`, default 443). It ends
+  with one plain-language diagnosis and what to do. Exit code 1 when a
+  step fails; `--json`, `--csv` (one row per step) and `--markdown`
+  work as usual.
+
 ### Fixed
 - Project links pointed to `github.com/mehdiaskari/xping`, which does not
   exist. The correct repository, `github.com/mehaskari/xping`, is now used

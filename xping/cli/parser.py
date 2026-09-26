@@ -163,6 +163,7 @@ Commands:
   speedtest            Download/upload speed via Cloudflare
   listen               Show locally listening TCP/UDP ports
   net                  Local network overview: interfaces, gateway, DNS, public IP
+  doctor [host]        Why is the internet not working? Step-by-step diagnosis
   deps                 Check system dependency status
   completion [shell]   Tab completion for bash/zsh/fish (--install to set it up)
   about                Show author, license, and attribution info
@@ -193,6 +194,8 @@ Examples:
   xping propagation example.com --expect 93.184.216.34
   xping speedtest --json
   xping net
+  xping doctor
+  xping doctor github.com --port 22
   xping profile add prod-db 10.0.0.5 --port 5432 --note "Production DB"
   xping profile list
   xping ping prod-db
@@ -681,6 +684,22 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     )
     p_net.add_argument(
         "--all", action="store_true", help="Also list interfaces with only link-local addresses"
+    )
+
+    p_doctor = sub.add_parser(
+        "doctor",
+        parents=[export_parent],
+        help="Diagnose why the internet (or a host) is not working",
+    )
+    p_doctor.add_argument(
+        "host", nargs="?", default=None, help="Optional host to test after the basics"
+    )
+    p_doctor.add_argument(
+        "--port",
+        type=_tcp_port,
+        default=443,
+        metavar="PORT",
+        help="TCP port to test on HOST [default: 443]",
     )
 
     sub.add_parser("deps", help="Check system dependency status")

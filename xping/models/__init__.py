@@ -3,6 +3,7 @@
 from .bundle import BundleResult
 from .check import CheckOutcome, CheckReport
 from .dnscheck import DnsCheckItem, DnsCheckResult
+from .doctor import DoctorResult, DoctorStep
 from .health import HealthResult
 from .http import HttpResult, RedirectHop
 from .ipscan import IpProbe, IpScanResult
@@ -57,6 +58,8 @@ __all__ = [
     "NetResult",
     "DnsCheckItem",
     "DnsCheckResult",
+    "DoctorResult",
+    "DoctorStep",
     "SpeedResult",
     "ListenEntry",
     "ListenResult",

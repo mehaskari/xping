@@ -13,6 +13,7 @@ from xping.diagnostics.bundle import run_bundle
 from xping.diagnostics.check import EXAMPLE, ConfigError, run_checks
 from xping.diagnostics.deps import print_deps_status
 from xping.diagnostics.dnscheck import dnscheck
+from xping.diagnostics.doctor import doctor
 from xping.diagnostics.health import health
 from xping.diagnostics.http import http_diagnose
 from xping.diagnostics.ipscan import ipscan
@@ -422,6 +423,14 @@ def cmd_osdetect(args: argparse.Namespace) -> object:
 def cmd_net(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
     result = net(public=not args.no_public, quiet=quiet, show_all=args.all)
+    emit_export(result, args)
+    return result
+
+
+def cmd_doctor(args: argparse.Namespace) -> object:
+    quiet = output_suppressed(args)
+    target = _resolve_host(args.host) if args.host else None
+    result = doctor(target=target, port=args.port, quiet=quiet)
     emit_export(result, args)
     return result
 
