@@ -288,11 +288,15 @@ def summary_for(result: Any) -> list[tuple[str, Any]]:
 
 
 def cell(value: Any) -> str:
-    """Render one table cell: JSON for nested data, empty string for None."""
+    """Render one table cell: JSON for nested data, empty string for None.
+    Escape sequences and control characters from remote data are removed —
+    CSV and Markdown are often printed straight to the terminal."""
+    from xping.render.ansi import safe
+
     if value is None:
         return ""
     if isinstance(value, (list, dict, tuple)):
         return json.dumps(value, separators=(",", ":"))
     if isinstance(value, float):
         return f"{value:.3f}".rstrip("0").rstrip(".") or "0"
-    return str(value)
+    return safe(str(value), keep_colors=False)

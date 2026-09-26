@@ -221,7 +221,7 @@ class TestHttp:
         mock_resp = MagicMock()
         mock_resp.status = 200
         mock_resp.reason = "OK"
-        mock_resp.read.return_value = b"<html></html>"
+        mock_resp.read.side_effect = [b"<html></html>", b""]
         mock_resp.getheaders.return_value = [("content-type", "text/html")]
         mock_resp.getheader.return_value = None
 

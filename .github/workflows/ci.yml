@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# CI only needs to read the code (least privilege for the GITHUB_TOKEN)
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Test — Python ${{ matrix.python-version }} / ${{ matrix.os }}

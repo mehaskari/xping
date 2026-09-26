@@ -473,8 +473,12 @@ def cmd_profile(args: argparse.Namespace) -> object:
     if action == "show":
         return profile_diag.show(args.name) is not None
     if getattr(args, "names", False):
+        # Only names `profile add` would accept: shell completion feeds these
+        # to bash's `compgen -W`, which expands $(...) in its word list, so a
+        # hand-edited profiles.json must not be able to inject commands.
         for entry in profile_diag.list_profiles(quiet=True).profiles:
-            print(entry.name)
+            if profile_diag.valid_name(entry.name):
+                print(entry.name)
         return True
     profile_diag.list_profiles()
     return True

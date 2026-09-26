@@ -6,6 +6,12 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
 
+# The job only reads the repository; secrets reach the shell as environment
+# variables, never pasted into the script text (a quote or $() in a secret
+# would otherwise become shell syntax).
+permissions:
+  contents: read
+
 jobs:
   upload-ppa:
     name: Build & upload to Launchpad PPA
@@ -34,6 +40,8 @@ jobs:
       # tiny gpg wrapper at it via --passphrase-file, then tells
       # debuild/dpkg-buildpackage to sign through that wrapper with -p.
       - name: Configure GPG for non-interactive signing
+        env:
+          GPG_PASSPHRASE: ${{ secrets.LAUNCHPAD_GPG_PASSPHRASE }}
         run: |
           mkdir -p ~/.gnupg
           chmod 700 ~/.gnupg
@@ -49,7 +57,7 @@ jobs:
           chmod 600 ~/.gnupg/gpg.conf ~/.gnupg/gpg-agent.conf
           gpgconf --kill gpg-agent 2>/dev/null || true
 
-          printf '%s' "${{ secrets.LAUNCHPAD_GPG_PASSPHRASE }}" > "$RUNNER_TEMP/gpg-passphrase.txt"
+          printf '%s' "$GPG_PASSPHRASE" > "$RUNNER_TEMP/gpg-passphrase.txt"
           chmod 600 "$RUNNER_TEMP/gpg-passphrase.txt"
 
           cat > "$RUNNER_TEMP/gpg-wrapper.sh" << WRAPPER
@@ -60,11 +68,15 @@ jobs:
           chmod 700 "$RUNNER_TEMP/gpg-wrapper.sh"
 
       - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.LAUNCHPAD_GPG_PRIVATE_KEY }}
         run: |
-          echo "${{ secrets.LAUNCHPAD_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
           gpg --list-secret-keys
 
       - name: Build and sign source package
+        env:
+          GPG_KEY_ID: ${{ secrets.LAUNCHPAD_GPG_KEY_ID }}
         run: |
           VERSION=$(python3 -c "import re; print(re.search(r'version = \"(.+?)\"', open('pyproject.toml').read()).group(1))")
           echo "Building xping $VERSION"
@@ -73,7 +85,7 @@ jobs:
             --exclude='build' --exclude='*.egg-info' --exclude='.venv' \
             --exclude='__pycache__' \
             -czf "../xping_${VERSION}.orig.tar.gz" .
-          debuild -S -sa -k"${{ secrets.LAUNCHPAD_GPG_KEY_ID }}" -p"$RUNNER_TEMP/gpg-wrapper.sh"
+          debuild -S -sa -k"$GPG_KEY_ID" -p"$RUNNER_TEMP/gpg-wrapper.sh"
 
       - name: Clean up passphrase file
         if: always()

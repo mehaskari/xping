@@ -5,6 +5,7 @@ Fallback: manual DNS PTR query to 8.8.8.8 when the system resolver
           fails (e.g. the resolver doesn't handle in-addr.arpa).
 """
 
+import os
 import socket
 import struct
 
@@ -41,9 +42,8 @@ def _ptr_name(ip: str) -> str:
     return ".".join(reversed(parts)) + ".in-addr.arpa"
 
 
-def _dns_query_bytes(name: str, qtype: int = 12) -> bytes:
+def _dns_query_bytes(name: str, qtype: int = 12, txid: int = 0x1234) -> bytes:
     """Build a minimal DNS query packet for *name* (qtype 12 = PTR)."""
-    txid = 0x1234
     flags = 0x0100  # standard query, recursion desired
     header = struct.pack("!HHHHHH", txid, flags, 1, 0, 0, 0)
     qname = b""
@@ -93,11 +93,14 @@ def _parse_ptr_response(data: bytes) -> list[str]:
         if rtype == 12:  # PTR
             # decode the name in RDATA (may have pointers)
             name_parts = []
-            rpos = pos
-            while rpos < pos + rdlen and rpos < len(data):
+            rpos, jumped, jumps = pos, False, 0
+            while rpos < len(data) and (jumped or rpos < pos + rdlen):
                 if data[rpos] & 0xC0 == 0xC0:
-                    ptr = ((data[rpos] & 0x3F) << 8) | data[rpos + 1]
-                    rpos = ptr
+                    # a malicious response can point a name at itself: cap the jumps
+                    if rpos + 1 >= len(data) or jumps >= 64:
+                        break
+                    rpos = ((data[rpos] & 0x3F) << 8) | data[rpos + 1]
+                    jumped, jumps = True, jumps + 1
                     continue
                 length = data[rpos]
                 rpos += 1
@@ -113,12 +116,16 @@ def _parse_ptr_response(data: bytes) -> list[str]:
 def _fallback_ptr(ip: str) -> str | None:
     """Direct UDP DNS PTR query to 8.8.8.8 as fallback."""
     ptr_name = _ptr_name(ip)
-    packet = _dns_query_bytes(ptr_name)
+    txid = int.from_bytes(os.urandom(2), "big")  # random ID + connected socket: hard to spoof
+    packet = _dns_query_bytes(ptr_name, txid=txid)
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.settimeout(_DNS_TIMEOUT)
-            sock.sendto(packet, (_DNS_FALLBACK, _DNS_PORT))
-            resp, _ = sock.recvfrom(512)
+            sock.connect((_DNS_FALLBACK, _DNS_PORT))
+            sock.send(packet)
+            resp = sock.recv(512)
+        if len(resp) < 2 or struct.unpack("!H", resp[:2])[0] != txid:
+            return None
         names = _parse_ptr_response(resp)
         return names[0].rstrip(".") if names else None
     except Exception:

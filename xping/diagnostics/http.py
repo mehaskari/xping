@@ -23,6 +23,7 @@ from xping.render.errors import error, resolve_error
 from xping.render.views import http as http_view
 
 MAX_REDIRECTS = 10
+MAX_BODY = 100 * 1024 * 1024  # bytes read before the download is cut short
 HSTS_MIN_AGE = 180 * 24 * 3600  # what hstspreload.org and most scanners ask for
 
 
@@ -168,14 +169,22 @@ def _one_request(url: str, timeout: float, family: int | None = None) -> dict:
         )
         resp = conn.getresponse()
         t3 = time.perf_counter()
-        body = resp.read()
+        # Count the body in chunks instead of holding it in memory; stop at
+        # MAX_BODY so a huge or endless response cannot run forever.
+        body_bytes, truncated = 0, False
+        while chunk := resp.read(65536):
+            body_bytes += len(chunk)
+            if body_bytes >= MAX_BODY:
+                truncated = True
+                break
         t4 = time.perf_counter()
         return dict(
             status=resp.status,
             reason=resp.reason,
             headers=dict(resp.getheaders()),
             location=resp.getheader("Location"),
-            body_bytes=len(body),
+            body_bytes=body_bytes,
+            body_truncated=truncated,
             dns_ms=dns_ms,
             tcp_ms=tcp_ms,
             tls_ms=tls_ms,
@@ -247,6 +256,7 @@ def http_diagnose(
             result.reason = d["reason"]
             result.headers = d["headers"]
             result.body_bytes = d["body_bytes"]
+            result.body_truncated = d["body_truncated"]
             result.ttfb_ms = d["ttfb_ms"]
             result.total_ms = (time.perf_counter() - total_wall) * 1000
             result.redirect_ms = result.total_ms - d["total_ms"] if result.redirects else None

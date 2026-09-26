@@ -44,6 +44,10 @@ def _save(data: dict) -> None:
     tmp.replace(STORE_FILE)
 
 
+def valid_name(name: str) -> bool:
+    return bool(_NAME_RE.match(name))
+
+
 def resolve_target(value: str) -> str:
     """Return the saved target for *value* if it names a profile, else *value* unchanged."""
     entry = _load().get(value)
