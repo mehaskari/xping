@@ -33,6 +33,18 @@
   socket's error queue (`IP_RECVERR`), macOS from an unprivileged ICMP
   socket. IPv4 and IPv6; not available on Windows.
 
+- **Alerts in watch mode: `--notify` and `--webhook URL`** on
+  `ping --watch` and on `--watch` / `--until-up` for `tcp`, `http` and
+  `health`.
+  - An event fires on every DOWN / UP change, and the UP message includes
+    how long the outage lasted.
+  - `--notify` uses Notification Center (macOS) or `notify-send` (Linux),
+    and the terminal bell elsewhere.
+  - `--webhook` POSTs a JSON event with `text` / `content` fields that
+    Slack, Discord, Mattermost and Google Chat display directly. It is
+    sent in the background, and a failure is reported only once.
+  - `ping --watch` treats three consecutive lost pings as an outage.
+
 ### Changed
 - `xping http`: `tcp_ms` is now the TCP connect time alone. It used to
   include the TLS handshake, which is now reported as `tls_ms`.

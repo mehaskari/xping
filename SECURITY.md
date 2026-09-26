@@ -48,6 +48,9 @@ stored credentials, no `eval`/`exec`.
   registries for `whois`) are listed in the README under
   "Files & privacy"; `--asn` is opt-in and `net --no-public` keeps
   everything local.
+- **Alerts:** `--webhook` sends the target name and check result only to
+  the URL you pass. `--notify` hands the text to `osascript` /
+  `notify-send` as arguments, never as script source or a shell line.
 - **Subprocesses:** system tools (`ping`, `traceroute`, `dig`, `ss`,
-  `netstat`, `ip`, `ifconfig`, …) are run with argument lists, never
+  `netstat`, `ip`, `ifconfig`, `osascript`, `notify-send`, …) are run with argument lists, never
   through a shell.

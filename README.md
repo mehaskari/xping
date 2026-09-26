@@ -44,6 +44,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **Connectivity doctor** — `xping doctor`: finds out *why* the internet (or a host) is not working — interface, router, internet, DNS, captive portal, HTTPS, clock — and says what to do
 - **Network overview** — `xping net`: interfaces, gateway, DNS servers, public IPv4/IPv6
 - **Watch & wait** — `--watch` / `--until-up` on `tcp`, `http` and `health`
+- **Alerts** — `--notify` (desktop notification) and `--webhook URL` (Slack, Discord, Mattermost, any JSON endpoint) when a watched target goes down or comes back
 - **Exit codes & thresholds** — `--max-loss`, `--max-latency`, `--expect-status`, `--min-days`, `--min-score`, `--quiet`
 - **Batch checks** — `xping check checks.toml` runs many checks in parallel with one exit code
 - **Speed test** — Multi-connection download/upload via Cloudflare
@@ -413,6 +414,38 @@ xping health example.com --min-score 75
 xping tcp db.internal 5432 --until-up -q && ./migrate
 ```
 
+### Alerts: `--notify` and `--webhook`
+
+In watch mode (`ping --watch`, and `--watch` / `--until-up` on `tcp`,
+`http`, `health`), xping can tell you when the state changes:
+
+```bash
+xping tcp db.local 5432 --watch --notify            # desktop notification
+xping http https://example.com --watch --every 30 \
+      --webhook https://hooks.slack.com/services/T000/B000/XXXX
+xping tcp db.local 5432 --until-up -q --notify      # "it's back" and exit
+```
+
+- An event fires on every DOWN and UP change (the UP message says how
+  long the outage lasted). The first check only sets the baseline, except
+  that `--until-up` always announces the final UP.
+- `ping --watch` counts a host as down after **3 lost pings in a row**, so
+  a single dropped packet is not an outage.
+- `--notify` uses Notification Center on macOS and `notify-send` on Linux;
+  elsewhere it rings the terminal bell.
+- `--webhook` POSTs one JSON object per event. `text` (Slack, Mattermost,
+  Google Chat) and `content` (Discord) hold a ready-made message:
+
+  ```json
+  {"source": "xping", "event": "down", "target": "db.local:5432", "check": "tcp",
+   "detail": "db.local:5432 refused or timed out on every attempt", "latency_ms": null,
+   "time": "2026-09-26T09:40:12+00:00", "machine": "laptop",
+   "text": "🔴 xping: db.local:5432 (tcp) is DOWN — …", "content": "…"}
+  ```
+
+  Delivery runs in the background; a failing endpoint is reported once
+  and never stops the watch.
+
 ### Batch checks
 
 Put many checks in one file and get one exit code (TOML needs Python 3.11+; JSON works everywhere):
@@ -477,6 +510,7 @@ Diagnostics talk to the host you name. A few features also contact third-party s
 | `trace --asn` / `mtr --asn` | Team Cymru DNS (hop addresses are looked up there); opt-in |
 | `propagation` | Google, Cloudflare, Quad9, OpenDNS, AdGuard and Control D public resolvers |
 | `whois` | IANA and registry WHOIS / RDAP servers |
+| `--webhook URL` | Only the URL you give, with the target name and check result |
 | `lookup`, `dnscheck` | `8.8.8.8` directly, only when `dig` is not installed (otherwise your resolver) |
 | `rdns` | `8.8.8.8`, only when the system resolver finds no PTR record |
 
