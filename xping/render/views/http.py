@@ -10,6 +10,7 @@ from ..ansi import (
     BWHITE,
     DIM,
     c,
+    pad,
 )
 from ..latency import latency_color
 
@@ -19,6 +20,8 @@ _SECURITY_BADGES = {
     "missing": ("✘", BRAND_ROSE),
 }
 _BAR_WIDTH = 30
+_LABEL_W = 16  # "Server response" + 1
+_HEADER_KEY_MAX = 26  # longer header names overflow instead of widening every row
 
 
 def timing_rows(result) -> list[tuple[str, float | None, str]]:
@@ -83,23 +86,23 @@ def print_result(result) -> None:
     print(_sub_header("Timing"))
     for label, ms, bar in timing_rows(result):
         value = latency_color(ms) if ms is not None else c("—", DIM)
-        print(f"  {c(label, DIM):<28}  {value:<22}  {c(bar, BRAND_TEAL)}")
+        print(f"  {pad(c(label, DIM), _LABEL_W)}  {pad(value, 10, '>')}  {c(bar, BRAND_TEAL)}")
     total = latency_color(result.total_ms) if result.total_ms is not None else c("—", DIM)
-    print(f"  {c('Total', BWHITE, BOLD):<30}{total}")
+    print(f"  {pad(c('Total', BWHITE, BOLD), _LABEL_W)}  {pad(total, 10, '>')}")
     print()
 
     print(_sub_header("Connection"))
     http_ver = result.http_version or "HTTP/1.1"
-    print(f"  {c('HTTP version', DIM):<28}  {c(http_ver, BWHITE, BOLD)}")
+    print(f"  {pad(c('HTTP version', DIM), _LABEL_W)}  {c(http_ver, BWHITE, BOLD)}")
     if result.h2_supported is not None:
         h2_str = c("yes", BRAND_MINT, BOLD) if result.h2_supported else c("no", DIM)
-        print(f"  {c('HTTP/2 support', DIM):<28}  {h2_str}")
+        print(f"  {pad(c('HTTP/2 support', DIM), _LABEL_W)}  {h2_str}")
     if result.tls_version:
         tls = result.tls_version + (f"  {result.tls_cipher}" if result.tls_cipher else "")
-        print(f"  {c('TLS', DIM):<28}  {c(tls, BWHITE)}")
+        print(f"  {pad(c('TLS', DIM), _LABEL_W)}  {c(tls, BWHITE)}")
     if result.ip:
-        print(f"  {c('Server IP', DIM):<28}  {c(result.ip, BWHITE)}")
-    print(f"  {c('Body size', DIM):<28}  {c(f'{result.body_bytes:,} bytes', BWHITE)}")
+        print(f"  {pad(c('Server IP', DIM), _LABEL_W)}  {c(result.ip, BWHITE)}")
+    print(f"  {pad(c('Body size', DIM), _LABEL_W)}  {c(f'{result.body_bytes:,} bytes', BWHITE)}")
     print()
 
     # ── Security headers ──────────────────────────────────────────
@@ -116,7 +119,8 @@ def print_result(result) -> None:
                 shown = item.value or item.note
             if shown and len(shown) > 60:
                 shown = shown[:57] + "…"
-            print(f"  {c(icon, color, BOLD)}  {c(item.name, BWHITE):<40}  {c(shown or '', DIM)}")
+            name = pad(c(item.name, BWHITE), 26)
+            print(f"  {c(icon, color, BOLD)}  {name}  {c(shown or '', DIM)}")
         print()
 
     # ── Headers ───────────────────────────────────────────────────
@@ -134,9 +138,10 @@ def print_result(result) -> None:
             result.headers.items(),
             key=lambda kv: (0 if kv[0].lower() in priority else 1, kv[0].lower()),
         )
+        key_w = min(max(len(k) for k, _ in sorted_headers), _HEADER_KEY_MAX)
         for key, value in sorted_headers:
             display_val = value if len(value) <= 72 else value[:69] + c("…", DIM)
-            print(f"  {c(key.lower(), BRAND_TEAL):<36}  {c(display_val, BWHITE)}")
+            print(f"  {pad(c(key.lower(), BRAND_TEAL), key_w)}  {c(display_val, BWHITE)}")
         print()
 
     # ── Summary line ──────────────────────────────────────────────

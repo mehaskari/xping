@@ -98,3 +98,37 @@ def test_view_and_exports(capsys):
     md = export_markdown(r)
     assert "Security headers" in md and "Content-Security-Policy" in md
     assert "tls_ms,30" in export_csv(r)
+
+
+def _columns(out: str, marker: str) -> set[int]:
+    """Column where *marker*'s value starts on every line that has it."""
+    from xping.render.ansi import ANSI_RE
+
+    return {ANSI_RE.sub("", line).index(marker) for line in out.splitlines() if marker in line}
+
+
+def test_columns_align_with_and_without_colour(capsys):
+    """f-string padding counted colour codes, so the timing numbers, the
+    waterfall and the header values drifted apart (worst with colour off)."""
+    from xping.render.ansi import ANSI_RE
+
+    for colour in (False, True):
+        r = _result()
+        r.headers = {"content-type": "text/html", "strict-transport-security": "max-age=1"}
+        with patch("xping.render.ansi.COLOR", colour), patch("xping.render.COLOR", colour):
+            http_view.print_result(r)
+        lines = [ANSI_RE.sub("", ln) for ln in capsys.readouterr().out.splitlines()]
+        timing = [ln for ln in lines if ln.strip().split("  ")[0] in (
+            "DNS lookup", "TCP connect", "TLS handshake", "Server response", "Total")]
+        assert len({ln.index(" ms") for ln in timing}) == 1, (colour, timing)
+        headers = [ln for ln in lines if ln.startswith("  content-type") or
+                   ln.startswith("  strict-transport-security ")]
+        assert len({ln.index(v) for ln, v in zip(headers, ("text/html", "max-age=1"))}) == 1
+
+
+def test_pad_counts_visible_width():
+    from xping.render.ansi import pad
+
+    coloured = "\033[1;92m12.5 ms\033[0m"
+    assert pad(coloured, 10).endswith("   ") and pad("ab", 4, ">") == "  ab"
+    assert pad("ab", 5, "^") == " ab  " and pad("toolong", 3) == "toolong"

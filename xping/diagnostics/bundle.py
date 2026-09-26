@@ -5,7 +5,7 @@ from xping.diagnostics.ping import ping
 from xping.diagnostics.tcp import tcp
 from xping.diagnostics.trace import trace
 from xping.models.bundle import BundleResult
-from xping.render import BOLD, BRAND_AMBER, BRAND_MINT, BRAND_ROSE, BRAND_SLATE, BWHITE, DIM, c
+from xping.render import BOLD, BRAND_AMBER, BRAND_MINT, BRAND_ROSE, BRAND_SLATE, BWHITE, DIM, c, pad
 from xping.render.latency import latency_color
 
 
@@ -21,11 +21,11 @@ def _bundle_summary(result: BundleResult) -> None:
         ip_str = dns.ipv4[0]
         extras = f"  (+{len(dns.ipv4) - 1} more)" if len(dns.ipv4) > 1 else ""
         print(
-            f"  {c('DNS', BRAND_SLATE):<24}  {c('✔', BRAND_MINT)}  "
+            f"  {pad(c('DNS', BRAND_SLATE), 24)}  {c('✔', BRAND_MINT)}  "
             f"{c(ip_str, BWHITE)}{c(extras, DIM)}"
         )
     elif dns and dns.error:
-        print(f"  {c('DNS', BRAND_SLATE):<24}  {c('✘', BRAND_ROSE)}  {c(dns.error, DIM)}")
+        print(f"  {pad(c('DNS', BRAND_SLATE), 24)}  {c('✘', BRAND_ROSE)}  {c(dns.error, DIM)}")
 
     # Ping
     p = result.ping
@@ -36,7 +36,7 @@ def _bundle_summary(result: BundleResult) -> None:
         ping_ok = p.received > 0
         badge = c("✔", BRAND_MINT) if ping_ok else c("✘", BRAND_ROSE)
         detail = f"{latency_color(p.avg_rtt)} avg   {c(f'{p.loss_pct:.0f}% loss', loss_color)}"
-        print(f"  {c('Ping', BRAND_SLATE):<24}  {badge}  {detail}")
+        print(f"  {pad(c('Ping', BRAND_SLATE), 24)}  {badge}  {detail}")
 
     # Trace
     if result.trace:
@@ -46,7 +46,7 @@ def _bundle_summary(result: BundleResult) -> None:
         badge = c("✔", BRAND_MINT) if reached else c("~", BRAND_AMBER)
         status = "reached" if reached else "incomplete"
         print(
-            f"  {c('Trace', BRAND_SLATE):<24}  {badge}  "
+            f"  {pad(c('Trace', BRAND_SLATE), 24)}  {badge}  "
             f"{c(f'{hops} hops', BWHITE)}  {c(status, DIM)}"
         )
 
@@ -62,7 +62,7 @@ def _bundle_summary(result: BundleResult) -> None:
         else:
             badge = c("✘", BRAND_ROSE)
             detail = c("refused / timeout", DIM)
-        print(f"  {c(port_label, BRAND_SLATE):<24}  {badge}  {detail}")
+        print(f"  {pad(c(port_label, BRAND_SLATE), 24)}  {badge}  {detail}")
 
     print()
 

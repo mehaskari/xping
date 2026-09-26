@@ -5,6 +5,7 @@ Pure stdlib ANSI escape codes — no external dependencies.
 
 from .animations import Spinner
 from .ansi import (
+    ANSI_RE,
     BBLUE,
     BCYAN,
     BG_BLACK,
@@ -37,7 +38,9 @@ from .ansi import (
     WHITE,
     YELLOW,
     c,
+    pad,
     supports_color,
+    visible_len,
 )
 from .errors import error, missing_tool, resolve_error, warn
 from .latency import latency_color, rtt_bar, spark_bar
@@ -80,6 +83,9 @@ __all__ = [
     "Spinner",
     "banner",
     "c",
+    "pad",
+    "visible_len",
+    "ANSI_RE",
     "clear_lines",
     "error",
     "kv",
