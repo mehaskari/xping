@@ -133,6 +133,9 @@ like
 Falls back to raw UDP DNS when
 .B dig
 is absent.
+With
+.BR \-\-doh ,
+the queries go encrypted as DNS over HTTPS instead.
 .TP
 .BR dnscheck " \fIDOMAIN\fR [\fIOPTIONS\fR]"
 Full DNS health check for
@@ -140,8 +143,12 @@ Full DNS health check for
 A/AAAA records, NS redundancy, MX backup, SPF policy (strict/soft/none),
 DMARC policy (reject/quarantine/none) from
 .IR _dmarc.DOMAIN ,
-and DKIM key presence at common selectors
-.RI ( selector ._domainkey. DOMAIN ).
+DKIM key presence at common selectors
+.RI ( selector ._domainkey. DOMAIN ),
+and DNSSEC: whether the zone is signed, has a DS record at the parent and
+validates, asked of a validating resolver (1.1.1.1, then 8.8.8.8) with the
+DO flag; broken ("bogus") signatures fail, a signed zone without DS warns,
+an unsigned one is informational.
 Reports a 0-100 score with pass/warn/fail per check.
 Checks whose DNS query failed (e.g. SERVFAIL or timeout) are marked
 as not verified and excluded from the score.
@@ -621,6 +628,20 @@ Equivalent to
 .BI "dig @" IP " RECORD HOST" .
 Example:
 .BR \-\-server\ 1.1.1.1 .
+.TP
+.BI \-\-doh " PROVIDER"
+Send the queries as DNS over HTTPS (RFC 8484) to
+.B cloudflare
+(cloudflare-dns.com),
+.B google
+(dns.google),
+.B quad9
+(dns.quad9.net), or any
+.I https://
+URL.
+Encrypted, and past resolvers that filter or rewrite plain DNS.
+Cannot be combined with
+.BR \-\-server .
 .SS tcp
 .TP
 .BI \-c " N" ", \-\-count " N
@@ -1197,6 +1218,9 @@ Auto-ping Google DNS and display follow-up command suggestions.
 .B xping google.com
 Auto-ping google.com (same shorthand, works with hostnames too).
 .TP
+.B xping lookup example.com \-\-doh cloudflare
+Look up over DNS-over-HTTPS, bypassing the local resolver.
+.TP
 .B xping blocklist mycompany.com
 Check a domain and its mail servers against spam blocklists.
 .TP
@@ -1360,7 +1384,11 @@ third parties:
 .B \-\-webhook
 (only the URL you give),
 .B blocklist
-(the blocklists' DNS servers, which see the checked address or domain), and
+(the blocklists' DNS servers, which see the checked address or domain),
+.B "lookup \-\-doh"
+(the chosen DoH provider),
+.B dnscheck
+(1.1.1.1 or 8.8.8.8 for the DNSSEC check), and
 .BR lookup ,
 .B dnscheck
 and

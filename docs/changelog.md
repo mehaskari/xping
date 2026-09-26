@@ -20,6 +20,18 @@
     or *error*.
   - `--zone` adds more lists. It is a `blocklist` type in check files and
     exits 1 when the target is listed.
+- **DNSSEC in `xping dnscheck`.**
+  - Three queries to a validating resolver (1.1.1.1, then 8.8.8.8) with
+    the DO flag: DS at the parent, a signed SOA and its AD flag, and a
+    checking-disabled retry after SERVFAIL.
+  - Results: signed and validated (ok); broken "bogus" signatures,
+    meaning validating resolvers cannot resolve the domain (fail); signed
+    without DS, i.e. not active (warn); not signed (info).
+  - Answers are retried over TCP when truncated.
+- **`xping lookup --doh PROVIDER`** — DNS over HTTPS (RFC 8484 wire
+  format) to `cloudflare`, `google`, `quad9` or any `https://` URL.
+  It gets past resolvers that filter, rewrite or hijack plain DNS. JSON
+  output now includes `transport` (`dig`, `udp` or `doh`) and `resolver`.
 - **`xping ntp [SERVER]`** — the system clock offset against an NTP
   server (default `pool.ntp.org`) over SNTP. It shows the offset, the
   delay, the stratum, the reference and whether the server is

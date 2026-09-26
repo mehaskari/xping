@@ -20,6 +20,8 @@ class DnsResult:
     # record type -> DNS status for queries that failed (SERVFAIL, TIMEOUT, …),
     # as opposed to records that are genuinely absent
     query_errors: dict[str, str] = field(default_factory=dict)
+    transport: str | None = None  # "dig" | "udp" | "doh"
+    resolver: str | None = None  # server address, "system", or the DoH URL
     error: str | None = None
 
     def to_dict(self, *, include_computed: bool = True) -> dict:

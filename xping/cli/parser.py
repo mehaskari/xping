@@ -58,6 +58,14 @@ def _score(value: str) -> int:
     return number
 
 
+def _doh_value(value: str) -> str:
+    from xping.diagnostics.lookup import DOH_PROVIDERS
+
+    if value.lower() in DOH_PROVIDERS or value.lower().startswith("https://"):
+        return value
+    raise argparse.ArgumentTypeError("use cloudflare, google, quad9, or an https:// DoH URL")
+
+
 def _hex_payload(value: str) -> str:
     cleaned = value.replace(" ", "").replace(":", "")
     try:
@@ -194,7 +202,7 @@ Commands:
   health <host>        Network health score (DNS + loss + latency + jitter)
   mtr    <host>        Combined traceroute + live per-hop ping
   mtu    <host>        Path MTU discovery (binary search)
-  dnscheck <domain>    DNS health check — SPF, DMARC, DKIM, NS, MX
+  dnscheck <domain>    DNS health check — SPF, DMARC, DKIM, DNSSEC, NS, MX
   blocklist <ip|domain> Spam blocklist (DNSBL) check — IP, or a domain's mail servers
   propagation <name>   Compare answers from public resolvers (DNS propagation)
   osdetect <host>      Guess remote OS from TTL fingerprint
@@ -219,6 +227,7 @@ Examples:
   xping trace 1.1.1.1 --max-hops 20
   xping trace example.com --tcp --port 443
   xping lookup github.com --full --markdown
+  xping lookup example.com --doh cloudflare
   xping tcp example.com 443 -c 5
   xping udp 1.1.1.1 53
   xping ntp --max-offset 500
@@ -334,12 +343,20 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     p_lookup.add_argument(
         "--full", "-f", action="store_true", help="Include TXT records (SPF, DMARC, DKIM…)"
     )
-    p_lookup.add_argument(
+    lookup_via = p_lookup.add_mutually_exclusive_group()
+    lookup_via.add_argument(
         "--server",
         "-s",
         default=None,
         metavar="IP",
         help="Custom DNS server, e.g. 8.8.8.8 or 1.1.1.1 (like dig @server)",
+    )
+    lookup_via.add_argument(
+        "--doh",
+        type=_doh_value,
+        default=None,
+        metavar="PROVIDER",
+        help="Query over DNS-over-HTTPS: cloudflare, google, quad9, or an https:// URL",
     )
 
     p_tcp = sub.add_parser("tcp", parents=[export_parent], help="Test TCP connectivity")

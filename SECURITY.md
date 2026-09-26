@@ -46,7 +46,8 @@ stored credentials, no `eval`/`exec`.
   Cloudflare for `net`/`speedtest`/`doctor`, Apple's captive-portal
   check for `doctor`, Team Cymru
   DNS for `--asn`, public resolvers for `propagation`, WHOIS/RDAP
-  registries for `whois`, spam blocklists for `blocklist`) are listed in the README under
+  registries for `whois`, spam blocklists for `blocklist`, 1.1.1.1/8.8.8.8 for the `dnscheck`
+  DNSSEC check, the chosen provider for `lookup --doh`) are listed in the README under
   "Files & privacy"; `--asn` is opt-in and `net --no-public` keeps
   everything local.
 - **Alerts:** `--webhook` sends the target name and check result only to

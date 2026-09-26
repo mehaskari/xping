@@ -6,6 +6,7 @@ Checks A/AAAA, NS redundancy, MX backup, SPF, DMARC, DKIM.
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
+from xping.diagnostics.dnssec import dnssec_check
 from xping.diagnostics.lookup import lookup, query_txt
 from xping.models.dnscheck import DnsCheckItem, DnsCheckResult
 from xping.render import BOLD, BRAND_TEAL, c, kv, section_header
@@ -100,6 +101,7 @@ def dnscheck(domain: str, quiet: bool = False) -> DnsCheckResult:
     dns = lookup(host=domain, full=True, quiet=True)
     dmarc_records, dmarc_err = query_txt(f"_dmarc.{domain}")
     dkim_selector, dkim_err = _find_dkim(domain)
+    dnssec = dnssec_check(domain)
 
     if spinner:
         spinner.stop()
@@ -191,6 +193,8 @@ def dnscheck(domain: str, quiet: bool = False) -> DnsCheckResult:
                 f"No key at common selectors — check <selector>._domainkey.{domain}",
             )
         )
+
+    checks.append(dnssec)
 
     result.checks = checks
 

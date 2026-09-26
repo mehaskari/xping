@@ -1,6 +1,8 @@
 """
 xping.lookup — DNS lookup with optional custom server (like dig @8.8.8.8).
-Falls back to raw UDP when dig is unavailable.
+Falls back to raw UDP when dig is unavailable. With --doh, queries go as
+DNS-over-HTTPS (RFC 8484) to Cloudflare, Google, Quad9 or any DoH URL —
+encrypted, and past resolvers that filter or rewrite plain DNS.
 """
 
 import re
@@ -8,8 +10,11 @@ import socket
 import struct
 import subprocess
 import time
+import urllib.error
+import urllib.request
 
 from xping.diagnostics.deps import warn_missing
+from xping.diagnostics.sslctx import secure_context
 from xping.models.lookup import DnsResult
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 from xping.render.errors import error
@@ -224,6 +229,46 @@ def _raw_query(
 
 _QTYPES = {"A": 1, "NS": 2, "CNAME": 5, "MX": 15, "TXT": 16, "AAAA": 28}
 
+DOH_PROVIDERS = {
+    "cloudflare": "https://cloudflare-dns.com/dns-query",
+    "google": "https://dns.google/dns-query",
+    "quad9": "https://dns.quad9.net/dns-query",
+}
+
+
+def doh_url(value: str) -> str:
+    """A provider name (cloudflare, google, quad9) or a full https:// URL."""
+    return DOH_PROVIDERS.get(value.lower(), value)
+
+
+def _doh_query(host: str, qtype: int, url: str, timeout: float = 5.0) -> tuple[str, list[str]]:
+    """One DNS-over-HTTPS query (RFC 8484 wire format, POST). (status, records)."""
+    request = urllib.request.Request(
+        url,
+        data=_build_dns_packet(host, qtype),
+        method="POST",
+        headers={
+            "Content-Type": "application/dns-message",
+            "Accept": "application/dns-message",
+            "User-Agent": "xping/lookup",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, context=secure_context(), timeout=timeout) as resp:
+            data = resp.read(65535)
+    except urllib.error.HTTPError as exc:
+        return f"HTTP {exc.code}", []
+    except (TimeoutError, socket.timeout):
+        return "TIMEOUT", []
+    except urllib.error.URLError as exc:
+        return ("TIMEOUT" if isinstance(exc.reason, TimeoutError) else "ERROR"), []
+    except (OSError, ValueError):
+        return "ERROR", []
+    status = _response_status(data)
+    if status != "NOERROR":
+        return status, []
+    return status, _parse_dns_response(data, qtype)
+
 
 def query_txt(name: str, server: str | None = None) -> tuple[list[str], str | None]:
     """Fetch TXT records for *name* (dig, falling back to raw UDP).
@@ -295,30 +340,67 @@ def _socket_resolve(host: str) -> tuple[list[str], list[str]]:
     return v4, v6
 
 
+def _fill_from_records(result: DnsResult, fetch, full: bool, cname: bool = False) -> None:
+    """Fill *result* from a record-list fetcher (raw UDP or DoH)."""
+    result.ipv4 = fetch("A")
+    if cname:
+        names = fetch("CNAME")
+        result.cname = names[0].rstrip(".") if names else None
+    result.ipv6 = fetch("AAAA")
+    for entry in fetch("MX"):
+        parts = entry.split(" ", 1)
+        if len(parts) == 2:
+            try:
+                result.mx.append((int(parts[0]), parts[1].rstrip(".")))
+            except ValueError:
+                continue  # malformed MX answer — skip it
+    result.ns = [n.rstrip(".") for n in fetch("NS")]
+    if full:
+        result.txt = fetch("TXT")
+
+
 # ── Main entry point ───────────────────────────────────────────────────────────
 
 
 def lookup(
-    host: str, full: bool = False, quiet: bool = False, server: str | None = None
+    host: str,
+    full: bool = False,
+    quiet: bool = False,
+    server: str | None = None,
+    doh: str | None = None,
 ) -> DnsResult:
-    """DNS lookup, optionally querying a custom *server* like dig @8.8.8.8."""
+    """DNS lookup, optionally querying a custom *server* like dig @8.8.8.8,
+    or over DNS-over-HTTPS with *doh* (provider name or URL)."""
     result = DnsResult(host=host)
+    url = doh_url(doh) if doh else None
 
     if not quiet:
         print(section_header(f"DNS LOOKUP  {host}", "◑"))
         print(kv("Query", c(host, BRAND_TEAL, BOLD)))
         if server:
             print(kv("Server", c(f"@{server}", BRAND_INDIGO, BOLD)))
+        if url:
+            print(kv("DNS over HTTPS", c(url, BRAND_INDIGO, BOLD)))
         print()
 
     def track(rtype: str, status: str) -> None:
         if status not in _ABSENT_STATUSES:
             result.query_errors[rtype] = status
 
-    # Try dig first
-    a_dig = _dig_query(host, "A", server)
+    # DoH, else dig, else raw UDP
+    a_dig = None if url else _dig_query(host, "A", server)
 
-    if a_dig is not None:
+    if url:
+        result.transport, result.resolver = "doh", url
+
+        def doh_records(rtype: str) -> list[str]:
+            status, records = _doh_query(host, _QTYPES[rtype], url)
+            track(rtype, status)
+            return records
+
+        _fill_from_records(result, doh_records, full, cname=True)
+    elif a_dig is not None:
+        result.transport, result.resolver = "dig", server or "system"
 
         def dig(rtype: str) -> str:
             if rtype == "A":
@@ -341,6 +423,7 @@ def lookup(
     else:
         # Fallback: raw UDP to requested server or 8.8.8.8
         dns_server = server or "8.8.8.8"
+        result.transport, result.resolver = "udp", dns_server
         if not quiet:
             warn_missing("dig", f"using raw UDP DNS → {dns_server}")
 
@@ -349,18 +432,7 @@ def lookup(
             track(rtype, status)
             return records
 
-        result.ipv4 = raw("A")
-        result.ipv6 = raw("AAAA")
-        for entry in raw("MX"):
-            parts = entry.split(" ", 1)
-            if len(parts) == 2:
-                try:
-                    result.mx.append((int(parts[0]), parts[1].rstrip(".")))
-                except ValueError:
-                    continue  # malformed MX answer — skip it
-        result.ns = [n.rstrip(".") for n in raw("NS")]
-        if full:
-            result.txt = raw("TXT")
+        _fill_from_records(result, raw, full)
 
     if not result.ipv4 and not result.ipv6:
         failed = [

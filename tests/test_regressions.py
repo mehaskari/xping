@@ -79,9 +79,11 @@ def _run_dnscheck(dns: DnsResult, txt_answers: dict):
     def fake_query_txt(name, server=None):
         return txt_answers.get(name, ([], None))
 
+    unsigned = dc.DnsCheckItem("DNSSEC", "info", "Not signed")
     with (
         patch.object(dc, "lookup", return_value=dns),
         patch.object(dc, "query_txt", side_effect=fake_query_txt),
+        patch.object(dc, "dnssec_check", return_value=unsigned),
     ):
         return dc.dnscheck("example.com", quiet=True)
 

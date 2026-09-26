@@ -634,7 +634,7 @@ xping mtu vpn-gateway.example.com --max-mtu 1600
 #### `xping lookup`
 
 ```
-xping lookup HOST [--full] [--server IP]
+xping lookup HOST [--full] [--server IP | --doh PROVIDER]
 ```
 
 Queries DNS records:
@@ -648,10 +648,25 @@ Queries DNS records:
 Every address found is also reverse-resolved. It uses `dig` when it is
 installed; otherwise xping sends its own UDP DNS queries.
 
+**DNS over HTTPS (`--doh`).** The queries go encrypted, over HTTPS
+(RFC 8484), to a DoH resolver instead of plain DNS on port 53. Use it when
+your network's resolver filters, rewrites or hijacks answers: compare
+`xping lookup NAME` with `xping lookup NAME --doh cloudflare`. Different
+answers mean something on the way is interfering. Some networks block
+the DoH services themselves; the queries then fail with `TIMEOUT`.
+
+| Provider | URL |
+|----------|-----|
+| `cloudflare` | `https://cloudflare-dns.com/dns-query` |
+| `google` | `https://dns.google/dns-query` |
+| `quad9` | `https://dns.quad9.net/dns-query` |
+| any `https://…` URL | your own or another DoH server |
+
 | Option | Description |
 |--------|-------------|
 | `-f`, `--full` | Include TXT records |
 | `-s`, `--server IP` | Ask this resolver instead of the system one (like `dig @8.8.8.8`) |
+| `--doh PROVIDER` | Query over DNS-over-HTTPS: `cloudflare`, `google`, `quad9`, or a URL. Cannot be combined with `--server`. |
 
 DMARC and DKIM live under other names; use [`dnscheck`](#xping-dnscheck)
 for them.
@@ -659,6 +674,8 @@ for them.
 ```bash
 xping lookup github.com
 xping lookup example.com --full --server 1.1.1.1
+xping lookup example.com --doh cloudflare      # encrypted, bypasses the local resolver
+xping lookup example.com --doh https://dns.example.net/dns-query
 ```
 
 #### `xping rdns`
@@ -691,6 +708,18 @@ A DNS and e-mail health check with a 0–100 score:
 | SPF | exactly one record, `-all` | warn: `~all` (softfail) · fail: `+all`, several SPF records, or none |
 | DMARC | `p=reject` at `_dmarc.DOMAIN` | warn: `quarantine` or `none` · fail: missing |
 | DKIM | a key at a common selector | info only: selectors cannot be listed, so "not found" is not a failure |
+| DNSSEC | signed, a DS record at the parent, and the answer validates | fail: signatures are broken ("bogus"), so validating resolvers cannot resolve the domain · warn: signed but no DS at the parent (not active) · info: not signed |
+
+DNSSEC is checked with three queries to a validating resolver
+(Cloudflare 1.1.1.1, falling back to Google 8.8.8.8), with the DNSSEC
+"DO" flag set:
+
+1. the domain's **DS** record at the parent, which shows whether DNSSEC
+   is switched on at the registrar;
+2. its **SOA**: are the answers signed (RRSIG), and did the resolver
+   validate them (the AD flag)?
+3. when that fails with SERVFAIL, the SOA again with "checking disabled".
+   If it then works, the signatures are broken.
 
 The DKIM selectors tried are `default`, `google`, `selector1`, `selector2`,
 `k1`, `k2`, `dkim`, `mail`, `s1` and `s2`. Checks whose DNS query failed
@@ -1395,6 +1424,8 @@ contact third parties, and only when you use them:
 | `whois` | IANA and registry WHOIS / RDAP servers |
 | `blocklist` | the blocklists' DNS servers (via your resolver), which see the checked IP or domain |
 | `lookup`, `dnscheck` | `8.8.8.8`, only when `dig` is not installed |
+| `lookup --doh` | the DoH provider you choose (Cloudflare, Google, Quad9 or your URL) |
+| `dnscheck` | `1.1.1.1` (or `8.8.8.8`) for the DNSSEC check |
 | `rdns` | `8.8.8.8`, only when the system resolver has no PTR record |
 | `--webhook URL` | only the URL you give |
 
