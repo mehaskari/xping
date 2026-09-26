@@ -225,7 +225,8 @@ class TestHttp:
         mock_resp.getheaders.return_value = [("content-type", "text/html")]
         mock_resp.getheader.return_value = None
 
-        with patch("xping.diagnostics.http.socket.gethostbyname", return_value="93.184.216.34"):
+        with patch("xping.diagnostics.http.socket.gethostbyname", return_value="93.184.216.34"), \
+                patch("xping.diagnostics.http.socket.create_connection"):
             with patch("xping.diagnostics.http.http.client.HTTPConnection") as mock_conn_cls:
                 mock_conn = MagicMock()
                 mock_conn.getresponse.return_value = mock_resp

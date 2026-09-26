@@ -19,6 +19,9 @@ class TestHttpAlpn:
         from xping.diagnostics import http as http_diag
 
         ctx = MagicMock()
+        tls_sock = ctx.wrap_socket.return_value
+        tls_sock.version.return_value = "TLSv1.3"
+        tls_sock.cipher.return_value = ("TLS_AES_128_GCM_SHA256", "TLSv1.3", 128)
         conn = MagicMock()
         resp = MagicMock(status=200, reason="OK", version=11)
         resp.getheaders.return_value = []
@@ -28,14 +31,21 @@ class TestHttpAlpn:
 
         with (
             patch.object(http_diag, "_ssl_context", return_value=ctx),
-            patch.object(http_diag.http.client, "HTTPSConnection", return_value=conn),
+            patch.object(http_diag.socket, "create_connection") as create,
+            patch.object(http_diag.http.client, "HTTPConnection", return_value=conn),
             patch.object(http_diag.socket, "gethostbyname", return_value="1.2.3.4"),
         ):
             d = http_diag._one_request("https://example.com/", timeout=1.0)
 
         ctx.set_alpn_protocols.assert_called_once_with(["http/1.1"])
+        ctx.wrap_socket.assert_called_once_with(
+            create.return_value, server_hostname="example.com"
+        )
+        assert conn.sock is tls_sock  # request goes over our TLS socket
         assert d["status"] == 200
         assert d["http_version"] == "HTTP/1.1"
+        assert d["tls_version"] == "TLSv1.3" and d["tls_cipher"] == "TLS_AES_128_GCM_SHA256"
+        assert d["tls_ms"] is not None and d["tcp_ms"] is not None
 
     def test_http10_response_version(self):
         from xping.diagnostics import http as http_diag
@@ -47,11 +57,13 @@ class TestHttpAlpn:
         resp.read.return_value = b"x"
         conn.getresponse.return_value = resp
         with (
+            patch.object(http_diag.socket, "create_connection"),
             patch.object(http_diag.http.client, "HTTPConnection", return_value=conn),
             patch.object(http_diag.socket, "gethostbyname", return_value="1.2.3.4"),
         ):
             d = http_diag._one_request("http://example.com/", timeout=1.0)
         assert d["http_version"] == "HTTP/1.0"
+        assert d["tls_ms"] is None and d["transfer_ms"] >= 0
 
 
 # ── dnscheck: DMARC / DKIM / query failures ───────────────────────────────────

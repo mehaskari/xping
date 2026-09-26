@@ -263,9 +263,9 @@ class TestIpv6Commands:
             patch.object(http_diag.socket, "create_connection") as create,
         ):
             d = http_diag._one_request("http://[2001:db8::5]:8080/", 1.0)
-            conn._create_connection(("2001:db8::5", 8080), 1.0)
         assert d["ip"] == "2001:db8::5"
-        create.assert_called_once_with(("2001:db8::5", 8080), 1.0)
+        create.assert_called_once_with(("2001:db8::5", 8080), timeout=1.0)
+        assert conn.sock is create.return_value
 
 
 class TestNativeTrace:

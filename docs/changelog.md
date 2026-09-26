@@ -11,8 +11,28 @@
   with one plain-language diagnosis and what to do. Exit code 1 when a
   step fails; `--json`, `--csv` (one row per step) and `--markdown`
   work as usual.
+- **`xping http`: per-phase timing waterfall and security headers.**
+  - The TLS handshake is now timed separately from the TCP connect. The
+    time to download the body and the time spent following redirects
+    are timed too.
+  - The phases are drawn as a waterfall, like a browser's network tab.
+  - The TLS version and cipher are shown.
+  - A security-header audit covers HTTPS / http→https upgrade, HSTS
+    (max-age ≥ 180 days), CSP, `X-Content-Type-Options`,
+    `X-Frame-Options` (or CSP `frame-ancestors`), `Referrer-Policy`,
+    `Permissions-Policy`, and version-revealing `Server` /
+    `X-Powered-By` headers. It is informational only.
+  - New JSON fields: `tls_ms`, `transfer_ms`, `redirect_ms`,
+    `tls_version`, `tls_cipher`, `security`, `security_missing`. CSV /
+    Markdown gain a "Security headers" table.
+
+### Changed
+- `xping http`: `tcp_ms` is now the TCP connect time alone. It used to
+  include the TLS handshake, which is now reported as `tls_ms`.
 
 ### Fixed
+- `xping http`: the last line of the redirect chain always showed
+  status 200, even when the final response was an error.
 - Project links pointed to `github.com/mehdiaskari/xping`, which does not
   exist. The correct repository, `github.com/mehaskari/xping`, is now used
   in the PyPI metadata (`pyproject.toml`, `setup.cfg`), `xping about`, the
