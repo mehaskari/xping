@@ -61,6 +61,8 @@
 - Summary tables (trace, ping, watch, speedtest, …) had a misaligned
   value column and uneven borders whenever a cell was coloured; the
   table renderer measured cells including their colour codes.
+- `xping trace`: the rule under the hop list was shorter than the rules
+  around the column header; all rules now have the same width.
 - `xping trace` printed the separator line twice before its summary.
 - `xping http`: the last line of the redirect chain always showed
   status 200, even when the final response was an error.

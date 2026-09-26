@@ -544,3 +544,14 @@ class TestTableAlignment:
             # the column divider sits in the same place on every line
             divider = {next(i for i, ch in enumerate(ln) if ch in "┬│┼┴" and i > 3) for ln in lines}
             assert len(divider) == 1, (colour, lines)
+
+
+def test_trace_rules_have_one_width(capsys):
+    from xping.models.trace import Hop
+    from xping.render.views import trace as trace_view
+
+    with patch("xping.render.COLOR", False), patch("xping.render.ansi.COLOR", False):
+        trace_view.hop_header()
+        trace_view.print_summary([Hop(ttl=1, host=None, ip="1.1.1.1", rtts=[5.0])], "h", "1.1.1.1")
+    rules = {len(ln) for ln in capsys.readouterr().out.splitlines() if ln.strip().startswith("───")}
+    assert len(rules) == 1, rules
