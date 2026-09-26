@@ -102,7 +102,9 @@ def print_result(result) -> None:
         print(f"  {pad(c('TLS', DIM), _LABEL_W)}  {c(tls, BWHITE)}")
     if result.ip:
         print(f"  {pad(c('Server IP', DIM), _LABEL_W)}  {c(result.ip, BWHITE)}")
-    print(f"  {pad(c('Body size', DIM), _LABEL_W)}  {c(f'{result.body_bytes:,} bytes', BWHITE)}")
+    print(
+        f"  {pad(c('Body size', DIM), _LABEL_W)}  {c(f'{result.body_bytes:,} bytes' + (' (stopped at 100 MB)' if result.body_truncated else ''), BWHITE)}"
+    )
     print()
 
     # ── Security headers ──────────────────────────────────────────

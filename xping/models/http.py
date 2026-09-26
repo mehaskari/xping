@@ -37,6 +37,7 @@ class HttpResult:
     ttfb_ms: float | None = None  # request sent → response headers (server time)
     total_ms: float | None = None  # wall time, including every redirect
     body_bytes: int = 0
+    body_truncated: bool = False  # download stopped at MAX_BODY
     dns_ms: float | None = None  # final request's phases ↓
     tcp_ms: float | None = None  # TCP connect only (TLS is tls_ms)
     tls_ms: float | None = None

@@ -93,8 +93,51 @@ def pad(text: str, width: int, align: str = "<") -> str:
     return text + " " * gap
 
 
+# Any terminal escape sequence: CSI (cursor moves, erase, …), OSC (title,
+# clipboard, hyperlinks), DCS/SOS/PM/APC strings, and two-byte escapes.
+_ANY_ESCAPE = re.compile(
+    r"\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)?|[PX^_][^\x1b]*(?:\x1b\\)?|[@-Z\\-_])"
+)
+# C0 controls except tab/newline (so no \r or \b overwriting), DEL, and C1
+_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+
+
+def safe(text: str, keep_colors: bool = True) -> str:
+    """Make text from the network safe to print.
+
+    Servers control much of what xping shows (HTTP headers, SMTP banners,
+    WHOIS, DNS TXT/PTR, Wi-Fi names). An escape sequence in there could
+    move the cursor and overwrite earlier lines, change the window title,
+    or write to the clipboard (OSC 52). Only xping's own colour codes are
+    kept; every other escape sequence is removed and every other control
+    character becomes "?"."""
+    out, pos = [], 0
+    for m in _ANY_ESCAPE.finditer(text):
+        out.append(_CONTROL.sub("?", text[pos : m.start()]))
+        if keep_colors and COLOR and m.group() in _OWN_SGR:
+            out.append(m.group())
+        pos = m.end()
+    out.append(_CONTROL.sub("?", text[pos:]))
+    return "".join(out)
+
+
 def c(text: str, *codes: str) -> str:
-    """Wrap *text* with ANSI codes, stripping them when colour is off."""
+    """Wrap *text* with ANSI codes, stripping them when colour is off.
+    *text* is passed through safe() — it may come from a remote server."""
+    text = safe(str(text))
     if not COLOR:
         return text
     return "".join(codes) + text + RESET
+
+
+# xping's own colour codes: the only escape sequences safe() lets through.
+# Black foreground/background are left out (unused, and a way to hide text).
+_OWN_SGR = frozenset(
+    value
+    for name, value in dict(globals()).items()
+    if name.isupper()
+    and isinstance(value, str)
+    and value.startswith(ESC)
+    and value.endswith("m")
+    and name not in ("BLACK", "BG_BLACK", "ESC")
+)

@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shlex
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -590,7 +591,8 @@ def install(shell: str, home: Path | None = None) -> list[str]:
     actions.append(f"wrote {_tilde(script, home)}")
     rc = _rc_file(shell, home)
     if rc is not None:
-        source = f'source "{script}"' if shell == "zsh" else f'[ -f "{script}" ] && . "{script}"'
+        path = shlex.quote(str(script))  # a home directory with $ or " must stay literal
+        source = f"source {path}" if shell == "zsh" else f"[ -f {path} ] && . {path}"
         block = f"{_BEGIN}\n{source}\n{_END}\n"
         existing = rc.read_text(encoding="utf-8") if rc.exists() else ""
         cleaned = _strip_block(existing).rstrip("\n")

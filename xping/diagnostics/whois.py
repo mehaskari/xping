@@ -27,6 +27,7 @@ MAX_REFERRALS = 2
 PORT43_RETRIES = 2  # 2 × 3s + 1 × 0.5s = 6.5s max before RDAP fallback
 RDAP_RETRIES = 3
 RETRY_DELAY = 0.5  # seconds between retries
+MAX_RESPONSE = 1024 * 1024  # bytes read from a WHOIS / RDAP server
 
 _FIELD_PATTERNS: dict[str, list[str]] = {
     "registrar": [r"registrar:\s*(.+)", r"sponsoring registrar:\s*(.+)"],
@@ -91,12 +92,13 @@ def _query(server: str, query: str, timeout: float = WHOIS_TIMEOUT) -> str:
         try:
             with socket.create_connection((ip, port), timeout=timeout) as sock:
                 sock.sendall((query + "\r\n").encode("ascii", errors="ignore"))
-                chunks = []
-                while True:
+                chunks, size = [], 0
+                while size < MAX_RESPONSE:  # a server that never stops can't exhaust memory
                     chunk = sock.recv(4096)
                     if not chunk:
                         break
                     chunks.append(chunk)
+                    size += len(chunk)
                 return b"".join(chunks).decode("utf-8", errors="replace")
         except (socket.timeout, TimeoutError, OSError) as exc:
             last_exc = exc
@@ -149,7 +151,7 @@ def _rdap_url_for(tld: str) -> str | None:
         return known
     try:
         with urllib.request.urlopen(RDAP_BOOTSTRAP, context=secure_context(), timeout=5) as resp:
-            data = json.loads(resp.read())
+            data = json.loads(resp.read(MAX_RESPONSE))
         for entry in data.get("services", []):
             tlds, urls = entry
             if tld.lower() in [t.lower() for t in tlds]:
@@ -177,7 +179,7 @@ def _rdap_query(domain: str, tld: str) -> WhoisResult | None:
         try:
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, context=ctx, timeout=8) as resp:
-                data = json.loads(resp.read())
+                data = json.loads(resp.read(MAX_RESPONSE))
             break
         except Exception:
             continue

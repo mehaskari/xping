@@ -5,6 +5,7 @@ DNS-over-HTTPS (RFC 8484) to Cloudflare, Google, Quad9 or any DoH URL —
 encrypted, and past resolvers that filter or rewrite plain DNS.
 """
 
+import os
 import re
 import socket
 import struct
@@ -36,7 +37,10 @@ def _dig_query(host: str, rtype: str, server: str | None = None) -> tuple[str, s
     cmd = ["dig", "+noall", "+answer", "+comments", "+ttl", "+time=2", "+tries=2"]
     if server:
         cmd.append(f"@{server}")
-    cmd += [rtype, host]
+    # -t / -q name the type and query explicitly: a name that starts with
+    # "-" (from a check file, profile or config) can never become an option
+    # such as dig's -f FILE (batch mode), which would read a local file
+    cmd += ["-t", rtype, "-q", host]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
     except FileNotFoundError:
@@ -113,8 +117,8 @@ def _parse_dig_cname(output: str) -> str | None:
 # ── Raw UDP DNS fallback ───────────────────────────────────────────────────────
 
 
-def _build_dns_packet(qname: str, qtype: int) -> bytes:
-    header = struct.pack("!HHHHHH", 0xAB12, 0x0100, 1, 0, 0, 0)
+def _build_dns_packet(qname: str, qtype: int, ident: int = 0xAB12) -> bytes:
+    header = struct.pack("!HHHHHH", ident, 0x0100, 1, 0, 0, 0)
     q = b""
     for label in qname.rstrip(".").split("."):
         lb = label.encode()
@@ -122,6 +126,8 @@ def _build_dns_packet(qname: str, qtype: int) -> bytes:
     q += b"\x00" + struct.pack("!HH", qtype, 1)
     return header + q
 
+
+_MAX_POINTER_JUMPS = 64
 
 _RCODES = {0: "NOERROR", 1: "FORMERR", 2: "SERVFAIL", 3: "NXDOMAIN", 4: "NOTIMP", 5: "REFUSED"}
 
@@ -144,13 +150,17 @@ def _parse_dns_response(data: bytes, qtype: int) -> list[str]:
         return []
 
     def read_name(buf: bytes, pos: int) -> tuple[str, int]:
-        labels, jumped, orig = [], False, pos
+        labels, jumped, orig, jumps = [], False, pos, 0
         while pos < len(buf):
             if buf[pos] & 0xC0 == 0xC0:
+                # a malicious response can point a name at itself: cap the jumps
+                if pos + 1 >= len(buf) or jumps >= _MAX_POINTER_JUMPS:
+                    break
                 ptr = ((buf[pos] & 0x3F) << 8) | buf[pos + 1]
                 if not jumped:
                     orig = pos + 2
                 pos, jumped = ptr, True
+                jumps += 1
                 continue
             length = buf[pos]
             pos += 1
@@ -210,13 +220,25 @@ def _parse_dns_response(data: bytes, qtype: int) -> list[str]:
 def _raw_query(
     host: str, qtype: int, server: str = "8.8.8.8", timeout: float = 4.0
 ) -> tuple[str, list[str]]:
-    """Raw UDP DNS query. Returns (status, records)."""
-    packet = _build_dns_packet(host, qtype)
+    """Raw UDP DNS query. Returns (status, records).
+
+    A random transaction ID and a connected socket (only the server's
+    replies are delivered) make off-path spoofing of the answer hard."""
+    ident = int.from_bytes(os.urandom(2), "big")
+    packet = _build_dns_packet(host, qtype, ident)
+    family = socket.AF_INET6 if ":" in server else socket.AF_INET
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        with socket.socket(family, socket.SOCK_DGRAM) as sock:
             sock.settimeout(timeout)
-            sock.sendto(packet, (server, 53))
-            resp, _ = sock.recvfrom(4096)
+            sock.connect((server, 53))
+            sock.send(packet)
+            deadline = time.monotonic() + timeout
+            while True:
+                resp = sock.recv(4096)
+                if len(resp) >= 2 and struct.unpack("!H", resp[:2])[0] == ident:
+                    break
+                if time.monotonic() > deadline:
+                    raise TimeoutError
     except (TimeoutError, socket.timeout):
         return "TIMEOUT", []
     except Exception:

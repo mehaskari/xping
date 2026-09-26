@@ -53,7 +53,15 @@ def _skip_name(data: bytes, pos: int) -> int:
 
 
 def parse_response(data: bytes, ident: int | None = None) -> dict:
-    """rcode, AD/TC flags and the count of each record type in the answer."""
+    """rcode, AD/TC flags and the count of each record type in the answer.
+    Raises ValueError for anything malformed."""
+    try:
+        return _parse_response(data, ident)
+    except (struct.error, IndexError) as exc:
+        raise ValueError(f"malformed DNS response ({exc})") from exc
+
+
+def _parse_response(data: bytes, ident: int | None) -> dict:
     if len(data) < 12:
         raise ValueError("short DNS response")
     rid, flags, qdcount, ancount = struct.unpack("!HHHH", data[:8])
@@ -83,8 +91,9 @@ def ask(name: str, qtype: int, server: str, cd: bool = False, timeout: float = 3
     family = socket.AF_INET6 if ":" in server else socket.AF_INET
     with socket.socket(family, socket.SOCK_DGRAM) as sock:
         sock.settimeout(timeout)
-        sock.sendto(packet, (server, 53))
-        data, _ = sock.recvfrom(4096)
+        sock.connect((server, 53))  # only the resolver's replies are delivered
+        sock.send(packet)
+        data = sock.recv(4096)
     answer = parse_response(data, ident)
     if answer["tc"]:
         with socket.create_connection((server, 53), timeout=timeout) as sock:

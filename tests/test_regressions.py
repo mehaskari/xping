@@ -55,7 +55,7 @@ class TestHttpAlpn:
         resp = MagicMock(status=200, reason="OK", version=10)
         resp.getheaders.return_value = []
         resp.getheader.return_value = None
-        resp.read.return_value = b"x"
+        resp.read.side_effect = [b"x", b""]
         conn.getresponse.return_value = resp
         with (
             patch.object(http_diag.socket, "create_connection"),

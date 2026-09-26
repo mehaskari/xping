@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### Security
+- Terminal escape sequences and control characters from servers are
+  removed before display and CSV/Markdown export. Before, a malicious
+  server could move the cursor, overwrite output or write to the clipboard.
+- The DNS parsers no longer hang on a compression pointer loop, which
+  a malicious response could trigger.
+- Raw DNS queries use a random transaction ID on a connected socket and
+  drop mismatched replies, which makes spoofing hard.
+- `dig` gets names through `-q` / `-t`, so a name such as `-f/etc/passwd`
+  from a check file can no longer read local files.
+- `profile list --names` prints only valid names. Bash completion passes
+  them to `compgen -W`, which expands `$(...)`.
+- `http` counts the body instead of storing it, and stops at 100 MB.
+  WHOIS responses are capped at 1 MB.
+- The completion rc block single-quotes the script path. CI and release
+  workflows use read-only tokens and pass secrets as environment
+  variables.
+
 ### Added
 - **`xping smtp HOST`** — checks a mail server.
   - It checks the greeting, the EHLO extensions, STARTTLS (or implicit

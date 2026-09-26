@@ -57,3 +57,10 @@ stored credentials, no `eval`/`exec`.
 - **Subprocesses:** system tools (`ping`, `traceroute`, `dig`, `ss`,
   `netstat`, `ip`, `ifconfig`, `osascript`, `notify-send`, …) are run with argument lists, never
   through a shell.
+- **Remote data:** text from servers (HTTP headers, SMTP banners, WHOIS,
+  DNS records, Wi-Fi names) is stripped of terminal escape sequences and
+  control characters before it is shown or exported. DNS responses are
+  parsed with bounded pointer following, raw DNS queries use random IDs on
+  connected sockets, and response sizes are capped (HTTP body, WHOIS).
+- **Names as arguments:** names passed to `dig` use `-q`/`-t`, so a value
+  starting with `-` can never become an option.

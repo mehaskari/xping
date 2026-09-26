@@ -1,6 +1,6 @@
 """Table rendering."""
 
-from .ansi import BOLD, BRAND_INDIGO, BWHITE, COLOR, DIM, RESET, c, pad, visible_len
+from .ansi import BOLD, BRAND_INDIGO, BWHITE, COLOR, DIM, RESET, c, pad, safe, visible_len
 
 
 def print_table(
@@ -15,8 +15,8 @@ def print_table(
         return
     widths = [
         max(
-            visible_len(str(h)),
-            max((visible_len(str(r[i])) for r in rows if i < len(r)), default=0),
+            visible_len(safe(str(h))),
+            max((visible_len(safe(str(r[i]))) for r in rows if i < len(r)), default=0),
         )
         for i, h in enumerate(headers)
     ]
@@ -24,7 +24,7 @@ def print_table(
     def fmt_row(cells, is_header=False):
         parts = []
         for i, width in enumerate(widths):
-            cell = str(cells[i]) if i < len(cells) else ""
+            cell = safe(str(cells[i])) if i < len(cells) else ""
             if is_header:
                 cell = c(cell, BRAND_INDIGO, BOLD)
             elif col_colors and i < len(col_colors) and COLOR:
