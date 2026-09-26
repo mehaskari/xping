@@ -5,7 +5,7 @@ from .check import CheckOutcome, CheckReport
 from .dnscheck import DnsCheckItem, DnsCheckResult
 from .doctor import DoctorResult, DoctorStep
 from .health import HealthResult
-from .http import HttpResult, RedirectHop
+from .http import HttpResult, RedirectHop, SecurityHeader
 from .ipscan import IpProbe, IpScanResult
 from .listen import ListenEntry, ListenResult
 from .lookup import DnsResult
@@ -45,6 +45,7 @@ __all__ = [
     "TlsResult",
     "HttpResult",
     "RedirectHop",
+    "SecurityHeader",
     "WhoisResult",
     "HealthResult",
     "ProfileEntry",

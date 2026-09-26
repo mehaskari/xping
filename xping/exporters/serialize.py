@@ -44,7 +44,8 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     # tls
     "TlsResult": ("days_remaining", "expired", "expiring_soon", "valid"),
     # http
-    "HttpResult": ("ok", "redirect_count"),
+    "HttpResult": ("ok", "redirect_count", "security_missing"),
+    "SecurityHeader": (),
     # whois
     "WhoisResult": ("found",),
     # health

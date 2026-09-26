@@ -36,7 +36,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **IP Scan** — Discover live hosts across CIDR blocks or IP ranges using ICMP echo probes
 - **IP Sweep** — Scan CIDR blocks or IP ranges for hosts with open TCP services
 - **TLS Inspector** — Certificate details, expiry countdown, cipher, and SAN list
-- **HTTP Diagnostics** — Status, headers, redirect chain, TTFB, and total time
+- **HTTP Diagnostics** — Status, redirect chain, a per-phase timing waterfall (DNS · TCP · TLS · server · download, like `curl -w`), TLS version/cipher, HTTP/2 detection, and a security-header audit (HSTS, CSP, X-Frame-Options, …)
 - **WHOIS** — Domain registration data via port 43 with automatic RDAP fallback over HTTPS
 - **Network Health Score** — 0–100 score combining DNS time, packet loss, latency, and jitter
 - **Path MTU Discovery** — Binary-search for the largest unfragmented packet size
@@ -214,11 +214,32 @@ xping tls github.com --json
 ### HTTP Diagnostics
 
 ```bash
-xping http https://example.com    # status, headers, TTFB, redirect chain
+xping http https://example.com    # status, timing waterfall, TLS, security headers
 xping http http://github.com      # follows redirects automatically
 xping http https://api.example.com --json
 xping http https://example.com --watch  # watch a website, highlight outages
 ```
+
+Each phase of the final request is timed on its own and drawn as a waterfall:
+
+```
+  ── Timing ──────────────────────────────────────────
+  DNS lookup          1.50 ms    █
+  TCP connect       108.69 ms     ███
+  TLS handshake     124.48 ms        ████
+  Server response   230.19 ms            ████████
+  Download           38.95 ms                    █
+  Total             503.81 ms
+```
+
+*Server response* is the time from sending the request to the first
+response byte (TTFB); *Redirects* appears when redirects were followed.
+The **security headers** section checks HTTPS (and an http→https
+upgrade), `Strict-Transport-Security` (max-age ≥ 180 days),
+`Content-Security-Policy`, `X-Content-Type-Options: nosniff`,
+`X-Frame-Options` (or CSP `frame-ancestors`), `Referrer-Policy`,
+`Permissions-Policy`, and `Server` / `X-Powered-By` headers that reveal
+software versions. It is informational and never changes the exit code.
 
 ### WHOIS
 

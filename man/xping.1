@@ -175,10 +175,24 @@ expiry date, days remaining, a lifetime progress bar, and (on Python
 Perform an HTTP GET to
 .IR URL ,
 following redirects automatically.
-Reports the HTTP version used, whether the server supports HTTP/2
-(detected via ALPN), status
-code, redirect chain, response headers, and a full timing breakdown:
-DNS resolve time \(md TCP connect time \(md TTFB \(md total request time.
+Reports the status code, redirect chain, response headers, the HTTP
+version used, whether the server supports HTTP/2 (detected via ALPN),
+the TLS version and cipher, and a per-phase timing waterfall for the
+final request: DNS lookup \(md TCP connect \(md TLS handshake \(md
+server response (time to first byte) \(md download, plus the time spent
+on redirects and the total.
+A security-header audit checks HTTPS (and an http\(->https upgrade),
+.B Strict\-Transport\-Security
+(max-age of at least 180 days),
+.BR Content\-Security\-Policy ,
+.BR "X\-Content\-Type\-Options: nosniff" ,
+.B X\-Frame\-Options
+(or CSP frame-ancestors),
+.BR Referrer\-Policy ,
+.BR Permissions\-Policy ,
+and
+.BR Server / X\-Powered\-By
+headers that reveal software versions; it is informational only.
 Exits 1 on HTTP status \(>= 400 unless
 .B \-\-expect\-status
 says otherwise.

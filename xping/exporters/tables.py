@@ -145,9 +145,13 @@ def sections_for(result: Any) -> list[Section]:
         if result.final_url or result.status_code is not None:
             requests.append([len(requests) + 1, result.final_url or result.url, result.status_code])
         headers = [[k, v] for k, v in result.headers.items()]
+        security = [[h.name, h.status, h.value or "", h.note] for h in result.security]
         return [
             Section("Requests", ["step", "url", "status_code"], requests, primary=False),
             Section("Headers", ["name", "value"], headers, primary=False),
+            Section(
+                "Security headers", ["header", "status", "value", "note"], security, primary=False
+            ),
         ]
     if isinstance(result, m.TlsResult):
         sans = [[n] for n in result.san]
