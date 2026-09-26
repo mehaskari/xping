@@ -783,7 +783,7 @@ xping dnscheck mycompany.com --min-score 80 -q
 #### `xping blocklist`
 
 ```
-xping blocklist IP|DOMAIN [--zone ZONE]... [-t SEC]
+xping blocklist IP|DOMAIN [--zone ZONE]... [-t SEC] [--all]
 ```
 
 Checks whether an IP address or a domain's mail servers are on a spam
@@ -814,10 +814,17 @@ listed*. Each result is one of:
 | ? **refused** | the list refused to answer. Spamhaus and URIBL refuse queries that arrive via big public resolvers (8.8.8.8, 1.1.1.1); use your ISP's or your own resolver |
 | ? **error** | the lookup timed out or failed |
 
+The output is a summary with one row per checked address or domain,
+e.g. "clean on 8/8 IP lists". Every result that is not *clean* is also
+shown in full below it. `--all` prints every list for every address
+instead. The last line counts the checks, e.g. "43 checks on 11 lists":
+11 lists, some of them checked for several addresses.
+
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--zone ZONE` | — | Also check this DNSBL zone (repeatable) |
 | `-t`, `--timeout SEC` | 5 | Seconds to wait per lookup |
+| `--all` | — | Show every list for every address, not the summary |
 
 Exit code 1 when the target is **listed** on any list, or when nothing
 could be checked. *Policy*, *refused* and *error* results do not fail.
@@ -1107,7 +1114,9 @@ From the four timestamps of each exchange, xping computes:
 - the **round-trip delay**.
 
 It takes several samples and reports the one with the lowest delay,
-because network asymmetry is the main source of error. It also shows the
+because network asymmetry is the main source of error. The **accuracy**
+line shows the worst case, half the round trip. An offset smaller than
+that means your clock is right; a nearer server gives a sharper number. It also shows the
 server's **stratum** (1 = attached to a reference clock such as GPS, 2 =
 synchronised to a stratum-1 server, …), its reference, and whether the
 server itself is synchronised.

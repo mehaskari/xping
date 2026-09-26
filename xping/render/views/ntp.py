@@ -40,6 +40,10 @@ def print_summary(result) -> None:
         ["Metric", "Value"],
         [
             ["Clock offset", offset_text(result.offset_ms)],
+            [
+                "Accuracy",
+                c(f"± {result.uncertainty_ms:.1f} ms", BWHITE) + c("  (half the round trip)", DIM),
+            ],
             ["Round-trip delay", latency_color(result.delay_ms)],
             ["Stratum", c(str(result.stratum), BWHITE)],
             ["Reference", c(result.reference or "—", BWHITE)],
@@ -47,4 +51,12 @@ def print_summary(result) -> None:
             ["Replies", f"{len(result.answered)}/{len(result.samples)}"],
         ],
     )
+    if abs(result.offset_ms) <= result.uncertainty_ms:
+        print(
+            c(
+                "  The offset is within the measurement accuracy — your clock is right."
+                " A nearer server gives a sharper number.",
+                DIM,
+            )
+        )
     print()

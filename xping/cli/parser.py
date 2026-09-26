@@ -606,6 +606,9 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         metavar="SEC",
         help="Seconds to wait per lookup [default: 5]",
     )
+    p_block.add_argument(
+        "--all", action="store_true", help="Show every list for every address, not a summary"
+    )
 
     p_prop = sub.add_parser(
         "propagation",

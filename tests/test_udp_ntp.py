@@ -235,3 +235,30 @@ def test_ntp_query_once_against_local_server():
         fields, offset, delay = ntp_diag.query_once("127.0.0.1", 2)
     sock.close()
     assert fields["stratum"] == 2 and offset == pytest.approx(250, abs=30)
+
+
+def test_ntp_accuracy_is_half_the_round_trip(capsys):
+    from xping.render.views import ntp as ntp_view
+
+    r = NtpResult("s", ip="1.2.3.4", stratum=2, leap=0, samples=[NtpSample(1, -12.5, 242.0)])
+    assert r.uncertainty_ms == 121.0
+    assert json.loads(export_json(r))["uncertainty_ms"] == 121.0
+    with patch("xping.render.COLOR", False):
+        ntp_view.print_summary(r)
+    out = capsys.readouterr().out
+    assert "± 121.0 ms" in out and "within the measurement accuracy" in out
+    r.samples = [NtpSample(1, -900.0, 40.0)]
+    with patch("xping.render.COLOR", False):
+        ntp_view.print_summary(r)
+    assert "within the measurement accuracy" not in capsys.readouterr().out
+
+
+def test_ip_line_only_for_hostnames(capsys, udp_server):
+    port, _ = udp_server
+    with patch("xping.render.COLOR", False):
+        udp_diag.udp("127.0.0.1", port, count=1, timeout=1)
+    header = capsys.readouterr().out.split("[1]")[0]
+    assert "Target" in header and "  IP " not in header
+    with patch.object(udp_diag, "resolve", return_value="127.0.0.1"), patch("xping.render.COLOR", False):
+        udp_diag.udp("localhost", port, count=1, timeout=1)
+    assert "  IP " in capsys.readouterr().out.split("[1]")[0]

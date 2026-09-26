@@ -115,7 +115,9 @@ def test_render_and_exports(capsys):
         result = bl.blocklist("192.0.2.10")
     out = capsys.readouterr().out
     assert "ℹ policy" in out and "PBL lists end-user address ranges" in out
-    assert "Not listed on any" in out and evaluate(result) == []
+    assert "Not listed — 8 checks on 8 lists, all answered" in out and evaluate(result) == []
+    assert "clean on 7/8 IP lists · Spamhaus ZEN (policy)" in out  # summary row
+    assert "Details:" in out  # the non-clean check is still shown in full
     data = json.loads(export_json(result))
     assert data["listed_count"] == 0 and data["checks"][0]["status"] == "policy"
     assert export_csv(result).splitlines()[0] == "list,zone,subject,status,codes,reason"
@@ -129,3 +131,21 @@ def test_parser_and_check_type(tmp_path):
     path = tmp_path / "c.json"
     path.write_text(json.dumps({"checks": [{"type": "blocklist", "target": "192.0.2.25"}]}))
     assert load_config(str(path))[0]["name"] == "blocklist 192.0.2.25"
+
+
+def test_summary_is_compact_and_all_shows_every_check(capsys):
+    fake = _fake_lookup({"example.net.multi.surbl.org": ["127.0.0.8"]})
+    with (
+        patch.object(bl, "lookup_a", side_effect=fake),
+        patch.object(bl, "mail_and_web_addresses", return_value=["192.0.2.25", "192.0.2.80"]),
+        patch("xping.render.COLOR", False),
+    ):
+        bl.blocklist("example.net")
+        compact = capsys.readouterr().out
+        bl.blocklist("example.net", show_all=True)
+        full = capsys.readouterr().out
+    assert "clean on 8/8 IP lists" in compact and compact.count("192.0.2.25") == 2  # header + row
+    assert "clean on 2/3 domain lists · SURBL (listed)" in compact
+    assert "Listed on 1 of 19 checks on 11 lists: SURBL (example.net)" in compact
+    assert full.count("192.0.2.25") == 1 + len(bl.IP_LISTS)  # header + one row per list
+    assert "Details:" not in full
