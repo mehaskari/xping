@@ -23,7 +23,7 @@ def _write(tmp_path, name, text, encoding="utf-8"):
 @needs_tomllib
 def test_example_config_is_valid(tmp_path):
     entries = check_diag.load_config(_write(tmp_path, "c.toml", check_diag.EXAMPLE))
-    assert [e["type"] for e in entries] == ["ping", "tcp", "http", "tls", "dnscheck", "propagation"]
+    assert [e["type"] for e in entries] == ["ping", "tcp", "http", "tls", "dnscheck", "ntp", "propagation"]
     assert all(e["timeout"] == 3 for e in entries)  # [defaults] merged into every check
 
 

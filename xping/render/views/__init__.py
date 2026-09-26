@@ -12,6 +12,7 @@ from . import (
     mtr,
     mtu,
     net,
+    ntp,
     ping,
     portscan,
     profile,
@@ -22,6 +23,7 @@ from . import (
     tcp,
     tls,
     trace,
+    udp,
     watch,
     whois,
 )
@@ -38,6 +40,7 @@ __all__ = [
     "mtr",
     "mtu",
     "net",
+    "ntp",
     "ping",
     "portscan",
     "propagation",
@@ -48,6 +51,7 @@ __all__ = [
     "tcp",
     "tls",
     "trace",
+    "udp",
     "watch",
     "whois",
 ]

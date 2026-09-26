@@ -78,6 +78,11 @@ domain = "example.com"
 min_score = 60
 
 [[check]]
+name = "System clock"
+type = "ntp"                 # server defaults to pool.ntp.org
+max_offset = 500
+
+[[check]]
 name = "New IP propagated"
 type = "propagation"
 name_to_query = "example.com"
@@ -190,10 +195,40 @@ def _run_propagation(e: dict):
     )
 
 
+def _run_udp(e: dict):
+    from xping.diagnostics.udp import udp
+
+    return udp(
+        host=_host(e),
+        port=int(e["port"]),
+        count=int(e.get("count", 1)),
+        timeout=float(e.get("timeout", 2.0)),
+        interval=float(e.get("interval", 0.2)),
+        probe=str(e.get("probe", "auto")),
+        hex_payload=e.get("payload"),
+        quiet=True,
+        family=_family(e),
+    )
+
+
+def _run_ntp(e: dict):
+    from xping.diagnostics.ntp import ntp
+
+    return ntp(
+        server=_host(e, "server"),
+        count=int(e.get("count", 2)),
+        timeout=float(e.get("timeout", 2.0)),
+        quiet=True,
+        family=_family(e),
+    )
+
+
 # type -> (runner, required keys, target key)
 CHECK_TYPES: dict[str, tuple[Callable[[dict], Any], tuple[str, ...], str]] = {
     "ping": (_run_ping, ("host",), "host"),
     "tcp": (_run_tcp, ("host", "port"), "host"),
+    "udp": (_run_udp, ("host", "port"), "host"),
+    "ntp": (_run_ntp, (), "server"),
     "http": (_run_http, ("url",), "url"),
     "tls": (_run_tls, ("host",), "host"),
     "lookup": (_run_lookup, ("host",), "host"),
@@ -201,7 +236,14 @@ CHECK_TYPES: dict[str, tuple[Callable[[dict], Any], tuple[str, ...], str]] = {
     "health": (_run_health, ("host",), "host"),
     "propagation": (_run_propagation, ("name_to_query",), "name_to_query"),
 }
-THRESHOLD_KEYS = ("max_loss", "max_latency", "expect_status", "min_days", "min_score")
+THRESHOLD_KEYS = (
+    "max_loss",
+    "max_latency",
+    "expect_status",
+    "min_days",
+    "min_score",
+    "max_offset",
+)
 
 
 class ConfigError(ValueError):
@@ -266,6 +308,8 @@ def load_config(path: str) -> list[dict]:
         if missing:
             raise ConfigError(f"check #{index} ({kind}): missing {', '.join(missing)}")
         entry["type"] = kind
+        if kind == "ntp":
+            entry.setdefault("server", "pool.ntp.org")
         entry.setdefault("name", f"{kind} {entry[CHECK_TYPES[kind][2]]}")
         entries.append(entry)
     return entries
@@ -276,6 +320,8 @@ def _run_one(entry: dict) -> CheckOutcome:
     target = str(entry[target_key])
     if entry["type"] == "tcp":
         target = f"{target}:{entry['port']}"
+    elif entry["type"] == "udp":
+        target = f"{target}:{entry['port']}/udp"
     started = time.perf_counter()
     try:
         result = runner(entry)

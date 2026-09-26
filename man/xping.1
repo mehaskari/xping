@@ -165,6 +165,26 @@ and
 repeat the check (see
 .BR "WATCH MODE" ).
 .TP
+.BR udp " \fIHOST\fR \fIPORT\fR [\fIOPTIONS\fR]"
+Probe a UDP service.
+UDP has no handshake, so a reply is the only proof that a service is
+listening: each attempt is
+.B open
+(a reply came back),
+.B closed
+(ICMP port unreachable) or
+.B no response
+(filtered, or the service ignored the request \(em UDP cannot tell these
+apart).
+The request is chosen by port: a root NS query for 53 and 5353, an SNTP
+request for 123, an SNMPv2c GET of sysDescr.0 with community
+.I public
+for 161, and an empty datagram otherwise; see
+.B \-\-probe
+and
+.BR \-\-payload .
+Exits 0 only when a reply came back.
+.TP
 .BR tls " \fIHOST\fR [\fIOPTIONS\fR]"
 Inspect the TLS/SSL certificate presented by
 .I HOST
@@ -249,6 +269,19 @@ useful for diagnosing VPN or tunnel fragmentation issues.
 IPv6 is supported on Linux and macOS (macOS needs root for the
 don't-fragment IPv6 probe) but not on Windows.
 .SS Local machine
+.TP
+.BR ntp " [\fISERVER\fR] [\fIOPTIONS\fR]"
+Measure how far the system clock is from an NTP server (default
+.IR pool.ntp.org )
+with SNTP over UDP port 123.
+Shows the clock offset (server minus local; positive means the local
+clock is behind), the round-trip delay, the server's stratum and
+reference, and whether the server is synchronised.
+Several samples are taken and the one with the lowest delay is used.
+Exits 1 when nothing answers, the server is unsynchronised (stratum 16
+or leap indicator 3), or
+.B \-\-max\-offset
+is exceeded.
 .TP
 .BR doctor " [\fIHOST\fR] [\fIOPTIONS\fR]"
 Answer \(lqwhy is the internet not working?\(rq.
@@ -357,6 +390,8 @@ and exit 1 if any failed.
 Supported types:
 .BR ping ,
 .BR tcp ,
+.BR udp ,
+.BR ntp ,
 .BR http ,
 .BR tls ,
 .BR lookup ,
@@ -368,7 +403,8 @@ each with the same thresholds as the command
 .BR max_latency ,
 .BR expect_status ,
 .BR min_days ,
-.BR min_score ).
+.BR min_score ,
+.BR max_offset ).
 Saved profile names work as hosts.
 .B "xping check \-\-example"
 prints a commented starter file; see
@@ -594,6 +630,68 @@ milliseconds.
 Repeat the check; see
 .B WATCH MODE
 (default every 2 s).
+.SS udp
+.TP
+.BI \-c " N" ", \-\-count " N
+Probes to send.
+Default:
+.BR 3 .
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Seconds to wait for each reply.
+Default:
+.BR 2.0 .
+.TP
+.BI \-i " SEC" ", \-\-interval " SEC
+Interval between probes.
+Default:
+.BR 0.5 .
+.TP
+.BI \-\-probe " KIND"
+Request to send:
+.BR auto " (by port),"
+.BR dns ,
+.BR ntp ,
+.BR snmp ,
+or
+.BR empty .
+Default:
+.BR auto .
+.TP
+.BI \-\-payload " HEX"
+Send these bytes (hex, spaces and colons allowed) instead of a built-in
+probe.
+.TP
+.BI \-\-max\-latency " MS"
+Exit 1 if the average reply time exceeds
+.I MS
+milliseconds.
+.PP
+Also accepts
+.BR \-\-watch ,
+.BR \-\-until\-up ,
+.BR \-\-every " (default 5),"
+.B \-\-notify
+and
+.BR \-\-webhook ;
+see
+.BR "WATCH MODE" .
+.SS ntp
+.TP
+.BI \-c " N" ", \-\-count " N
+Samples to take.
+Default:
+.BR 4 .
+.TP
+.BI \-t " SEC" ", \-\-timeout " SEC
+Seconds to wait per sample.
+Default:
+.BR 2.0 .
+.TP
+.BI \-\-max\-offset " MS"
+Exit 1 if the clock differs from the server by more than
+.I MS
+milliseconds.
 .SS tls
 .TP
 .BI \-\-port " N"
@@ -803,6 +901,7 @@ or
 .
 .SH WATCH MODE
 .BR tcp ,
+.BR udp ,
 .BR http ,
 and
 .B health
@@ -1072,6 +1171,12 @@ Auto-ping Google DNS and display follow-up command suggestions.
 .B xping google.com
 Auto-ping google.com (same shorthand, works with hostnames too).
 .TP
+.B xping udp 1.1.1.1 53
+Check that a DNS server answers over UDP.
+.TP
+.B xping ntp \-\-max\-offset 500
+Exit 1 if the system clock is off by more than half a second.
+.TP
 .B xping doctor
 Diagnose why the internet is not working, step by step.
 .TP
@@ -1213,6 +1318,8 @@ third parties:
 .BR \-\-no\-public ),
 .B speedtest
 (speed.cloudflare.com),
+.B ntp
+(pool.ntp.org unless another server is named),
 .B doctor
 (1.1.1.1, 8.8.8.8 and 9.9.9.9; captive.apple.com; www.cloudflare.com),
 .B trace/mtr \-\-asn

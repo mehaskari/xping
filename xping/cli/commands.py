@@ -23,6 +23,7 @@ from xping.diagnostics.mtr import mtr
 from xping.diagnostics.mtu import mtu
 from xping.diagnostics.net import net
 from xping.diagnostics.notify import Notifier
+from xping.diagnostics.ntp import ntp
 from xping.diagnostics.osdetect import osdetect
 from xping.diagnostics.ping import ping
 from xping.diagnostics.ping import watch as ping_watch
@@ -35,6 +36,7 @@ from xping.diagnostics.sweep import sweep
 from xping.diagnostics.tcp import tcp
 from xping.diagnostics.tls import tls
 from xping.diagnostics.trace import trace
+from xping.diagnostics.udp import udp
 from xping.diagnostics.watch import watch
 from xping.diagnostics.whois import whois
 from xping.render import (
@@ -182,6 +184,43 @@ def cmd_tcp(args: argparse.Namespace) -> object:
         count=args.count,
         timeout=args.timeout,
         interval=args.interval,
+        quiet=quiet,
+        family=family_of(args),
+    )
+    emit_export(result, args)
+    return result
+
+
+def cmd_udp(args: argparse.Namespace) -> object:
+    _require_watch_for_notify(args)
+    host = _resolve_host(args.host)
+    options = dict(
+        host=host,
+        port=args.port,
+        timeout=args.timeout,
+        probe=args.probe,
+        hex_payload=args.payload,
+        family=family_of(args),
+    )
+    if _watch_requested(args):
+        return _run_watch(
+            args,
+            f"{args.host}:{args.port}/udp",
+            "udp",
+            lambda: udp(count=1, quiet=True, **options),
+            lambda r: (r.avg_rtt_ms, r.attempts[0].detail if r.attempts else r.error or ""),
+        )
+    result = udp(count=args.count, interval=args.interval, quiet=output_suppressed(args), **options)
+    emit_export(result, args)
+    return result
+
+
+def cmd_ntp(args: argparse.Namespace) -> object:
+    quiet = output_suppressed(args)
+    result = ntp(
+        server=_resolve_host(args.server),
+        count=args.count,
+        timeout=args.timeout,
         quiet=quiet,
         family=family_of(args),
     )
