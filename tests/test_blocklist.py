@@ -76,7 +76,7 @@ def test_domain_checks_domain_lists_and_mail_ips():
 
 def test_extra_zone_and_errors():
     def lookup(name, timeout):
-        return (None, 5000.0) if name.endswith("bl.example.org") else ([], 3.0)
+        return (None, 5000.0) if name == "10.2.0.192.bl.example.org" else ([], 3.0)
 
     with patch.object(bl, "lookup_a", side_effect=lookup):
         result = bl.blocklist("192.0.2.10", extra_zones=["bl.example.org"], quiet=True)
