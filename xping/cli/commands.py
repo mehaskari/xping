@@ -42,6 +42,7 @@ from xping.diagnostics.trace import trace
 from xping.diagnostics.udp import udp
 from xping.diagnostics.watch import watch
 from xping.diagnostics.whois import whois
+from xping.diagnostics.wifi import wifi
 from xping.render import (
     BOLD,
     BRAND_AMBER,
@@ -563,6 +564,13 @@ def cmd_osdetect(args: argparse.Namespace) -> object:
 def cmd_net(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
     result = net(public=not args.no_public, quiet=quiet, show_all=args.all)
+    emit_export(result, args)
+    return result
+
+
+def cmd_wifi(args: argparse.Namespace) -> object:
+    quiet = output_suppressed(args)
+    result = wifi(interface=args.interface, quiet=quiet, show_nearby=args.nearby)
     emit_export(result, args)
     return result
 

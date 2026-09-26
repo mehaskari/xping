@@ -48,6 +48,7 @@ from xping.models import (
     UdpResult,
     WatchResult,
     WhoisResult,
+    WifiResult,
 )
 
 
@@ -197,6 +198,16 @@ def _diff(r: DiffResult, _opts) -> list[Failure]:
     return []
 
 
+def _wifi(r: WifiResult, opts) -> list[Failure]:
+    if r.error or not r.current:
+        return [Failure(r.error or "not connected to Wi-Fi")]
+    limit = _opt(opts, "min_signal")
+    signal = r.current.signal_dbm
+    if limit is not None and signal is not None and signal < limit:
+        return [Failure(f"Wi-Fi signal {signal} dBm is below --min-signal {limit} dBm", True)]
+    return []
+
+
 def _bundle(r: BundleResult, opts) -> list[Failure]:
     failures: list[Failure] = []
     if r.lookup is not None and r.lookup.error:
@@ -242,6 +253,7 @@ def evaluate(result, opts=None) -> list[Failure]:
         (BundleResult, _bundle),
         (UdpResult, _udp),
         (DiffResult, _diff),
+        (WifiResult, _wifi),
         (BlocklistResult, _blocklist),
         (NtpResult, _ntp),
     )

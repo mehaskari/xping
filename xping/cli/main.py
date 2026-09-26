@@ -39,6 +39,7 @@ from xping.cli.commands import (
     cmd_trace,
     cmd_udp,
     cmd_whois,
+    cmd_wifi,
     print_version,
 )
 from xping.cli.errors import UsageError
@@ -103,6 +104,7 @@ _DISPATCH = {
     "listen": cmd_listen,
     "osdetect": cmd_osdetect,
     "net": cmd_net,
+    "wifi": cmd_wifi,
     "doctor": cmd_doctor,
     "completion": cmd_completion,
     "config": cmd_config,

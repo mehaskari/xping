@@ -28,6 +28,7 @@ from . import (
     udp,
     watch,
     whois,
+    wifi,
 )
 
 __all__ = [
@@ -58,4 +59,5 @@ __all__ = [
     "udp",
     "watch",
     "whois",
+    "wifi",
 ]
