@@ -78,7 +78,9 @@ def test_connection_refused_and_unresolvable():
     sock.bind(("127.0.0.1", 0))
     port = sock.getsockname()[1]
     sock.close()
-    assert "refused" in sm.smtp("127.0.0.1", port=port, timeout=2, quiet=True).error
+    # Windows retries a refused SYN for ~2 s, so it may report a timeout instead
+    error = sm.smtp("127.0.0.1", port=port, timeout=2, quiet=True).error
+    assert "refused" in error or "timed out" in error
     with patch.object(sm, "resolve", side_effect=socket.gaierror):
         assert sm.smtp("nothing.invalid", quiet=True).error == "cannot resolve 'nothing.invalid'"
 

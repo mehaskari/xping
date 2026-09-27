@@ -1,3 +1,17 @@
+xping (1.4.7-1) noble; urgency=medium
+
+  * Security: text from servers is stripped of terminal escape sequences;
+    DNS parsing can no longer hang on pointer loops; raw DNS queries use
+    random IDs; dig names cannot become options; profile names are
+    validated for shell completion; HTTP and WHOIS reads are capped.
+  * New: xping wifi (signal, noise, channel crowding, advice).
+  * New: xping diff (compare two --json results; --max-regression).
+  * New: xping smtp (mail server greeting, STARTTLS, certificate, AUTH).
+  * blocklist shows a compact summary (--all for every list); ntp shows
+    its accuracy.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Sun, 27 Sep 2026 11:36:20 +0000
+
 xping (1.4.6-1) noble; urgency=medium
 
   * New: xping udp HOST PORT - UDP service probe (DNS, NTP, SNMP or raw
