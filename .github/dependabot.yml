@@ -1,3 +1,6 @@
+# Workflow actions are pinned to commit SHAs (a moved tag cannot change
+# what runs in CI or in releases); the github-actions entry below keeps
+# those pins up to date through weekly PRs.
 version: 2
 updates:
   - package-ecosystem: "pip"

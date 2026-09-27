@@ -19,6 +19,9 @@
 - The completion rc block single-quotes the script path. CI and release
   workflows use read-only tokens and pass secrets as environment
   variables.
+- Every GitHub Action in CI and release workflows is pinned to a commit
+  SHA, so a moved or hijacked tag can't change what runs with release
+  credentials. Dependabot keeps the pins current.
 
 ### Added
 - **`xping smtp HOST`** — checks a mail server.
