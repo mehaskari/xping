@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.4.8] - 2026-09-27
 
 ### Changed
 - `xping wifi` detects a clearly stronger access point nearby (8 dB or
