@@ -192,7 +192,7 @@ def test_profile_names_output_only_valid_names(tmp_path, monkeypatch, capsys):
 def test_rc_block_quotes_the_script_path(tmp_path):
     from xping.cli import completion
 
-    home = tmp_path / "we$(ird) \"home\""
+    home = tmp_path / "we$(ird) it's home"  # $, space and a quote — all valid on Windows too
     home.mkdir()
     completion.install("zsh", home=home)
     block = (home / ".zshrc").read_text()
