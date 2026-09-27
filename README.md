@@ -386,8 +386,10 @@ xping wifi --min-signal=-67 -q || echo "weak Wi-Fi"
 ```
 
 Grades the signal (Excellent ≥ −55 dBm … Very weak), flags a low
-signal-to-noise ratio and crowded channels, and suggests a fix (move
-closer, switch to 5 GHz, or the least used of channels 1 / 6 / 11). Uses
+signal-to-noise ratio and crowded channels, spots a clearly stronger
+access point nearby (a device "stuck" on a far one), and suggests a fix
+(move closer, toggle Wi-Fi, switch to 5 GHz, or the least used of
+channels 1 / 6 / 11). Uses
 `system_profiler` (macOS), `iw` / `nmcli` (Linux) or `netsh` (Windows);
 macOS hides network names unless the terminal has Location Services
 permission.

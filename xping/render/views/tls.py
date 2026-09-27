@@ -5,6 +5,7 @@ import time
 
 from ..ansi import BOLD, BRAND_AMBER, BRAND_INDIGO, BRAND_MINT, BRAND_ROSE, BWHITE, DIM, c
 from ..tables import print_table
+from ._cert import cert_name
 
 
 def _expiry_badge(result) -> str:
@@ -68,8 +69,8 @@ def print_result(result) -> None:
     rows = [
         ["Protocol", result.protocol or "—"],
         ["Cipher", result.cipher or "—"],
-        ["Subject", result.subject or "—"],
-        ["Issuer", result.issuer or "—"],
+        ["Subject", cert_name(result.subject)],
+        ["Issuer", cert_name(result.issuer)],
         ["Valid from", result.not_before or "—"],
         ["Valid until", result.not_after or "—"],
         ["Expires in", days_s],
