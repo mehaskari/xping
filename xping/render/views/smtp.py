@@ -3,7 +3,9 @@
 from ..ansi import BOLD, BRAND_AMBER, BRAND_MINT, BRAND_ROSE, BRAND_SLATE, BWHITE, DIM, c
 from ..latency import latency_color
 from ..layout import kv
+from ._cert import cert_name
 
+_MX_SHOWN = 3  # one per line; the rest are counted (all of them are in --json)
 _WANTED = ("PIPELINING", "8BITMIME", "SMTPUTF8", "CHUNKING", "ENHANCEDSTATUSCODES")
 
 
@@ -15,7 +17,11 @@ def print_result(result) -> None:
     if result.ip and result.ip != result.server:
         print(kv("IP", c(result.ip, BWHITE)))
     if result.mx_hosts and result.server != result.host:
-        print(kv("All MX", c(", ".join(result.mx_hosts), DIM)))
+        shown = result.mx_hosts[:_MX_SHOWN]
+        more = len(result.mx_hosts) - len(shown)
+        for i, mx in enumerate(shown):
+            extra = c(f"  (+{more} more)", DIM) if more and i == len(shown) - 1 else ""
+            print(kv("All MX" if i == 0 else "", c(mx, DIM)) + extra)
     if result.reverse_dns is not None or result.ip:
         if result.reverse_dns is None:
             ptr = c("none — many receivers distrust senders without reverse DNS", BRAND_AMBER)
@@ -66,7 +72,7 @@ def print_result(result) -> None:
         )
         expiry = f"  expires in {days} days" if days is not None else ""
         print(kv("Certificate", c("✔ valid for this name", BRAND_MINT) + c(expiry, color)))
-        print(kv("  Issuer", c(result.cert_issuer or "—", DIM)))
+        print(kv("  Issuer", c(cert_name(result.cert_issuer), DIM)))
 
     if result.auth:
         print(kv("AUTH", c(" ".join(result.auth), BWHITE)))

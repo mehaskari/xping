@@ -954,7 +954,8 @@ xping tls HOST [--port PORT] [-t SEC] [--min-days N]
 ```
 
 Inspects the certificate a server presents: protocol version, cipher,
-subject, issuer, subject alternative names, validity dates, days remaining
+subject, issuer (shown short, e.g. "Sectigo Limited (… CA DV E36)"; the
+full names are in `--json`), subject alternative names, validity dates, days remaining
 (with a lifetime progress bar) and, on Python 3.13+, the full chain up to
 the root CA. Verification is strict and uses the system store plus
 `certifi`.
@@ -992,8 +993,8 @@ Checks a mail server the way another mail server sees it:
 5. sends `QUIT`. **No mail is sent**: xping never issues `MAIL FROM`.
 
 Give it a **mail domain** and it tests the domain's preferred MX server
-(`xping smtp gmail.com` → `gmail-smtp-in.l.google.com`), listing all MX
-records. Give it a server name, or use `--no-mx`, to test that host
+(`xping smtp gmail.com` → `gmail-smtp-in.l.google.com`), listing the
+first three MX records (all of them are in `--json`). Give it a server name, or use `--no-mx`, to test that host
 directly.
 
 It also checks the server address's **reverse DNS**. Receiving servers
@@ -1150,6 +1151,11 @@ Shows how good your Wi-Fi link is, and why it might be slow:
 
 Below that, xping gives concrete advice when something is off:
 
+- a stronger access point nearby: 8 dB or more above yours, with the same
+  security (and the same name, where the OS shows names). Devices often
+  hold on to a weaker access point after you move around, and turning
+  Wi-Fi off and on makes them switch. 5/6 GHz access points are preferred
+  over a slightly stronger 2.4 GHz one;
 - a weak signal: move closer, or add an access point;
 - a low SNR: interference;
 - a crowded channel: switch to 5 GHz, or change channel. On 2.4 GHz it

@@ -359,11 +359,47 @@ def best_24ghz_channel(result: WifiResult) -> int | None:
     return min(counts, key=lambda ch: (counts[ch], ch)) if counts else None
 
 
+STRONGER_BY_DB = 8  # a nearby access point this much stronger is worth moving to
+
+
+def stronger_access_point(result: WifiResult) -> WifiNetwork | None:
+    """The strongest nearby access point that is clearly better than ours
+    and plausibly the same network: same security, and the same name when
+    both names are known (macOS hides them; then security alone decides)."""
+    net = result.current
+    if not net or net.signal_dbm is None:
+        return None
+    candidates = [
+        n
+        for n in result.nearby
+        if n.signal_dbm is not None
+        and n.signal_dbm >= net.signal_dbm + STRONGER_BY_DB
+        and n.security == net.security
+        and (not (n.ssid and net.ssid) or n.ssid == net.ssid)
+        and not (n.bssid and n.bssid == net.bssid)  # macOS reports no BSSIDs
+    ]
+    # a 5/6 GHz access point a few dB weaker is still the faster choice
+    return max(
+        candidates, key=lambda n: n.signal_dbm + (0 if n.band == "2.4 GHz" else 6), default=None
+    )
+
+
 def advice(result: WifiResult) -> list[str]:
     tips: list[str] = []
     net = result.current
     if not net:
         return tips
+    better = stronger_access_point(result)
+    if better is not None:
+        where = f"channel {better.channel}" + (f", {better.band}" if better.band else "")
+        same = "the same network" if better.ssid and net.ssid else "same security"
+        tips.append(
+            f"A stronger access point is nearby ({better.signal_dbm} dBm on {where}, {same})."
+            " Your device is holding on to a weaker one: turn Wi-Fi off and on to move to it."
+            if better.ssid and net.ssid
+            else f"A stronger access point is nearby ({better.signal_dbm} dBm on {where}, {same})."
+            " If it is the same network, turn Wi-Fi off and on to move to it."
+        )
     if net.signal_dbm is not None and net.signal_dbm < -67:
         tips.append(
             "Signal is weak for calls and streaming (below -67 dBm): move closer to the router,"

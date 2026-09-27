@@ -145,3 +145,25 @@ def test_parser_and_check_type(tmp_path):
     path = tmp_path / "c.json"
     path.write_text(json.dumps({"checks": [{"type": "smtp", "host": "example.net", "require_tls": True}]}))
     assert load_config(str(path))[0]["name"] == "smtp example.net"
+
+
+def test_cert_name_is_short():
+    from xping.render.views._cert import cert_name
+
+    assert cert_name("countryName=US, organizationName=Google Trust Services, commonName=WE2") == (
+        "Google Trust Services (WE2)"
+    )
+    assert cert_name("commonName=github.com") == "github.com"
+    assert cert_name("organizationName=Example, Inc., commonName=Example, Inc. CA") == "Example, Inc. CA"
+    assert cert_name(None) == "—"
+
+
+def test_mx_list_is_one_per_line_and_capped(capsys):
+    from xping.render.views import smtp as view
+
+    r = SmtpResult("gmail.com", server="mx1", ip="192.0.2.1", error="no answer on port 25 (timed out)",
+                   mx_hosts=[f"{p} mx{p}.example.net" for p in (5, 10, 20, 30, 40)])
+    with patch("xping.render.COLOR", False), patch("xping.render.ansi.COLOR", False):
+        view.print_result(r)
+    lines = [ln for ln in capsys.readouterr().out.splitlines() if "mx" in ln and "example.net" in ln]
+    assert len(lines) == 3 and lines[0].lstrip().startswith("All MX") and lines[2].endswith("(+2 more)")

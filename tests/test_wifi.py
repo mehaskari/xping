@@ -181,3 +181,32 @@ def test_render(capsys):
 def test_parser(argv):
     args = build_parser().parse_args(argv)
     assert args.command == "wifi"
+
+
+def _net(signal, channel, band="5 GHz", security="WPA2 Enterprise", ssid=None, bssid=None):
+    return WifiNetwork(ssid=ssid, bssid=bssid, channel=channel, band=band,
+                       signal_dbm=signal, security=security)
+
+
+def test_stronger_access_point_macos_style():
+    """macOS: no SSIDs or BSSIDs, so same security decides; 5 GHz preferred."""
+    result = WifiResult(connected=True, current=_net(-71, 64), nearby=[
+        _net(-49, 6, "2.4 GHz", security="WPA2 Personal"),  # other network
+        _net(-58, 6, "2.4 GHz"),
+        _net(-61, 132),  # 3 dB weaker but 5 GHz: the better choice
+        _net(-69, 64),   # only 2 dB stronger: not worth it
+    ])
+    better = wd.stronger_access_point(result)
+    assert better.channel == 132
+    assert any("stronger access point is nearby (-61 dBm on channel 132, 5 GHz" in t for t in wd.advice(result))
+
+
+def test_stronger_access_point_uses_names_when_known():
+    me = _net(-75, 36, ssid="Office", bssid="aa:aa:aa:aa:aa:01")
+    other_name = _net(-50, 40, ssid="Guest")
+    same_ap = _net(-50, 36, ssid="Office", bssid="aa:aa:aa:aa:aa:01")
+    assert wd.stronger_access_point(WifiResult(current=me, nearby=[other_name, same_ap])) is None
+    sibling = _net(-55, 149, ssid="Office", bssid="aa:aa:aa:aa:aa:02")
+    result = WifiResult(current=me, nearby=[other_name, sibling])
+    assert wd.stronger_access_point(result) is sibling
+    assert any("the same network" in t and "holding on to a weaker one" in t for t in wd.advice(result))

@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- `xping wifi` detects a clearly stronger access point nearby (8 dB or
+  more, same security, same name where known). This is a device "stuck"
+  on a far access point, and toggling Wi-Fi fixes it. 5/6 GHz access
+  points are preferred.
+- `xping smtp` lists MX records one per line, showing the first three.
+  `smtp` and `tls` show certificate names short ("Google Trust Services
+  (WE2)" instead of the full distinguished name); JSON output keeps the
+  full names.
+
 ## [1.4.7] - 2026-09-27
 
 ### Security
