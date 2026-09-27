@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.4.7] - 2026-09-27
 
 ### Security
 - Terminal escape sequences and control characters from servers are
