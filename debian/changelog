@@ -1,3 +1,13 @@
+xping (1.4.8-1) noble; urgency=medium
+
+  * xping wifi suggests moving to a clearly stronger access point nearby
+    (same security, 8 dB or more; 5/6 GHz preferred).
+  * xping smtp lists MX records one per line; smtp and tls show short
+    certificate names.
+  * CI and release workflows use current action versions (Node.js 24).
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Sun, 27 Sep 2026 12:32:19 +0000
+
 xping (1.4.7-1) noble; urgency=medium
 
   * Security: text from servers is stripped of terminal escape sequences;
