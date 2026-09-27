@@ -19,3 +19,8 @@ updates:
     labels: ["dependencies", "github-actions"]
     commit-message:
       prefix: "ci"
+    # One PR for all actions: codeql-action's init/autobuild/analyze must
+    # move together, and separate PRs conflict with each other.
+    groups:
+      actions:
+        patterns: ["*"]

@@ -11,6 +11,12 @@
   `smtp` and `tls` show certificate names short ("Google Trust Services
   (WE2)" instead of the full distinguished name); JSON output keeps the
   full names.
+- CI and release workflows use current action versions, which run on
+  Node.js 24 instead of the deprecated Node.js 20: checkout v7,
+  setup-python v7, upload-artifact v7, download-artifact v8 (a hash
+  mismatch now fails the download), action-gh-release v3 and CodeQL v4.
+  All of them are still pinned to commit SHAs. Dependabot now proposes
+  action updates as one grouped PR.
 
 ## [1.4.7] - 2026-09-27
 
