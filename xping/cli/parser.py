@@ -66,6 +66,25 @@ def _doh_value(value: str) -> str:
     raise argparse.ArgumentTypeError("use cloudflare, google, quad9, or an https:// DoH URL")
 
 
+SAVE_COMMANDS = (
+    "ping",
+    "trace",
+    "mtr",
+    "health",
+    "tls",
+    "tcp",
+    "udp",
+    "http",
+    "smtp",
+    "dnscheck",
+    "blocklist",
+    "ntp",
+    "speedtest",
+    "wifi",
+    "doctor",
+)
+
+
 def _hex_payload(value: str) -> str:
     cleaned = value.replace(" ", "").replace(":", "")
     try:
@@ -196,6 +215,7 @@ Commands:
   all    <host>        Run lookup, ping, trace, and TCP checks
   check  <file>        Run many checks from a TOML/JSON file — one exit code
   diff   <old> <new>   Compare two --json results of the same check (- = stdin)
+  history [cmd target] Runs saved with --save: table, trend, vs. the usual
   rdns   <ip>          Reverse DNS (PTR) lookup
   tls    <host>        TLS/SSL certificate inspector
   smtp   <host>        Mail server check: greeting, STARTTLS, certificate (domain → MX)
@@ -261,6 +281,7 @@ Examples:
   xping all cloudflare.com
   xping check --example > checks.toml && xping check checks.toml
   xping ping example.net --json | xping diff baseline.json -
+  xping ping example.net --save && xping history ping example.net
 
 Exit codes: 0 check passed · 1 check failed · 2 invalid usage · 130 interrupted
 Thresholds (e.g. --max-loss, --max-latency, --min-days) turn checks into alarms;
@@ -953,6 +974,35 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     p_config.add_argument(
         "--example", action="store_true", help="Print an example config file and exit"
     )
+
+    p_history = sub.add_parser(
+        "history",
+        parents=[export_parent],
+        help="Show results saved with --save: runs, trend, and the latest vs. the usual",
+    )
+    p_history.add_argument(
+        "history_command", nargs="?", choices=SAVE_COMMANDS, metavar="COMMAND", help="e.g. ping"
+    )
+    p_history.add_argument("history_target", nargs="?", metavar="TARGET", help="e.g. example.net")
+    p_history.add_argument(
+        "--last", type=_positive_int, default=None, metavar="N", help="Only the newest N runs"
+    )
+    p_history.add_argument(
+        "--since", default=None, metavar="AGE", help="Only runs from the last AGE, e.g. 12h or 7d"
+    )
+    p_history.add_argument(
+        "--clear",
+        action="store_true",
+        help="Delete saved runs (all, one command, or one command + target)",
+    )
+
+    # --save on every command whose results history can follow
+    for name in SAVE_COMMANDS:
+        sub.choices[name].add_argument(
+            "--save",
+            action="store_true",
+            help="Also keep this result in ~/.xping/history (see: xping history)",
+        )
 
     sub.add_parser("deps", help="Check system dependency status")
     sub.add_parser("about", help="Show author, license, and attribution info")

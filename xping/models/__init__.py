@@ -7,6 +7,7 @@ from .diff import DiffResult, MetricChange
 from .dnscheck import DnsCheckItem, DnsCheckResult
 from .doctor import DoctorResult, DoctorStep
 from .health import HealthResult
+from .history import HistoryEntry, HistoryResult, HistoryRun
 from .http import HttpResult, RedirectHop, SecurityHeader
 from .ipscan import IpProbe, IpScanResult
 from .listen import ListenEntry, ListenResult
@@ -58,6 +59,9 @@ __all__ = [
     "WifiNetwork",
     "WifiResult",
     "HealthResult",
+    "HistoryEntry",
+    "HistoryResult",
+    "HistoryRun",
     "ProfileEntry",
     "ProfileListResult",
     "PropagationResult",

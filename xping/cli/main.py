@@ -18,6 +18,7 @@ from xping.cli.commands import (
     cmd_dnscheck,
     cmd_doctor,
     cmd_health,
+    cmd_history,
     cmd_http,
     cmd_ipscan,
     cmd_listen,
@@ -46,7 +47,7 @@ from xping.cli.commands import (
 from xping.cli.errors import UsageError
 from xping.cli.parser import build_parser
 from xping.cli.verdict import evaluate
-from xping.render import BOLD, BRAND_AMBER, BRAND_SLATE, BRAND_TEAL, DIM, banner, c, error
+from xping.render import BOLD, BRAND_AMBER, BRAND_SLATE, BRAND_TEAL, DIM, banner, c, error, warn
 
 _NEXT_STEPS = [
     ("trace", "hop-by-hop path"),
@@ -99,6 +100,7 @@ _DISPATCH = {
     "http": cmd_http,
     "whois": cmd_whois,
     "health": cmd_health,
+    "history": cmd_history,
     "mtr": cmd_mtr,
     "mtu": cmd_mtu,
     "profile": cmd_profile,
@@ -192,7 +194,26 @@ def main() -> None:
             raise
         sys.exit(1)
 
-    sys.exit(_exit_code(result, args))
+    code = _exit_code(result, args)
+    if getattr(args, "save", False):
+        _save(args, result, code == 0)
+    sys.exit(code)
+
+
+def _save(args, result, ok: bool) -> None:
+    """Keep the result for `xping history` (--save). Watch runs and failed
+    lookups without a result are skipped; a write error only warns."""
+    from xping.diagnostics import history
+    from xping.models.watch import WatchResult
+
+    if result is None or isinstance(result, WatchResult | bool):
+        return
+    if not (hasattr(result, "to_dict") or isinstance(result, list)):
+        return
+    try:
+        history.record(args.command, history.TARGETS[args.command](args), result, ok)
+    except (OSError, KeyError, AttributeError) as exc:
+        warn(f"could not save to history: {exc}")
 
 
 def _exit_code(result, args) -> int:

@@ -602,6 +602,39 @@ def cmd_doctor(args: argparse.Namespace) -> object:
     return result
 
 
+def cmd_history(args: argparse.Namespace) -> object:
+    from xping.diagnostics import history
+    from xping.models.history import HistoryResult
+    from xping.render.views import history as history_view
+
+    command, target = args.history_command, args.history_target
+    if target and not command:
+        raise UsageError("name the command first, e.g. xping history ping example.net")
+    if command and command not in history.TARGETS:
+        raise UsageError(f"'{command}' results are not saved; one of: {', '.join(history.TARGETS)}")
+    if args.clear:
+        removed = history.clear(command, target)
+        print(c(f"  ✔ removed {removed} saved history file(s)", BRAND_TEAL))
+        return HistoryResult(command=command, target=target, cleared=removed)
+    if not target:
+        result = HistoryResult(entries=history.entries())
+        if command:
+            result.entries = [e for e in result.entries if e.command == command]
+        if not output_suppressed(args):
+            history_view.print_list(result)
+        emit_export(result, args)
+        return result
+    try:
+        since = history.parse_since(args.since) if args.since else None
+    except ValueError as exc:
+        raise UsageError(f"--since: {exc}") from exc
+    result = history.show(command, target, last=args.last, since=since)
+    if not output_suppressed(args):
+        history_view.print_result(result)
+    emit_export(result, args)
+    return result
+
+
 def cmd_deps(_args: argparse.Namespace) -> None:
     print_deps_status()
 

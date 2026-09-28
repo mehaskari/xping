@@ -28,6 +28,7 @@ from xping.models import (
     DnsResult,
     DoctorResult,
     HealthResult,
+    HistoryResult,
     Hop,
     HttpResult,
     IpScanResult,
@@ -292,6 +293,8 @@ def evaluate(result, opts=None) -> list[Failure]:
         return _errored(result)
     if isinstance(result, ListenResult | NetResult):
         return _errored(result)
+    if isinstance(result, HistoryResult):
+        return [Failure(result.error)] if result.error else []
     if isinstance(result, DoctorResult):
         return [] if result.ok else [Failure(result.diagnosis)]
     if isinstance(result, CheckReport):

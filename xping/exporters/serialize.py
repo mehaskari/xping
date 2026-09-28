@@ -52,6 +52,9 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     "WhoisResult": ("found",),
     # health
     "HealthResult": ("grade",),
+    "HistoryEntry": (),
+    "HistoryRun": (),
+    "HistoryResult": ("ok_pct",),
     # profile
     "ProfileListResult": ("count",),
     # mtr
