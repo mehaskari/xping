@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- `xping diff` is easier to trust and to read.
+  - Jitter and the maximum RTT get a 10% noise band; other metrics keep
+    3%.
+  - New notes warn when the two runs have different or small sample
+    sizes.
+  - Notes also explain likely causes: a higher minimum RTT points to a
+    route or ISP change, and higher jitter with an unchanged minimum
+    points to a busy or weak local link.
+  - JSON output has a new `notes` field.
+- `xping wifi` names two stronger access points when they are nearly
+  equal, so the tip no longer flips between runs as signals fluctuate.
+
 ## [1.4.8] - 2026-09-27
 
 ### Changed

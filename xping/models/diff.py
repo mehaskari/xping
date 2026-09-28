@@ -29,6 +29,7 @@ class DiffResult:
     metrics: list[MetricChange] = field(default_factory=list)
     changes: list[str] = field(default_factory=list)  # status / set / route changes, as text
     regressions: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)  # how to read the comparison
     max_regression: float | None = None
     error: str | None = None
 

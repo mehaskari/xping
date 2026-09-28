@@ -58,6 +58,10 @@ def print_result(result) -> None:
             color = BRAND_ROSE if line in result.regressions else BRAND_AMBER
             print(c(f"    {line}", color))
         print()
+    for note in result.notes:
+        print(c(f"  ℹ {note}", BRAND_SLATE))
+    if result.notes:
+        print()
     if not result.metrics and not result.changes:
         print(c("  No differences.", BRAND_MINT, BOLD))
     elif result.max_regression is not None:

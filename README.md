@@ -558,7 +558,9 @@ xping http https://example.com --json | xping diff before.json - --max-regressio
 Recognises the kind of result and compares what matters: RTT, jitter and
 loss; each HTTP phase; the route of `trace` / `mtr`; DNS records; and
 the status of every `dnscheck` / `doctor` / `check` item. Changes under
-3% are treated as noise. `--max-regression PCT` exits 1 when something
+3% (10% for jitter and the maximum RTT) are treated as noise, and notes
+flag unequal or small sample sizes and say what a change most likely
+means (a slower route vs. a busy local link). `--max-regression PCT` exits 1 when something
 got worse by more than PCT, or a status got worse.
 
 ### Batch checks

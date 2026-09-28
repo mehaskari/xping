@@ -494,8 +494,12 @@ and
 or
 .B blocklist
 item whose status changed.
-The kind of result is recognised from the JSON; changes under 3% or
-below a small minimum count as unchanged.
+The kind of result is recognised from the JSON; changes under 3% (10%
+for jitter and the maximum RTT) or below a small minimum count as
+unchanged.
+Notes point out unequal or small sample sizes, and whether a change
+looks like a slower route (the minimum RTT rose) or a busy local link
+(only the jitter rose).
 .TP
 .B deps
 Check whether the optional system binaries

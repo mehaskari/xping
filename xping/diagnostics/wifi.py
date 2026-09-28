@@ -362,13 +362,21 @@ def best_24ghz_channel(result: WifiResult) -> int | None:
 STRONGER_BY_DB = 8  # a nearby access point this much stronger is worth moving to
 
 
-def stronger_access_point(result: WifiResult) -> WifiNetwork | None:
-    """The strongest nearby access point that is clearly better than ours
-    and plausibly the same network: same security, and the same name when
-    both names are known (macOS hides them; then security alone decides)."""
+TIE_DB = 3  # candidates this close in score are all worth naming
+
+
+def _ap_score(n: WifiNetwork) -> int:
+    # a 5/6 GHz access point a few dB weaker is still the faster choice
+    return n.signal_dbm + (0 if n.band == "2.4 GHz" else 6)
+
+
+def stronger_access_points(result: WifiResult) -> list[WifiNetwork]:
+    """Nearby access points clearly better than ours and plausibly the same
+    network (same security; same name when both names are known — macOS
+    hides them), best first."""
     net = result.current
     if not net or net.signal_dbm is None:
-        return None
+        return []
     candidates = [
         n
         for n in result.nearby
@@ -378,10 +386,12 @@ def stronger_access_point(result: WifiResult) -> WifiNetwork | None:
         and (not (n.ssid and net.ssid) or n.ssid == net.ssid)
         and not (n.bssid and n.bssid == net.bssid)  # macOS reports no BSSIDs
     ]
-    # a 5/6 GHz access point a few dB weaker is still the faster choice
-    return max(
-        candidates, key=lambda n: n.signal_dbm + (0 if n.band == "2.4 GHz" else 6), default=None
-    )
+    return sorted(candidates, key=_ap_score, reverse=True)
+
+
+def stronger_access_point(result: WifiResult) -> WifiNetwork | None:
+    better = stronger_access_points(result)
+    return better[0] if better else None
 
 
 def advice(result: WifiResult) -> list[str]:
@@ -389,17 +399,26 @@ def advice(result: WifiResult) -> list[str]:
     net = result.current
     if not net:
         return tips
-    better = stronger_access_point(result)
-    if better is not None:
-        where = f"channel {better.channel}" + (f", {better.band}" if better.band else "")
-        same = "the same network" if better.ssid and net.ssid else "same security"
-        tips.append(
-            f"A stronger access point is nearby ({better.signal_dbm} dBm on {where}, {same})."
-            " Your device is holding on to a weaker one: turn Wi-Fi off and on to move to it."
-            if better.ssid and net.ssid
-            else f"A stronger access point is nearby ({better.signal_dbm} dBm on {where}, {same})."
-            " If it is the same network, turn Wi-Fi off and on to move to it."
+    candidates = stronger_access_points(result)
+    if candidates:
+        best = candidates[0]
+        # name near-equal alternatives too, so the tip doesn't flip between runs
+        close = [n for n in candidates if _ap_score(best) - _ap_score(n) <= TIE_DB][:2]
+
+        def where(n: WifiNetwork) -> str:
+            band = f", {n.band}" if n.band else ""
+            return f"{n.signal_dbm} dBm on channel {n.channel}{band}"
+
+        places = " or ".join(where(n) for n in close)
+        named = bool(best.ssid and net.ssid)
+        same = "the same network" if named else "same security"
+        action = (
+            "Your device is holding on to a weaker one: turn Wi-Fi off and on to move."
+            if named
+            else "If it is the same network, turn Wi-Fi off and on to move."
         )
+        noun = "access points are" if len(close) > 1 else "access point is"
+        tips.append(f"A stronger {noun} nearby ({places}; {same}). {action}")
     if net.signal_dbm is not None and net.signal_dbm < -67:
         tips.append(
             "Signal is weak for calls and streaming (below -67 dBm): move closer to the router,"

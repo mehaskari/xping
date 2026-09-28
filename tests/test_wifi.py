@@ -198,7 +198,8 @@ def test_stronger_access_point_macos_style():
     ])
     better = wd.stronger_access_point(result)
     assert better.channel == 132
-    assert any("stronger access point is nearby (-61 dBm on channel 132, 5 GHz" in t for t in wd.advice(result))
+    tip = next(t for t in wd.advice(result) if "stronger access point" in t)
+    assert "(-61 dBm on channel 132, 5 GHz or -58 dBm on channel 6, 2.4 GHz; same security)" in tip
 
 
 def test_stronger_access_point_uses_names_when_known():
@@ -210,3 +211,14 @@ def test_stronger_access_point_uses_names_when_known():
     result = WifiResult(current=me, nearby=[other_name, sibling])
     assert wd.stronger_access_point(result) is sibling
     assert any("the same network" in t and "holding on to a weaker one" in t for t in wd.advice(result))
+
+
+def test_near_equal_access_points_are_both_named():
+    result = WifiResult(connected=True, current=_net(-71, 64), nearby=[
+        _net(-57, 132),
+        _net(-54, 6, "2.4 GHz"),  # scores within 3 dB of channel 132 (5 GHz +6)
+        _net(-60, 36),            # 3 dB below 132: also close
+    ])
+    tip = next(t for t in wd.advice(result) if "stronger access point" in t)
+    assert "channel 132, 5 GHz or " in tip and "access points are nearby" in tip
+    assert tip.count(" or ") == 1  # at most two named
