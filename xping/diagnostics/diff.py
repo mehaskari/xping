@@ -38,6 +38,12 @@ class Metric:
     path: str
     better: str = LOWER
     unit: str = "ms"
+    noise_pct: float = 3.0  # relative change treated as noise
+
+
+# Spread-type numbers (jitter, the slowest reply) swing a lot between runs
+SPREAD_NOISE = 10.0
+FEW_SAMPLES = 10
 
 
 # Changes smaller than this are noise, never a regression
@@ -62,8 +68,8 @@ METRICS: dict[str, tuple[Metric, ...]] = {
     "ping": (
         Metric("Average RTT", "avg_rtt"),
         Metric("Min RTT", "min_rtt"),
-        Metric("Max RTT", "max_rtt"),
-        Metric("Jitter", "jitter"),
+        Metric("Max RTT", "max_rtt", noise_pct=SPREAD_NOISE),
+        Metric("Jitter", "jitter", noise_pct=SPREAD_NOISE),
         Metric("Packet loss", "loss_pct", unit="%"),
     ),
     "tcp": (
@@ -85,7 +91,7 @@ METRICS: dict[str, tuple[Metric, ...]] = {
         Metric("Health score", "score", HIGHER, ""),
         Metric("DNS resolve", "dns_resolve_ms"),
         Metric("Average RTT", "ping.avg_rtt"),
-        Metric("Jitter", "ping.jitter"),
+        Metric("Jitter", "ping.jitter", noise_pct=SPREAD_NOISE),
         Metric("Packet loss", "ping.loss_pct", unit="%"),
     ),
     "dnscheck": (Metric("DNS score", "score", HIGHER, ""),),
@@ -216,9 +222,9 @@ def compare_metric(metric: Metric, before, after) -> MetricChange | None:
         change.verdict = "changed"
         return change
     change.change_pct = (a - b) / abs(b) * 100 if b else (0.0 if a == b else None)
-    # noise: a tiny absolute change, or under 3 % of the old value
+    # noise: a tiny absolute change, or a small share of the old value
     small = abs(a - b) < _MIN_ABS.get(metric.unit, 0.0) or (
-        change.change_pct is not None and abs(change.change_pct) < NOISE_PCT
+        change.change_pct is not None and abs(change.change_pct) < metric.noise_pct
     )
     if a == b or small or metric.better == NEUTRAL:
         change.verdict = "same" if a == b or small else "changed"
@@ -331,6 +337,48 @@ def _propagation_changes(before, after, result: DiffResult) -> None:
             result.changes.append(f"{resolver}: {o} → {n}")
 
 
+def _samples(kind: str, data) -> int | None:
+    """How many probes a result is based on (ping/health replies, tcp tries)."""
+    if kind == "ping":
+        return len(data.get("rtts") or [])
+    if kind == "health":
+        return len(_get(data, "ping.rtts") or [])
+    if kind in ("tcp", "udp"):
+        return len(data.get("attempts") or [])
+    return None
+
+
+def _notes(kind: str, before, after, result: DiffResult) -> list[str]:
+    """Plain-language hints about how far to trust the comparison, and what
+    a change most likely means."""
+    notes = []
+    b, a = _samples(kind, before), _samples(kind, after)
+    if b and a and b != a:
+        notes.append(
+            f"The runs have different sample sizes ({b} vs {a}) — compare runs taken with"
+            " the same -c for a fair result."
+        )
+    if b and a and min(a, b) < FEW_SAMPLES:
+        notes.append(
+            f"Only {min(a, b)} samples: jitter and the maximum RTT vary a lot between such"
+            " short runs. Use -c 30 or more for both runs."
+        )
+    by_label = {m.label: m for m in result.metrics}
+    minimum, jitter = by_label.get("Min RTT"), by_label.get("Jitter")
+    if minimum and minimum.verdict == "worse" and (minimum.change_pct or 0) >= 10:
+        notes.append(
+            "The minimum RTT rose: the fastest possible round trip got slower, which points"
+            " to a longer route or an ISP change rather than Wi-Fi or congestion. Compare"
+            " `xping trace` runs to see the route."
+        )
+    elif jitter and jitter.verdict == "worse" and (not minimum or minimum.verdict == "same"):
+        notes.append(
+            "Jitter rose while the minimum RTT stayed the same: typical of a busy or weak"
+            " local link (Wi-Fi signal, congestion), not of the route. See `xping wifi`."
+        )
+    return notes
+
+
 def compare(before, after, max_regression: float | None = None) -> DiffResult:
     kind, other = detect(before), detect(after)
     result = DiffResult(kind=kind)
@@ -349,6 +397,7 @@ def compare(before, after, max_regression: float | None = None) -> DiffResult:
     _route_changes(kind, before, after, result)
     if kind == "propagation":
         _propagation_changes(before, after, result)
+    result.notes = _notes(kind, before, after, result)
     for m in result.metrics:
         if m.verdict == "worse":
             pct = f"{m.change_pct:+.0f}%" if m.change_pct is not None else "worse"

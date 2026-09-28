@@ -1155,7 +1155,8 @@ Below that, xping gives concrete advice when something is off:
   security (and the same name, where the OS shows names). Devices often
   hold on to a weaker access point after you move around, and turning
   Wi-Fi off and on makes them switch. 5/6 GHz access points are preferred
-  over a slightly stronger 2.4 GHz one;
+  over a slightly stronger 2.4 GHz one, and two near-equal candidates are
+  both named, so the tip does not flip between runs as signals fluctuate;
 - a weak signal: move closer, or add an access point;
 - a low SNR: interference;
 - a crowded channel: switch to 5 GHz, or change channel. On 2.4 GHz it
@@ -1325,8 +1326,19 @@ matter are compared, each with the direction that counts as better:
 | anything else | every numeric field |
 
 Changes under 3%, or smaller than a minimum amount (1 ms, 1 percentage
-point, 2 dBm, …), count as *same*, so normal jitter is not reported as a
-change.
+point, 2 dBm, …), count as *same*, so normal variation is not reported as
+a change. Jitter and the maximum RTT swing much more between runs, so for
+them the band is 10%.
+
+Below the table, diff adds notes on how to read the result:
+
+- the two runs used **different sample sizes**, or **fewer than 10**
+  samples. Compare runs taken with the same `-c`, ideally 30 or more;
+- the **minimum RTT rose by 10% or more**: the fastest possible round trip
+  got slower. That points to a longer route or an ISP change, not to Wi-Fi
+  or congestion, so compare `xping trace` runs;
+- **jitter rose while the minimum stayed the same**: typical of a busy or
+  weak local link. See `xping wifi`.
 
 | Option | Description |
 |--------|-------------|

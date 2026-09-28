@@ -142,3 +142,26 @@ def test_parser_and_cli_usage_error(tmp_path):
     assert (args.before, args.after, args.max_regression) == ("a.json", "-", 25.0)
     with pytest.raises(UsageError, match="cannot read"):
         commands.cmd_diff(build_parser().parse_args(["diff", str(tmp_path / "x"), str(tmp_path / "y")]))
+
+
+def test_notes_on_sample_sizes():
+    result = d.compare(_ping([20.0] * 30), _ping([20.0] * 8))
+    assert any("different sample sizes (30 vs 8)" in n for n in result.notes)
+    assert any("Only 8 samples" in n for n in result.notes)
+    assert d.compare(_ping([20.0] * 30), _ping([20.0] * 30)).notes == []
+
+
+def test_spread_metrics_have_a_wider_noise_band():
+    # jitter +8 % is noise for a spread metric; the average +8 % is not
+    before = _ping([100.0, 110.0] * 15)
+    after = _ping([108.0, 118.8] * 15)
+    result = d.compare(before, after)
+    assert _metric(result, "Average RTT").verdict == "worse"
+    assert _metric(result, "Jitter").verdict == "same"
+
+
+def test_notes_interpret_min_rtt_and_jitter():
+    route = d.compare(_ping([90.0, 100.0] * 15), _ping([107.0, 117.0] * 15))
+    assert any("longer route or an ISP change" in n for n in route.notes)
+    local = d.compare(_ping([90.0, 92.0] * 15), _ping([90.0, 130.0] * 15))
+    assert any("busy or weak local link" in n for n in local.notes)
