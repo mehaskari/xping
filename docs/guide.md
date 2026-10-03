@@ -30,7 +30,7 @@ output means, and walks through common tasks.
    - Web, mail and TLS: [`http`](#xping-http) · [`tls`](#xping-tls) · [`smtp`](#xping-smtp)
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
    - Local machine: [`wifi`](#xping-wifi) · [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
-   - Automation: [`check`](#xping-check) · [`diff`](#xping-diff) · [`profile`](#xping-profile)
+   - Automation: [`check`](#xping-check) · [`diff`](#xping-diff) · [`history`](#xping-history) · [`profile`](#xping-profile)
    - Utilities: [`config`](#xping-config) · [`completion`](#xping-completion) · [`deps`](#xping-deps) · [`about`](#xping-about)
 5. [Batch check files](#5-batch-check-files)
 6. [Recipes](#6-recipes)
@@ -356,6 +356,7 @@ example:
 |--------|---------|-------------|
 | `HOST` | — | Optional host to test after the basics |
 | `--port PORT` | 443 | TCP port to test on HOST |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 Exit code 1 when any step fails; warnings alone keep exit code 0. A full
 run takes about 5 seconds because independent steps run in parallel.
@@ -434,6 +435,7 @@ will sound choppy".
 | `--min-score N` | — | Exit 1 if the score is below N |
 | `--watch`, `--until-up`, `--every SEC`, `--notify`, `--webhook URL` | every: 30 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 ```bash
 xping health google.com
@@ -494,6 +496,7 @@ Latency colours, used everywhere in xping: **green** < 30 ms,
 | `--max-loss PCT` | — | Exit 1 if packet loss is above PCT % |
 | `--max-latency MS` | — | Exit 1 if the average RTT is above MS |
 | `-4`, `-6` | — | Address family |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 Exit code 1 when the host cannot be resolved or answers no ping at all.
 
@@ -537,6 +540,7 @@ No root is needed on Linux or macOS. TCP mode is not available on Windows.
 | `-T`, `--tcp` | — | Probe with TCP SYNs instead of ICMP |
 | `--port PORT` | 443 | TCP port for `--tcp` (implies `--tcp`) |
 | `-4`, `-6` | — | Address family |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 ```bash
 xping trace 1.1.1.1
@@ -571,6 +575,7 @@ problem at that hop.
 | `--max-loss PCT` | — | Exit 1 if loss **at the destination** is above PCT % |
 | `--max-latency MS` | — | Exit 1 if the destination's average RTT is above MS |
 | `-4`, `-6` | — | Address family |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 ```bash
 xping mtr 1.1.1.1 --cycles 30
@@ -596,6 +601,7 @@ service listening, and is the firewall letting me through?".
 | `--max-latency MS` | — | Exit 1 if the average connect time is above MS |
 | `--watch`, `--until-up`, `--every SEC`, `--notify`, `--webhook URL` | every: 2 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 Exit code 1 when every attempt is refused or times out.
 
@@ -640,6 +646,7 @@ The request is chosen by port (`--probe auto`), or set explicitly:
 | `--max-latency MS` | — | Exit 1 if the average reply time is above MS |
 | `--watch`, `--until-up`, `--every SEC`, `--notify`, `--webhook URL` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 Exit code 0 only when a reply came back; *closed* and *no response* both
 exit 1.
@@ -776,6 +783,7 @@ Grades: Excellent ≥ 90, Good ≥ 70, Fair ≥ 50, Poor ≥ 25, Critical below.
 | Option | Description |
 |--------|-------------|
 | `--min-score N` | Exit 1 if the score is below N |
+| `--save` | Keep this result for [`xping history`](#xping-history) |
 
 ```bash
 xping dnscheck example.com
@@ -827,6 +835,7 @@ instead. The last line counts the checks, e.g. "43 checks on 11 lists":
 | `--zone ZONE` | — | Also check this DNSBL zone (repeatable) |
 | `-t`, `--timeout SEC` | 5 | Seconds to wait per lookup |
 | `--all` | — | Show every list for every address, not the summary |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 Exit code 1 when the target is **listed** on any list, or when nothing
 could be checked. *Policy*, *refused* and *error* results do not fail.
@@ -939,6 +948,7 @@ a slow resolver.
 | `--max-latency MS` | — | Exit 1 if the total request time is above MS |
 | `--watch`, `--until-up`, `--every SEC`, `--notify`, `--webhook URL` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 ```bash
 xping http https://example.com
@@ -966,6 +976,7 @@ the root CA. Verification is strict and uses the system store plus
 | `-t`, `--timeout SEC` | 5.0 | Connection timeout |
 | `--min-days N` | — | Exit 1 if the certificate expires in fewer than N days |
 | `-4`, `-6` | — | Address family |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 Exit code 1 when the handshake fails or the certificate has expired.
 Certificates with 14 days or less left are highlighted.
@@ -1015,6 +1026,7 @@ back to the same address.
 | `--require-tls` | — | Exit 1 unless TLS works and the certificate verifies |
 | `--min-days N` | — | Exit 1 if the certificate expires in fewer than N days |
 | `-4`, `-6` | — | Address family |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 Exit code 1 when the server cannot be reached or refuses the session
 (a greeting other than 220). A missing STARTTLS or an invalid
@@ -1168,6 +1180,7 @@ Below that, xping gives concrete advice when something is off:
 | `-i`, `--interface NAME` | Use this Wi-Fi interface (e.g. `en0`, `wlan0`) |
 | `--nearby` | List the nearby networks, strongest first, marking those on your channel |
 | `--min-signal DBM` | Exit 1 if the signal is weaker than DBM. Write negative values as `--min-signal=-67` |
+| `--save` | Keep this result for [`xping history`](#xping-history) |
 
 Exit code 1 when there is no Wi-Fi interface, it is not connected, or
 `--min-signal` is not met. The data comes from the OS without root:
@@ -1233,6 +1246,7 @@ server itself is synchronised.
 | `-t`, `--timeout SEC` | 2.0 | Seconds to wait per sample |
 | `--max-offset MS` | — | Exit 1 if the clock is off by more than MS milliseconds |
 | `-4`, `-6` | — | Address family |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 Exit code 1 when no sample got a reply, when the server reports it is
 not synchronised (stratum 16 or leap indicator 3), or when
@@ -1262,6 +1276,7 @@ Poor ≥ 1, Critical below.
 |--------|---------|-------------|
 | `-c`, `--connections N` | 4 | Parallel connections (1 = single stream) |
 | `-d`, `--duration SEC` | 8 | Maximum download measurement time |
+| `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 ```bash
 xping speedtest
@@ -1351,6 +1366,51 @@ exits 2.
 xping http https://example.com --json > before.json
 xping http https://example.com --json | xping diff before.json - --max-regression 25
 xping check checks.toml --json > today.json && xping diff yesterday.json today.json
+```
+
+#### `xping history`
+
+```
+xping history [COMMAND [TARGET]] [--last N] [--since AGE] [--clear]
+```
+
+Follows results over time. Runs are recorded **only when you ask**:
+
+- add `--save` to a measurement command, e.g. `xping ping example.net --save`;
+- or put `save = true` under `[defaults]` in `~/.xping/config.toml` to
+  save every run of every command that supports it.
+
+`--save` is available on `ping`, `trace`, `mtr`, `health`, `tls`, `tcp`,
+`udp`, `http`, `smtp`, `dnscheck`, `blocklist`, `ntp`, `speedtest`, `wifi`
+and `doctor`. Each command-and-target pair is kept in its own file under
+`~/.xping/history/<command>/`, one line per run: the time, whether the
+check passed, and the full result. The newest 500 runs are kept. Watch
+mode is never saved.
+
+| Usage | Shows |
+|-------|-------|
+| `xping history` | everything recorded: command, target, number of runs, first and last run |
+| `xping history ping` | the same, for one command |
+| `xping history ping example.net` | the runs as a table of the command's key metrics (ping: average RTT, jitter, packet loss), a trend line, the share of passed runs, and how the latest run compares with the median of the earlier ones |
+
+The target is written the way you typed it (a profile name stays a
+profile name). `tcp`, `udp`, and `tls` / `smtp` on a non-default port
+add `:PORT`, e.g. `xping history tcp db.local:5432`.
+
+| Option | Description |
+|--------|-------------|
+| `--last N` | Only the newest N runs |
+| `--since AGE` | Only runs from the last AGE: `30m`, `12h`, `7d`, `2w` |
+| `--clear` | Delete saved runs: everything, one command, or one command + target |
+
+`--json` gives every run with its values. `--csv` gives one row per run,
+for a spreadsheet chart.
+
+```bash
+xping ping example.net -c 30 --save          # e.g. from cron, every hour
+xping history ping example.net --since 7d
+xping history http https://example.com --last 50 --csv > http.csv
+xping history --clear                         # start over
 ```
 
 #### `xping profile`
@@ -1626,6 +1686,16 @@ xping ipscan 192.168.1.0/24        # hosts that answer ping
 xping sweep 192.168.1.0/24 -p 22,80,443,3389
 ```
 
+**Track a connection over days**
+
+```cron
+0 * * * *  xping ping example.net -c 30 --save -q
+```
+
+```bash
+xping history ping example.net --since 7d     # table, trend, latest vs. usual
+```
+
 **Did it get worse since last time?**
 
 ```bash
@@ -1653,6 +1723,7 @@ xping doctor --json > doctor.json
 | `~/.xping/health_history.json` | `health` score history (last 50 per host) |
 | `~/.xping/completions/` | Completion scripts written by `completion --install` |
 | `~/.xping/config.toml` | Your defaults (you write it; xping only reads it) |
+| `~/.xping/history/` | Results saved with `--save` (newest 500 runs per command and target) |
 
 `completion --install` also adds a marked block to your shell's rc file
 (or a file under `~/.config/fish/completions/`).

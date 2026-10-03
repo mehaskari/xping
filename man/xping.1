@@ -501,6 +501,35 @@ Notes point out unequal or small sample sizes, and whether a change
 looks like a slower route (the minimum RTT rose) or a busy local link
 (only the jitter rose).
 .TP
+.BR history " [\fICOMMAND\fR [\fITARGET\fR]] [\fIOPTIONS\fR]"
+Show results saved with
+.BR \-\-save :
+without arguments, what is recorded; with a command and target, the runs
+as a table of the command's key metrics, a trend line, the share of
+passed runs, and the latest run against the median of the earlier ones.
+.B \-\-save
+is accepted by
+.BR ping ,
+.BR trace ,
+.BR mtr ,
+.BR health ,
+.BR tls ,
+.BR tcp ,
+.BR udp ,
+.BR http ,
+.BR smtp ,
+.BR dnscheck ,
+.BR blocklist ,
+.BR ntp ,
+.BR speedtest ,
+.B wifi
+and
+.BR doctor ;
+nothing is recorded without it (or
+.B save = true
+in the config file).
+The newest 500 runs per command and target are kept.
+.TP
 .B deps
 Check whether the optional system binaries
 .RB ( ping ,
@@ -1021,6 +1050,27 @@ percent, or a status got worse.
 Without it,
 .B diff
 only reports and exits 0.
+.SS history
+.TP
+.BI \-\-last " N"
+Only the newest
+.I N
+runs.
+.TP
+.BI \-\-since " AGE"
+Only runs from the last
+.IR AGE ,
+e.g.
+.BR 12h ,
+.BR 7d ,
+.BR 2w .
+.TP
+.B \-\-clear
+Delete saved runs: all, one command, or one command and target.
+.TP
+.B \-\-save
+(on the measurement commands) Keep the result in
+.IR ~/.xping/history .
 .SS doctor
 .TP
 .BI \-\-port " PORT"
@@ -1417,6 +1467,9 @@ Exit 1 if the system clock is off by more than half a second.
 .B xping ping example.net \-\-json | xping diff baseline.json \-
 Compare a new run with a saved baseline.
 .TP
+.B xping ping example.net \-c 30 \-\-save && xping history ping example.net
+Save a run and see it next to the earlier ones.
+.TP
 .B xping wifi \-\-nearby
 Wi-Fi signal, noise and channel, with the networks nearby.
 .TP
@@ -1554,6 +1607,12 @@ or
 Personal defaults (see
 .BR CONFIGURATION );
 written by you, only read by xping.
+.TP
+.I ~/.xping/history/
+Results saved with
+.B \-\-save
+(see
+.BR history ).
 .TP
 .I /usr/share/man/man1/xping.1.gz
 This manual page (installed by package managers).
