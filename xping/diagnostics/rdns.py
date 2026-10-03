@@ -155,9 +155,9 @@ def rdns(ip: str, quiet: bool = False) -> RdnsResult:
         result.addresses = addresses
     except socket.herror:
         # Fallback: direct UDP query to 8.8.8.8
-        hostname = _fallback_ptr(ip)
-        if hostname:
-            result.hostname = hostname
+        fallback = _fallback_ptr(ip)
+        if fallback:
+            result.hostname = fallback
         else:
             result.error = f"No PTR record found for '{ip}'"
     except OSError as exc:

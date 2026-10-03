@@ -9,6 +9,7 @@ to PyPI, GitHub Releases and the Launchpad PPA.
 ```bash
 pytest --cov=xping --cov-report=term-missing
 ruff check xping/ --config ruff.toml
+mypy
 ruff format --check xping/ --line-length 100
 python -m build && twine check dist/*
 ```
@@ -59,7 +60,7 @@ does not apply to them), but the PR route runs the full CI first.
 
 | Path | Trigger | What it does |
 |------|---------|---------------|
-| `ci.yml` | every push / PR | tests on Ubuntu + macOS × Python 3.10–3.12 (required), Windows (informational), lint, version check, build |
+| `ci.yml` | every push / PR | tests with coverage (minimum in `pyproject.toml`) on Ubuntu + macOS × Python 3.10–3.12 (required), Windows (informational), lint, type check (mypy), version check, build |
 | `codeql.yml` | every push / PR | CodeQL security analysis |
 | `release-pypi.yml` | tag `vX.Y.Z` | build → PyPI (OIDC trusted publishing, no token) → GitHub Release with the `docs/changelog.md` entry as notes |
 | `release-launchpad.yml` | tag `vX.Y.Z` | build source package → sign → upload to the PPA; Launchpad then builds it for noble (15–60 min) |

@@ -91,7 +91,7 @@ def _subprocess_trace_live(
 
     hops: list[Hop] = []
 
-    for line in proc.stdout:
+    for line in proc.stdout or ():
         parsed = parse_trace_line(line.rstrip())
         if parsed is None:
             continue
@@ -246,6 +246,7 @@ def _trace_loop(dest_ip, max_hops, timeout, probes, quiet, asn, tracer) -> list[
             spinner = Spinner(c(f"Probing hop {ttl}…", BRAND_TEAL))
             spinner.start()
 
+        hop: Hop | None
         if tracer is not None:
             hop = _tcp_trace_hop(tracer, ttl, timeout, probes)
         else:

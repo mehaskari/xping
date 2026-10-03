@@ -90,7 +90,7 @@ def _query(server: str, query: str, timeout: float = WHOIS_TIMEOUT) -> str:
         if attempt:
             time.sleep(RETRY_DELAY)
         try:
-            with socket.create_connection((ip, port), timeout=timeout) as sock:
+            with socket.create_connection((str(ip), int(port)), timeout=timeout) as sock:
                 sock.sendall((query + "\r\n").encode("ascii", errors="ignore"))
                 chunks, size = [], 0
                 while size < MAX_RESPONSE:  # a server that never stops can't exhaust memory

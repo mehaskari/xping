@@ -66,7 +66,7 @@ def _read_cert(result: SmtpResult, sock: ssl.SSLSocket) -> None:
     cert = sock.getpeercert() or {}
     result.cert_subject = _format_name(cert.get("subject")) if cert else None
     result.cert_issuer = _format_name(cert.get("issuer")) if cert else None
-    result.cert_not_after = cert.get("notAfter")
+    result.cert_not_after = str(cert.get("notAfter") or "") or None
 
 
 def _parse_ehlo(result: SmtpResult, client: smtplib.SMTP) -> None:
@@ -108,23 +108,25 @@ class _SslClient(smtplib.SMTP_SSL):
 
 def _session(result: SmtpResult, server: str, timeout: float) -> None:
     context = secure_context()
+    ip = result.ip or server
+    client: smtplib.SMTP
     if result.port == SMTPS_PORT:
         result.implicit_tls = True
         started = time.perf_counter()
         try:
-            client = _SslClient(result.ip, server, timeout, context)
+            client = _SslClient(ip, server, timeout, context)
             code, banner = client.connect(server, result.port)
         except ssl.SSLCertVerificationError as exc:
             result.cert_error = exc.verify_message or str(exc)
             result.error = f"TLS certificate rejected: {result.cert_error}"
             return
         result.tls_ms = (time.perf_counter() - started) * 1000
-        _read_cert(result, client.sock)
+        _read_cert(result, client.sock)  # type: ignore[arg-type]  # an SSLSocket here
     else:
-        client = _Client(result.ip, timeout)
-        client._host = server  # starttls() takes the TLS server name from here
+        client = _Client(ip, timeout)
+        setattr(client, "_host", server)  # noqa: B010 — starttls() takes the TLS name from here
         code, banner = client.connect(server, result.port)
-    result.connect_ms = client.connect_ms
+    result.connect_ms = getattr(client, "connect_ms", None)
     result.banner_code = code
     result.banner = banner.decode("utf-8", "replace").strip() if banner else None
     try:
@@ -145,7 +147,7 @@ def _session(result: SmtpResult, server: str, timeout: float) -> None:
                     result.cert_error = f"STARTTLS failed: {exc}"
                     return
                 result.tls_ms = (time.perf_counter() - started) * 1000
-                _read_cert(result, client.sock)
+                _read_cert(result, client.sock)  # type: ignore[arg-type]  # SSLSocket after STARTTLS
                 client.ehlo()
                 _parse_ehlo(result, client)
     finally:

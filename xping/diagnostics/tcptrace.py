@@ -36,7 +36,7 @@ from xping.diagnostics import icmp
 _REACHED = {0, errno.ECONNREFUSED, getattr(errno, "WSAECONNREFUSED", -1)}
 _IN_PROGRESS = {errno.EINPROGRESS, errno.EWOULDBLOCK, errno.EALREADY, 0}
 # ICMP "time exceeded" / "destination unreachable" per family
-_ICMP_ERRORS = {socket.AF_INET: (11, 3), socket.AF_INET6: (3, 1)}
+_ICMP_ERRORS: dict[int, tuple[int, int]] = {socket.AF_INET: (11, 3), socket.AF_INET6: (3, 1)}
 
 
 def supported() -> bool:

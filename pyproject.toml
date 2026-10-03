@@ -42,7 +42,7 @@ Repository = "https://github.com/mehaskari/xping"
 Issues = "https://github.com/mehaskari/xping/issues"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.4", "pytest-cov>=4.1"]
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "mypy>=1.10"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -65,8 +65,23 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 55
+# Ratchet: raise this when coverage grows, never lower it (it was 79% when set)
+fail_under = 75
 show_missing = true
+
+[tool.mypy]
+python_version = "3.10"
+files = ["xping"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+# Baseline: these modules predate type checking and need a larger rework
+# (loosely typed table rows, the verdict dispatch tuple, speedtest's shared
+# state). Every other module is checked; remove an entry once it is clean.
+[[tool.mypy.overrides]]
+module = ["xping.exporters.tables", "xping.cli.verdict", "xping.diagnostics.speedtest"]
+ignore_errors = true
 
 [tool.setuptools.packages.find]
 where = ["."]

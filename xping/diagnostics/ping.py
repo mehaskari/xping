@@ -96,6 +96,7 @@ def ping(
 
             t0 = time.perf_counter()
 
+            rtt: float | None
             if use_subprocess:
                 rtt = _subprocess_ping_one(ip, timeout)
             else:
@@ -185,6 +186,7 @@ def watch(
             seq += 1
             t0 = time.perf_counter()
 
+            rtt: float | None
             if use_subprocess:
                 rtt = _subprocess_ping_one(ip, timeout)
             else:

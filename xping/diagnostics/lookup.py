@@ -13,6 +13,7 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 
 from xping.diagnostics.deps import warn_missing
 from xping.diagnostics.sslctx import secure_context
@@ -322,10 +323,10 @@ def query(name: str, rtype: str, server: str | None = None) -> tuple[str, list[s
     dig = _dig_query(name, rtype, server)
     if dig is not None:
         status, answer = dig
-        parsers = {
+        parsers: dict[str, Callable[[str], list[str]]] = {
             "A": lambda out: _parse_dig_a(out)[0],
             "AAAA": _parse_dig_aaaa,
-            "CNAME": lambda out: [c] if (c := _parse_dig_cname(out)) else [],
+            "CNAME": lambda out: [cname] if (cname := _parse_dig_cname(out)) else [],
             "MX": lambda out: [f"{prio} {host}" for prio, host in _parse_dig_mx(out)],
             "NS": _parse_dig_ns,
             "TXT": _parse_dig_txt,
@@ -347,10 +348,11 @@ def normalize_record(rtype: str, value: str) -> str:
 
 
 def _socket_resolve(host: str) -> tuple[list[str], list[str]]:
-    v4, v6 = [], []
+    v4: list[str] = []
+    v6: list[str] = []
     try:
         for info in socket.getaddrinfo(host, None):
-            addr = info[4][0]
+            addr = str(info[4][0])
             if ":" in addr:
                 if addr not in v6:
                     v6.append(addr)

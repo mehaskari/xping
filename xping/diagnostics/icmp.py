@@ -28,7 +28,10 @@ import time
 ECHO_REQUEST_V4, ECHO_REPLY_V4 = 8, 0
 ECHO_REQUEST_V6, ECHO_REPLY_V6 = 128, 129
 
-_PROTO = {socket.AF_INET: socket.IPPROTO_ICMP, socket.AF_INET6: socket.IPPROTO_ICMPV6}
+_PROTO: dict[int, int] = {
+    socket.AF_INET: socket.IPPROTO_ICMP,
+    socket.AF_INET6: socket.IPPROTO_ICMPV6,
+}
 
 
 def checksum(data: bytes) -> int:
@@ -119,7 +122,9 @@ def echo(ip: str, seq: int, timeout: float = 2.0) -> float | None:
 
 # ICMP "time exceeded" / "destination unreachable" types per family
 _ERRORS = {socket.AF_INET: (11, 3), socket.AF_INET6: (3, 1)}
-_RECVERR = {  # Linux: ICMP errors for ping sockets arrive on the error queue
+_RECVERR: dict[
+    int, tuple[int, int]
+] = {  # Linux: ICMP errors for ping sockets arrive on the error queue
     socket.AF_INET: (getattr(socket, "SOL_IP", 0), getattr(socket, "IP_RECVERR", 11)),
     socket.AF_INET6: (getattr(socket, "SOL_IPV6", 41), getattr(socket, "IPV6_RECVERR", 25)),
 }

@@ -186,7 +186,7 @@ class Notifier:
 
     def _send(self, payload: dict) -> None:
         try:
-            post_webhook(self.webhook, payload)
+            post_webhook(self.webhook or "", payload)
         except Exception as exc:
             self._warn_once("webhook", f"Webhook delivery failed: {exc}")
 

@@ -208,7 +208,7 @@ def parse_nmcli(text: str) -> list[tuple[bool, WifiNetwork]]:
             channel=channel,
             band=channel_from_freq(_int(freq) or 0)[1]
             or (band_of_channel(channel) if channel else None),
-            signal_dbm=pct_to_dbm(_int(signal)) if _int(signal) is not None else None,
+            signal_dbm=pct_to_dbm(pct) if (pct := _int(signal)) is not None else None,
             security=security or "Open",
         )
         networks.append((in_use.strip() == "*", net))
@@ -367,7 +367,7 @@ TIE_DB = 3  # candidates this close in score are all worth naming
 
 def _ap_score(n: WifiNetwork) -> int:
     # a 5/6 GHz access point a few dB weaker is still the faster choice
-    return n.signal_dbm + (0 if n.band == "2.4 GHz" else 6)
+    return (n.signal_dbm or -200) + (0 if n.band == "2.4 GHz" else 6)
 
 
 def stronger_access_points(result: WifiResult) -> list[WifiNetwork]:
@@ -432,8 +432,12 @@ def advice(result: WifiResult) -> list[str]:
         )
     if result.same_channel >= 3:
         if net.band == "2.4 GHz":
-            best = best_24ghz_channel(result)
-            better = f" (least used nearby: channel {best})" if best and best != net.channel else ""
+            least_used = best_24ghz_channel(result)
+            better = (
+                f" (least used nearby: channel {least_used})"
+                if least_used and least_used != net.channel
+                else ""
+            )
             tips.append(
                 f"{result.same_channel} nearby networks share your 2.4 GHz channel: switch to 5 GHz,"
                 f" or change the router's channel{better}."

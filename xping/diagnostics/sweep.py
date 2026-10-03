@@ -42,7 +42,7 @@ def _parse_ip_range(value: str, limit: int) -> list[str]:
         raise ValueError("range endpoints must use the same IP version")
     if int(start) > int(end):
         raise ValueError("IP ranges must be ascending")
-    targets = []
+    targets: list[str] = []
     for item in range(int(start), int(end) + 1):
         if len(targets) >= limit:
             raise ValueError(f"target range is too large (max {limit} hosts)")

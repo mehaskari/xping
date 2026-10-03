@@ -32,7 +32,17 @@ they pass there:
 pytest --cov=xping --cov-report=term-missing
 ruff check xping/ --config ruff.toml
 ruff format --check xping/ --line-length 100
+mypy                       # settings in pyproject.toml [tool.mypy]
 ```
+
+- **Coverage** must stay at or above the `fail_under` value in
+  `pyproject.toml`. It is a ratchet: raise it when coverage grows, never
+  lower it.
+- **Types:** every module is type-checked except three listed under
+  `[[tool.mypy.overrides]]` (`exporters/tables.py`, `cli/verdict.py`,
+  `diagnostics/speedtest.py`), which predate the check. New code must
+  pass mypy. When you clean up one of those three, remove it from the
+  list.
 
 ## Version Bump Protocol
 

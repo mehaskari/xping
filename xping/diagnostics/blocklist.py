@@ -99,6 +99,7 @@ def lookup_a(name: str, timeout: float) -> tuple[list[str] | None, float]:
     """A records of *name* via the system resolver: a list (empty when the
     name does not exist), or None when the lookup timed out or failed."""
     started = time.perf_counter()
+    codes: list[str] | None
     pool = ThreadPoolExecutor(max_workers=1)
     future = pool.submit(socket.gethostbyname_ex, name)
     try:
@@ -162,7 +163,7 @@ def mail_and_web_addresses(domain: str) -> list[str]:
         except OSError:
             continue
         for info in infos:
-            ip = info[4][0]
+            ip = str(info[4][0])
             if ip not in addresses:
                 addresses.append(ip)
     return addresses
@@ -204,7 +205,9 @@ def blocklist(
             else:
                 result.skipped.append(ip)  # few lists support IPv6
         with ThreadPoolExecutor(max_workers=16) as pool:
-            result.checks = list(pool.map(lambda job: check_one(*job, timeout), jobs))
+            result.checks = list(
+                pool.map(lambda job: check_one(job[0], job[1], job[2], timeout), jobs)
+            )
     finally:
         if spinner:
             spinner.stop()
