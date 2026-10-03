@@ -1829,4 +1829,4 @@ Set `NO_COLOR=1`, or use `--markdown` / `--csv`.
 At <https://github.com/mehaskari/xping/issues>. The bug report form asks
 for the xping version, OS, install method and the exact command. Report
 security issues privately as described in
-[SECURITY.md](../SECURITY.md).
+[SECURITY.md](https://github.com/mehaskari/xping/blob/main/SECURITY.md).

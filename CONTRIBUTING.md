@@ -123,6 +123,9 @@ No new external dependencies without discussion — xping is stdlib +
 12. `man/xping.1` — COMMANDS entry, OPTIONS section and an example
 13. `README.md` — usage section; `docs/changelog.md` — entry
 14. `docs/guide.md` — a `#### \`xping NAME\`` section with every option
+    (it is also the documentation site: preview with
+    `pip install -r docs/requirements.txt && mkdocs serve`; the site is
+    built with `--strict`, so broken links or section anchors fail CI)
     (a test checks that each command and long option is documented)
 15. Write real tests, mock all network calls, and **run them**.
 
