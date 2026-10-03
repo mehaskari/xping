@@ -54,6 +54,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **Alerts** — `--notify` (desktop notification) and `--webhook URL` (Slack, Discord, Mattermost, any JSON endpoint) when a watched target goes down or comes back
 - **Exit codes & thresholds** — `--max-loss`, `--max-latency`, `--expect-status`, `--min-days`, `--min-score`, `--quiet`
 - **Compare runs** — `xping diff before.json after.json`: what got better or worse (latency, loss, the route of a trace, DNS records, check statuses); `--max-regression` for CI
+- **History** — `--save` keeps a result in `~/.xping/history`; `xping history ping example.net` shows the runs, a trend line and how the latest compares with the usual
 - **Batch checks** — `xping check checks.toml` runs many checks in parallel with one exit code
 - **Speed test** — Multi-connection download/upload via Cloudflare
 - **All-in-one** — Run lookup, ping, trace, and TCP checks in a single command
@@ -563,6 +564,18 @@ flag unequal or small sample sizes and say what a change most likely
 means (a slower route vs. a busy local link). `--max-regression PCT` exits 1 when something
 got worse by more than PCT, or a status got worse.
 
+### History
+
+```bash
+xping ping example.net -c 30 --save            # opt in, per run (or save = true in the config)
+xping history                                   # what is recorded
+xping history ping example.net --since 7d       # runs, trend, latest vs. the median
+```
+
+`--save` works on ping, trace, mtr, health, tls, tcp, udp, http, smtp,
+dnscheck, blocklist, ntp, speedtest, wifi and doctor. The newest 500 runs
+per command and target are kept; `--clear` deletes them.
+
 ### Batch checks
 
 Put many checks in one file and get one exit code (TOML needs Python 3.11+; JSON works everywhere):
@@ -615,6 +628,7 @@ xping keeps its state under `~/.xping/`:
 | `~/.xping/health_history.json` | `xping health` score history (last 50 per host) |
 | `~/.xping/completions/` | Completion scripts written by `xping completion --install` |
 | `~/.xping/config.toml` | Your personal defaults (written by you, only read by xping) |
+| `~/.xping/history/` | Results saved with `--save` (newest 500 runs per command and target) |
 
 `xping completion --install` also adds a clearly marked block to your shell's rc file; `--uninstall` removes it.
 

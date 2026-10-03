@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+### Added
+- **History: `--save` and `xping history`.**
+  - `--save` on ping, trace, mtr, health, tls, tcp, udp, http, smtp,
+    dnscheck, blocklist, ntp, speedtest, wifi and doctor keeps the result
+    in `~/.xping/history/<command>/` (or set `save = true` under
+    `[defaults]` in the config file).
+  - `xping history` lists what is recorded.
+  - `xping history COMMAND TARGET` shows the runs with the command's key
+    metrics, a trend line, the pass rate, and the latest run against the
+    median. It supports `--last`, `--since 7d`, `--clear`, and
+    `--json` / `--csv`.
+  - Nothing is recorded without `--save`. The newest 500 runs per
+    command and target are kept.
+
 ### Changed
 - `xping diff` is easier to trust and to read.
   - Jitter and the maximum RTT get a 10% noise band; other metrics keep

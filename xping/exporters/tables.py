@@ -123,6 +123,12 @@ def sections_for(result: Any) -> list[Section]:
         ]
         columns = ["ssid", "bssid", "channel", "band", "signal_dbm", "security"]
         return [Section("Nearby networks", columns, rows, primary=False)]
+    if isinstance(result, m.HistoryResult):
+        if result.command is None:
+            rows = [[e.command, e.target, e.runs, e.first, e.last] for e in result.entries]
+            return [Section("Saved", ["command", "target", "runs", "first_ts", "last_ts"], rows)]
+        rows = [[r.ts, r.ok] + [r.values.get(x) for x in result.metrics] for r in result.runs]
+        return [Section("Runs", ["ts", "ok"] + result.metrics, rows)]
     if isinstance(result, m.UdpResult):
         rows = [[a.seq, a.state, _ms(a.rtt_ms), a.reply_bytes, a.detail] for a in result.attempts]
         return [Section("Attempts", ["seq", "state", "rtt_ms", "reply_bytes", "detail"], rows)]
