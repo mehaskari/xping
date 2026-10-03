@@ -17,7 +17,7 @@ No root needed for ping, traceroute and MTR on macOS and Linux. Every command re
 
 Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LICENSE) for attribution terms.
 
-📖 **[User Guide](docs/guide.md)**: every command and option explained, with background, check-file reference, recipes and FAQ. The same reference is in `man xping`.
+📖 **[Documentation site](https://mehaskari.github.io/xping/)** (searchable; source: [docs/guide.md](docs/guide.md)): every command and option explained, with background, check-file reference, recipes and FAQ. The same reference is in `man xping`.
 
 ---
 

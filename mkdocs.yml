@@ -1,0 +1,52 @@
+# Documentation site: https://mehaskari.github.io/xping/
+# Built from docs/ by .github/workflows/pages.yml on every push to main.
+# Local preview:  pip install mkdocs-material && mkdocs serve
+site_name: xping
+site_description: Network diagnostics for the terminal — ping, traceroute, DNS, TLS, HTTP, Wi-Fi and more
+site_url: https://mehaskari.github.io/xping/
+repo_url: https://github.com/mehaskari/xping
+repo_name: mehaskari/xping
+edit_uri: edit/main/docs/
+docs_dir: docs
+strict: true
+
+nav:
+  - Home: index.md
+  - User Guide: guide.md
+  - Changelog: changelog.md
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.top
+    - toc.follow
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+
+markdown_extensions:
+  - toc:
+      permalink: true
+      toc_depth: 4
+  - admonition
+  - tables
+  - pymdownx.superfences
+  - pymdownx.highlight
+
+# With strict: true, a link to a missing page or section fails the build
+validation:
+  links:
+    anchors: warn

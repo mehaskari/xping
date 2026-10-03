@@ -38,6 +38,11 @@
 - The minimum test coverage rose from 55% to 75% (actual: 79%). The CI run
   page shows a coverage summary.
 
+- A documentation site at https://mehaskari.github.io/xping/, built with
+  MkDocs (Material) from `docs/`. It has search, dark mode and a table of
+  contents. Every docs change is built in strict mode, so a broken link
+  or section anchor fails the check. The site is published from `main`.
+
 ## [1.4.8] - 2026-09-27
 
 ### Changed

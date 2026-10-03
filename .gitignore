@@ -93,3 +93,4 @@ debian/*.log
 *.orig
 *.rej
 *.bak
+site/
