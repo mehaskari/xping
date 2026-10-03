@@ -239,7 +239,9 @@ def test_whois_response_is_capped(monkeypatch):
             while not stop.is_set():
                 conn.sendall(b"A" * 4096)
         except OSError:
-            pass
+            # expected: xping stops reading at the cap and closes the socket
+            conn.close()
+            return
         conn.close()
 
     threading.Thread(target=serve, daemon=True).start()

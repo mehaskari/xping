@@ -116,16 +116,16 @@ def test_config_save_true_enables_it(store, tmp_path, monkeypatch):
 
 
 def test_cmd_history_views_and_usage(store, capsys):
-    history.record("ping", "example.net", _ping(20.0), True)
+    history.record("ping", "prod-db", _ping(20.0), True)
     parser = build_parser()
     listing = commands.cmd_history(parser.parse_args(["history"]))
-    assert listing.entries[0].target == "example.net"
-    shown = commands.cmd_history(parser.parse_args(["history", "ping", "example.net", "--since", "1d"]))
+    assert listing.entries[0].target == "prod-db"
+    shown = commands.cmd_history(parser.parse_args(["history", "ping", "prod-db", "--since", "1d"]))
     assert len(shown.runs) == 1
     out = capsys.readouterr().out
-    assert "HISTORY" in out and "example.net" in out
+    assert "HISTORY" in out and "prod-db" in out  # a profile-style name, not a URL
     with pytest.raises(UsageError, match="--since"):
-        commands.cmd_history(parser.parse_args(["history", "ping", "example.net", "--since", "x"]))
+        commands.cmd_history(parser.parse_args(["history", "ping", "prod-db", "--since", "x"]))
     with pytest.raises(SystemExit):
         parser.parse_args(["history", "lookup", "x"])  # lookup results are not saved
 
