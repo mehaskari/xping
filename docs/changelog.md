@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.4.9] - 2026-10-03
 
 ### Added
 - **History: `--save` and `xping history`.**

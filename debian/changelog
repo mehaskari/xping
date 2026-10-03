@@ -1,3 +1,14 @@
+xping (1.4.9-1) noble; urgency=medium
+
+  * New: --save and xping history: keep results over time and see the
+    runs, a trend line and the latest run against the usual.
+  * xping diff: wider noise band for jitter and max RTT; notes on sample
+    sizes and the likely cause of a change.
+  * xping wifi names two near-equal stronger access points.
+  * Documentation site: https://mehaskari.github.io/xping/
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Sat, 03 Oct 2026 20:26:19 +0000
+
 xping (1.4.8-1) noble; urgency=medium
 
   * xping wifi suggests moving to a clearly stronger access point nearby
