@@ -162,8 +162,8 @@ def test_mx_list_is_one_per_line_and_capped(capsys):
     from xping.render.views import smtp as view
 
     r = SmtpResult("gmail.com", server="mx1", ip="192.0.2.1", error="no answer on port 25 (timed out)",
-                   mx_hosts=[f"{p} mx{p}.example.net" for p in (5, 10, 20, 30, 40)])
+                   mx_hosts=[f"{p} mailhost{p}" for p in (5, 10, 20, 30, 40)])
     with patch("xping.render.COLOR", False), patch("xping.render.ansi.COLOR", False):
         view.print_result(r)
-    lines = [ln for ln in capsys.readouterr().out.splitlines() if "mx" in ln and "example.net" in ln]
+    lines = [ln for ln in capsys.readouterr().out.splitlines() if "mailhost" in ln]
     assert len(lines) == 3 and lines[0].lstrip().startswith("All MX") and lines[2].endswith("(+2 more)")
