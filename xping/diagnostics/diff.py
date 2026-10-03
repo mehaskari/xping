@@ -127,7 +127,7 @@ METRICS: dict[str, tuple[Metric, ...]] = {
 }
 
 # kind -> [(label, list path, key field(s), value field)]
-STATUSES = {
+STATUSES: dict[str, list[tuple[str, str, tuple[str, ...], str]]] = {
     "dnscheck": [("check", "checks", ("name",), "status")],
     "doctor": [("step", "steps", ("name",), "status")],
     "check": [("check", "outcomes", ("name",), "ok")],

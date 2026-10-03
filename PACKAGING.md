@@ -197,6 +197,7 @@ Snapcraft.io → your account → xping → **Builds** tab.
 ```
 [ ] pytest --cov=xping --cov-report=term-missing   passes
 [ ] ruff check xping/ --config ruff.toml           passes
+[ ] mypy                                           passes
 [ ] ruff format --check xping/ --line-length 100   passes
 [ ] python -m build && twine check dist/*          passes
 [ ] Version identical in all six files (pyproject.toml, xping/__init__.py,

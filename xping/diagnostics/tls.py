@@ -7,6 +7,7 @@ negotiated protocol, cipher, and certificate details.
 import socket
 import ssl
 import sys
+from typing import Any
 
 from xping.diagnostics.resolve import resolve
 from xping.diagnostics.sslctx import secure_context
@@ -70,11 +71,10 @@ def tls(
                 if cert:
                     result.subject = _format_name(cert.get("subject"))
                     result.issuer = _format_name(cert.get("issuer"))
-                    result.not_before = cert.get("notBefore")
-                    result.not_after = cert.get("notAfter")
-                    result.san = [
-                        value for key, value in cert.get("subjectAltName", ()) if key == "DNS"
-                    ]
+                    result.not_before = str(cert.get("notBefore") or "") or None
+                    result.not_after = str(cert.get("notAfter") or "") or None
+                    san: Any = cert.get("subjectAltName", ())
+                    result.san = [str(value) for key, value in san if key == "DNS"]
                 # Certificate chain — Python 3.13+ exposes get_verified_chain()
                 # On older versions we parse the DER chain manually
                 chain_names: list[str] = []

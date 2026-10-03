@@ -508,7 +508,8 @@ def cmd_completion(args: argparse.Namespace) -> object:
                 print(c("    (fish picks it up automatically)", DIM))
             else:
                 home = completion.Path.home()
-                rc = completion._tilde(completion._rc_file(shell, home), home)
+                rc_file = completion._rc_file(shell, home)
+                rc = completion._tilde(rc_file, home) if rc_file else "your shell rc file"
                 print(c(f"    source {rc}", BRAND_TEAL))
             print(c("  Re-run after upgrading xping to pick up new commands and flags.", DIM))
         else:

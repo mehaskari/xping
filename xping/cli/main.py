@@ -180,7 +180,7 @@ def main() -> None:
         sys.exit(0)
 
     try:
-        result = _DISPATCH[args.command](args)
+        result = _DISPATCH[args.command](args)  # type: ignore[assignment]  # any result type
     except KeyboardInterrupt:
         print(c("\n\n  Interrupted.", BRAND_AMBER))
         sys.exit(130)

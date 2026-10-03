@@ -56,4 +56,4 @@ def resolve(host: str, family: int | None = None) -> str:
     infos = socket.getaddrinfo(host, None, socket.AF_INET6, socket.SOCK_STREAM)
     if not infos:
         raise socket.gaierror(f"no IPv6 address found for {host}")
-    return infos[0][4][0]
+    return str(infos[0][4][0])

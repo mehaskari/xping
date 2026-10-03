@@ -135,7 +135,7 @@ def _convert_one(action: argparse.Action, value: Any, where: str) -> Any:
     if isinstance(value, bool | dict | list):
         raise ConfigError(f"{where}: expected a single value, got {value!r}")
     try:
-        converted = action.type(str(value)) if action.type else value
+        converted = action.type(str(value)) if callable(action.type) else value
     except argparse.ArgumentTypeError as exc:
         raise ConfigError(f"{where}: {exc}") from exc
     except (TypeError, ValueError) as exc:

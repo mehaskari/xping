@@ -59,6 +59,7 @@ def parse_reply(data: bytes, sent: bytes) -> dict:
         raise ValueError("reply does not match our request")
     stratum = data[1]
     ref = data[12:16]
+    reference: str | None
     if stratum == 0:
         reference = "KoD " + ref.decode("ascii", "replace").strip("\x00")  # kiss-o'-death
     elif stratum == 1:

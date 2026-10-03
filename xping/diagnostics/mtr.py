@@ -85,6 +85,7 @@ def mtr(
             if not hop.ip:
                 hop.rtts.append(-1.0)
                 continue
+            rtt: float | None
             if use_subprocess_ping:
                 rtt = ping_once_subprocess(hop.ip, timeout)
             else:

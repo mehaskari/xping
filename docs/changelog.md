@@ -29,6 +29,15 @@
 - `xping wifi` names two stronger access points when they are nearly
   equal, so the tip no longer flips between runs as signals fluctuate.
 
+### Development
+- CI type-checks the code with mypy. Every module is checked except three
+  that need a larger rework, which are listed as a baseline in
+  `pyproject.toml`. Fixing the reported issues turned up a name that
+  shadowed the colour helper in `lookup`, plus many missing `None`
+  checks and annotations.
+- The minimum test coverage rose from 55% to 75% (actual: 79%). The CI run
+  page shows a coverage summary.
+
 ## [1.4.8] - 2026-09-27
 
 ### Changed

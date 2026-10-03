@@ -97,7 +97,7 @@ def system_resolve(name: str, timeout: float = 5.0) -> tuple[str | None, float]:
     future = pool.submit(socket.getaddrinfo, name, 443, 0, socket.SOCK_STREAM)
     try:
         infos = future.result(timeout=timeout)
-        address = infos[0][4][0] if infos else None
+        address = str(infos[0][4][0]) if infos else None
     except (FutureTimeout, OSError):
         address = None
     finally:

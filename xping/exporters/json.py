@@ -10,6 +10,7 @@ from .serialize import to_dict
 
 def export_json(result: Any, *, indent: int = 2) -> str:
     """Serialize a diagnostic result (or bundle) to JSON."""
+    payload: Any
     if isinstance(result, list):
         payload = [to_dict(item) for item in result]
     elif hasattr(result, "to_dict"):

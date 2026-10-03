@@ -20,6 +20,7 @@ import shutil
 import statistics
 import time
 from pathlib import Path
+from typing import Any
 
 from xping.diagnostics.diff import METRICS, _get, _number
 from xping.models.history import HistoryEntry, HistoryResult, HistoryRun
@@ -68,10 +69,11 @@ def _file(command: str, target: str, base: Path | None = None) -> Path:
 
 def record(command: str, target: str, result: object, ok: bool, base: Path | None = None) -> Path:
     """Append one run; trim the file to the newest MAX_RUNS runs."""
+    data: Any
     if isinstance(result, list):
         data = [item.to_dict() for item in result]
     else:
-        data = result.to_dict()
+        data = result.to_dict()  # type: ignore[attr-defined]  # every result model has it
     path = _file(command, target, base)
     path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps({"ts": time.time(), "ok": ok, "target": target, "result": data})
@@ -86,7 +88,7 @@ def record(command: str, target: str, result: object, ok: bool, base: Path | Non
 
 
 def _read(path: Path) -> list[dict]:
-    runs = []
+    runs: list[dict] = []
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
@@ -103,7 +105,7 @@ def _read(path: Path) -> list[dict]:
 
 def entries(base: Path | None = None) -> list[HistoryEntry]:
     """Everything recorded, newest activity first."""
-    found = []
+    found: list[HistoryEntry] = []
     root = base or HISTORY_DIR
     if not root.is_dir():
         return found
@@ -158,7 +160,7 @@ def show(
         result.runs.append(HistoryRun(ts=run["ts"], ok=bool(run.get("ok")), values=values))
     if len(result.runs) >= 3 and result.metrics:
         headline = result.metrics[0]
-        earlier = [r.values[headline] for r in result.runs[:-1] if r.values[headline] is not None]
+        earlier = [v for r in result.runs[:-1] if (v := r.values[headline]) is not None]
         latest = result.runs[-1].values[headline]
         if earlier and latest is not None:
             result.median = statistics.median(earlier)
