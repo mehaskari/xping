@@ -150,8 +150,9 @@ def test_ping_watch_needs_three_losses(monkeypatch):
     monkeypatch.setattr(ping_diag.ping_view, "redraw_watch", lambda rtts, rows: 0)
     monkeypatch.setattr(ping_diag.ping_view, "print_summary", lambda result: None)
     n = _notifier()
-    ping_diag.watch("1.1.1.1", interval=0, notifier=n)
+    result = ping_diag.watch("1.1.1.1", interval=0, notifier=n)
     assert [e["event"] for e in n.sent] == ["down", "up"]  # 2 losses were not an outage
+    assert result.count == 9 and result.received == 3  # the session, for exit code / --save
     assert "3 pings lost in a row" in n.sent[0]["text"]
 
 

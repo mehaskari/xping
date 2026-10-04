@@ -50,7 +50,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **Wi-Fi** — `xping wifi`: signal and noise (dBm), SNR, channel and width, link rate, security, how many nearby networks share your channel, and what to do about it
 - **Connectivity doctor** — `xping doctor`: finds out *why* the internet (or a host) is not working — interface, router, internet, DNS, captive portal, HTTPS, clock — and says what to do
 - **Network overview** — `xping net`: interfaces, gateway, DNS servers, public IPv4/IPv6
-- **Watch & wait** — `--watch` / `--until-up` on `tcp`, `udp`, `http` and `health`
+- **Watch & wait** — `--watch` / `--until-up` on `ping`, `tcp`, `udp`, `http` and `health`
 - **Alerts** — `--notify` (desktop notification) and `--webhook URL` (Slack, Discord, Mattermost, any JSON endpoint) when a watched target goes down or comes back
 - **Exit codes & thresholds** — `--max-loss`, `--max-latency`, `--expect-status`, `--min-days`, `--min-score`, `--quiet`
 - **Compare runs** — `xping diff before.json after.json`: what got better or worse (latency, loss, the route of a trace, DNS records, check statuses); `--max-regression` for CI
@@ -518,8 +518,8 @@ xping tcp db.internal 5432 --until-up -q && ./migrate
 
 ### Alerts: `--notify` and `--webhook`
 
-In watch mode (`ping --watch`, and `--watch` / `--until-up` on `tcp`,
-`udp`, `http`, `health`), xping can tell you when the state changes:
+In watch mode (`--watch` / `--until-up` on `ping`, `tcp`, `udp`, `http`,
+`health`), xping can tell you when the state changes:
 
 ```bash
 xping tcp db.local 5432 --watch --notify            # desktop notification

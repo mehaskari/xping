@@ -2,7 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+- `ping --until-up` and `--every`, like `tcp`, `udp`, `http` and
+  `health`: ping once per check until the host answers, then exit 0
+  (`xping ping 10.0.0.1 --until-up -q && ssh 10.0.0.1`).
+
 ### Changed
+- `ping --watch` now judges the whole session when you stop it:
+  `--max-loss` / `--max-latency` and the exit code apply (1 when every
+  ping was lost), and `--save` keeps the session in history. An
+  unresolvable host now exits 1 instead of 0.
 - `--save` confirms the save with the run number and the `xping history`
   command to use, except with `-q` or an export format, where the output
   has to stay clean.

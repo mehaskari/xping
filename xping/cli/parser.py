@@ -326,6 +326,18 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         action="store_true",
         help="Continuous live ping with sparkline (Ctrl-C to stop)",
     )
+    p_ping.add_argument(
+        "--until-up",
+        action="store_true",
+        help="Ping until the host answers, then exit 0 (works with --quiet)",
+    )
+    p_ping.add_argument(
+        "--every",
+        type=_positive_float,
+        default=2.0,
+        metavar="SEC",
+        help="Seconds between pings with --until-up [default: 2]",
+    )
     _add_notify(p_ping)
     _add_max_loss(p_ping)
     _add_max_latency(p_ping, "average RTT")
