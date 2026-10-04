@@ -142,3 +142,30 @@ def test_save_flag_only_where_supported():
     assert parser.parse_args(["ping", "h", "--save"]).save
     with pytest.raises(SystemExit):
         parser.parse_args(["lookup", "h", "--save"])
+
+
+def test_single_run_has_no_trend_and_singular_wording(store, capsys):
+    from xping.render.views import history as view
+
+    history.record("ping", "prod-db", _ping(20.0), True)
+    with patch("xping.render.COLOR", False), patch("xping.render.ansi.COLOR", False):
+        view.print_result(history.show("ping", "prod-db"))
+    out = capsys.readouterr().out
+    assert "trend" not in out and "100% of 1 run" in out and "1 runs" not in out
+    history.record("ping", "prod-db", _ping(25.0), True)
+    with patch("xping.render.COLOR", False), patch("xping.render.ansi.COLOR", False):
+        view.print_result(history.show("ping", "prod-db"))
+    assert "Average RTT trend" in capsys.readouterr().out
+
+
+def test_save_confirms_except_when_output_must_stay_clean(store, monkeypatch, capsys):
+    main_mod = importlib.import_module("xping.cli.main")
+    monkeypatch.setitem(main_mod._DISPATCH, "ping", lambda args: _ping(20.0))
+    with patch("sys.argv", ["xping", "ping", "prod-db", "--save"]), pytest.raises(SystemExit):
+        main_mod.main()
+    assert "saved to history (run 1)" in capsys.readouterr().out
+    for flag in ("-q", "--json"):
+        with patch("sys.argv", ["xping", "ping", "prod-db", "--save", flag]), pytest.raises(SystemExit):
+            main_mod.main()
+        assert "saved to history" not in capsys.readouterr().out
+    assert history.entries()[0].runs == 3  # all three runs were still saved

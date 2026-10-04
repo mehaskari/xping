@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- `--save` confirms the save with the run number and the `xping history`
+  command to use, except with `-q` or an export format, where the output
+  has to stay clean.
+
+### Fixed
+- `xping history` no longer shows an empty trend line for a single run,
+  and says "1 run" rather than "1 runs".
+
 ## [1.4.9] - 2026-10-03
 
 ### Added

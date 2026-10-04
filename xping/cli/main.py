@@ -45,6 +45,7 @@ from xping.cli.commands import (
     print_version,
 )
 from xping.cli.errors import UsageError
+from xping.cli.export import output_suppressed
 from xping.cli.parser import build_parser
 from xping.cli.verdict import evaluate
 from xping.render import BOLD, BRAND_AMBER, BRAND_SLATE, BRAND_TEAL, DIM, banner, c, error, warn
@@ -211,9 +212,19 @@ def _save(args, result, ok: bool) -> None:
     if not (hasattr(result, "to_dict") or isinstance(result, list)):
         return
     try:
-        history.record(args.command, history.TARGETS[args.command](args), result, ok)
+        target = history.TARGETS[args.command](args)
+        path = history.record(args.command, target, result, ok)
     except (OSError, KeyError, AttributeError) as exc:
         warn(f"could not save to history: {exc}")
+        return
+    # confirm, unless the output must stay clean (-q, --json/--csv/--markdown)
+    if not output_suppressed(args):
+        runs = sum(1 for _ in path.open(encoding="utf-8"))
+        print(
+            c(f"  ✔ saved to history (run {runs})", BRAND_TEAL)
+            + c(f"  ·  xping history {args.command} {target}", DIM)
+        )
+        print()
 
 
 def _exit_code(result, args) -> int:
