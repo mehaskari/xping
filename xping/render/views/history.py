@@ -60,12 +60,13 @@ def print_result(result) -> None:
         headline = result.metrics[0]
         series = [r.values.get(headline) for r in result.runs]
         values = [v if v is not None else -1.0 for v in series]
-        if any(v is not None for v in series):
+        if sum(v is not None for v in series) >= 2:  # one run has no trend
             print(kv(f"{headline} trend", spark_bar(values, width=40)))
     ok = result.ok_pct
     if ok is not None:
         color = BRAND_MINT if ok == 100 else BRAND_AMBER if ok >= 90 else BRAND_ROSE
-        print(kv("Passed", c(f"{ok:.0f}% of {len(result.runs)} runs", color)))
+        runs = len(result.runs)
+        print(kv("Passed", c(f"{ok:.0f}% of {runs} run{'s' if runs != 1 else ''}", color)))
     if result.latest_vs_median_pct is not None:
         pct = result.latest_vs_median_pct
         unit = result.units.get(result.metrics[0], "")
