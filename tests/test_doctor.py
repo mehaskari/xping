@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from xping.cli.parser import build_parser
-from xping.cli.verdict import evaluate
+from xping.verdict import evaluate
 from xping.diagnostics import doctor as doc
 from xping.exporters.csv import export_csv
 from xping.exporters.json import export_json

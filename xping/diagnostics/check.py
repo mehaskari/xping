@@ -29,12 +29,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from xping.cli.verdict import evaluate
 from xping.diagnostics import profile as profile_diag
 from xping.models.check import CheckOutcome, CheckReport
 from xping.render import BRAND_TEAL, c, kv, section_header
 from xping.render.animations import Spinner
 from xping.render.views import check as check_view
+from xping.verdict import evaluate
 
 EXAMPLE = """\
 # xping check - run with:  xping check checks.toml

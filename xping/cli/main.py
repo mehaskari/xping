@@ -47,8 +47,8 @@ from xping.cli.commands import (
 from xping.cli.errors import UsageError
 from xping.cli.export import output_suppressed
 from xping.cli.parser import build_parser
-from xping.cli.verdict import evaluate
 from xping.render import BOLD, BRAND_AMBER, BRAND_SLATE, BRAND_TEAL, DIM, banner, c, error, warn
+from xping.verdict import evaluate
 
 _NEXT_STEPS = [
     ("trace", "hop-by-hop path"),

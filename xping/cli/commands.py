@@ -8,7 +8,6 @@ import json
 from xping import __author__, __copyright__, __email__, __license__, __url__, __version__
 from xping.cli.errors import UsageError
 from xping.cli.export import emit_export, export_requested, output_suppressed
-from xping.cli.verdict import evaluate
 from xping.diagnostics import profile as profile_diag
 from xping.diagnostics.blocklist import blocklist
 from xping.diagnostics.bundle import run_bundle
@@ -53,6 +52,7 @@ from xping.render import (
     DIM,
     c,
 )
+from xping.verdict import evaluate
 
 
 def _resolve_host(value: str) -> str:

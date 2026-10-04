@@ -139,7 +139,7 @@ def test_net_no_public_skips_http():
 
 
 def test_net_error_when_nothing_found():
-    from xping.cli.verdict import evaluate
+    from xping.verdict import evaluate
 
     with (
         patch.object(net_diag, "_linux"),

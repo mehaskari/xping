@@ -80,7 +80,7 @@ warn_redundant_casts = true
 # (loosely typed table rows, the verdict dispatch tuple, speedtest's shared
 # state). Every other module is checked; remove an entry once it is clean.
 [[tool.mypy.overrides]]
-module = ["xping.exporters.tables", "xping.cli.verdict", "xping.diagnostics.speedtest"]
+module = ["xping.exporters.tables", "xping.verdict", "xping.diagnostics.speedtest"]
 ignore_errors = true
 
 [tool.setuptools.packages.find]

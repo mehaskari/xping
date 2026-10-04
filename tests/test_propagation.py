@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from xping.cli.verdict import evaluate
+from xping.verdict import evaluate
 from xping.diagnostics import lookup as lookup_diag
 from xping.diagnostics import propagation as prop_diag
 from xping.exporters import export_csv

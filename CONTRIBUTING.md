@@ -39,7 +39,7 @@ mypy                       # settings in pyproject.toml [tool.mypy]
   `pyproject.toml`. It is a ratchet: raise it when coverage grows, never
   lower it.
 - **Types:** every module is type-checked except three listed under
-  `[[tool.mypy.overrides]]` (`exporters/tables.py`, `cli/verdict.py`,
+  `[[tool.mypy.overrides]]` (`exporters/tables.py`, `verdict.py`,
   `diagnostics/speedtest.py`), which predate the check. New code must
   pass mypy. When you clean up one of those three, remove it from the
   list.
@@ -114,7 +114,7 @@ No new external dependencies without discussion — xping is stdlib +
    (and `family=` if it resolves hosts — use `diagnostics/resolve.py`)
 6. `xping/render/views/NAME.py` — `print_result()`
 7. `xping/render/views/__init__.py` — import
-8. `xping/cli/verdict.py` — when does the result count as a failure
+8. `xping/verdict.py` — when does the result count as a failure
    (exit code 1)? Add thresholds here if the command gets any.
 9. `xping/cli/commands.py` — `cmd_NAME()` handler that **returns** the result
 10. `xping/cli/parser.py` — subcommand + flags; add it to the `--help`
