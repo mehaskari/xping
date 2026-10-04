@@ -78,8 +78,7 @@ def _require_watch_for_notify(args: argparse.Namespace) -> None:
         _watch_requested(args)
     ):
         flag = "--notify" if getattr(args, "notify", False) else "--webhook"
-        watch_flags = "--watch" if args.command == "ping" else "--watch or --until-up"
-        raise UsageError(f"{flag} only works in watch mode ({watch_flags})")
+        raise UsageError(f"{flag} only works in watch mode (--watch or --until-up)")
 
 
 def _run_watch(args: argparse.Namespace, target: str, check: str, run_once, describe) -> object:
@@ -109,20 +108,30 @@ def _run_watch(args: argparse.Namespace, target: str, check: str, run_once, desc
 
 def cmd_ping(args: argparse.Namespace) -> object:
     _require_watch_for_notify(args)
+    if getattr(args, "until_up", False):
+        host = _resolve_host(args.host)
+        return _run_watch(
+            args,
+            args.host,
+            "ping",
+            lambda: ping(
+                host=host, count=1, timeout=args.timeout, quiet=True, family=family_of(args)
+            ),
+            lambda r: (r.avg_rtt, "reply"),
+        )
     if getattr(args, "watch", False):
         if output_suppressed(args):
             raise UsageError(
                 "--watch runs until Ctrl-C and cannot be combined with "
                 "--json/--csv/--markdown/--quiet"
             )
-        ping_watch(
+        return ping_watch(
             host=_resolve_host(args.host),
             timeout=args.timeout,
             interval=args.interval,
             family=family_of(args),
             notifier=_notifier(args, args.host, "ping"),
         )
-        return None
     quiet = output_suppressed(args)
     result = ping(
         host=_resolve_host(args.host),

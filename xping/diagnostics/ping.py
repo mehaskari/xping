@@ -151,9 +151,11 @@ def watch(
     interval: float = 1.0,
     family: int | None = None,
     notifier=None,
-) -> None:
+) -> PingResult:
     """Continuous live ping with in-place sparkline (Ctrl-C to stop).
 
+    Returns every ping of the session as one PingResult, so the exit code,
+    --max-loss / --max-latency and --save treat it like a normal run.
     With a *notifier*, the host counts as down after DOWN_AFTER_LOSSES
     consecutive lost pings and as up again at the next reply — a single
     lost packet is not an outage."""
@@ -163,7 +165,7 @@ def watch(
         from xping.render.errors import resolve_error
 
         resolve_error(host)
-        return
+        return PingResult(host=host, ip="", count=0, resolved=False)
 
     from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 
@@ -213,8 +215,9 @@ def watch(
                 time.sleep(remaining)
     except KeyboardInterrupt:
         print()
-        result = PingResult(host=host, ip=ip, count=len(rtts), rtts=rtts)
-        ping_view.print_summary(result)
     finally:
         if notifier is not None:
             notifier.flush()
+    result = PingResult(host=host, ip=ip, count=len(rtts), rtts=rtts)
+    ping_view.print_summary(result)
+    return result

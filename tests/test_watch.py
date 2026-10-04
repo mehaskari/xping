@@ -87,6 +87,30 @@ def test_cmd_tcp_until_up_uses_verdict_and_thresholds():
     assert "exceeds --max-latency" in result.samples[0].detail
 
 
+def test_cmd_ping_until_up_one_ping_per_check():
+    from xping.cli import commands
+    from xping.models import PingResult
+
+    args = build_parser().parse_args(["ping", "gw", "--until-up", "-q", "--every", "1"])
+    lost = PingResult(host="gw", ip="10.0.0.1", count=1, rtts=[-1.0])
+    back = PingResult(host="gw", ip="10.0.0.1", count=1, rtts=[4.0])
+    with (
+        patch("xping.cli.commands.ping", side_effect=[lost, back]) as fake_ping,
+        patch("xping.diagnostics.watch.time.sleep"),
+    ):
+        result = commands.cmd_ping(args)
+    assert fake_ping.call_count == 2 and fake_ping.call_args.kwargs["count"] == 1
+    assert [s.ok for s in result.samples] == [False, True] and result.last_ok
+
+
+def test_ping_notify_accepts_until_up():
+    from xping.cli import commands
+
+    args = build_parser().parse_args(["ping", "gw", "--notify"])
+    with pytest.raises(commands.UsageError, match="--watch or --until-up"):
+        commands.cmd_ping(args)
+
+
 @pytest.mark.parametrize(
     "argv",
     [

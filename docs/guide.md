@@ -189,22 +189,25 @@ xping tls example.com --min-days 14 -q || echo "renew the certificate"
 
 ### 3.5 Watch mode and alerts
 
-`tcp`, `udp`, `http` and `health` can repeat themselves:
+`ping`, `tcp`, `udp`, `http` and `health` can repeat themselves:
 
 | Option | Effect |
 |--------|--------|
 | `--watch` | Repeat every `--every` seconds until Ctrl-C. Prints one line per check, highlights DOWN/UP changes with the downtime, and ends with a summary (uptime %, state changes, longest outage, average latency). The exit code reflects the final state. |
 | `--until-up` | Repeat until the check passes, then exit 0. Combine with `-q` to wait silently in scripts. Ctrl-C exits 130. |
-| `--every SEC` | Seconds between checks. Defaults: `tcp` 2, `udp` 5, `http` 5, `health` 30. |
+| `--every SEC` | Seconds between checks. Defaults: `ping` 2, `tcp` 2, `udp` 5, `http` 5, `health` 30. |
 
 Each round is judged exactly like a single run. Thresholds such as
 `--max-latency` or `--expect-status` therefore decide UP and DOWN too.
 
-`ping --watch` (`-w`) is a separate live mode. It shows a continuously
-redrawn sparkline and running statistics.
+`ping --watch` (`-w`) is a live mode of its own: one ping every
+`--interval` with a continuously redrawn sparkline and running
+statistics. When you stop it, the whole session counts as one ping run,
+so `--max-loss`, `--max-latency`, the exit code and `--save` apply to it.
+`ping --until-up` sends one ping per check, like `tcp --until-up`.
 
-**Alerts.** In any watch mode (`ping --watch`, and `--watch` /
-`--until-up` on `tcp`, `udp`, `http`, `health`) you can be told about changes:
+**Alerts.** In any watch mode (`--watch` / `--until-up` on `ping`, `tcp`,
+`udp`, `http`, `health`) you can be told about changes:
 
 | Option | Effect |
 |--------|--------|
@@ -476,7 +479,7 @@ xping all example.com --json > report.json
 #### `xping ping`
 
 ```
-xping ping HOST [-c N] [-t SEC] [-i SEC] [--watch] [--max-loss PCT] [--max-latency MS]
+xping ping HOST [-c N] [-t SEC] [-i SEC] [--watch | --until-up] [--every SEC] [--max-loss PCT] [--max-latency MS]
 ```
 
 Sends ICMP echo requests. Each reply is printed immediately with a
@@ -491,8 +494,10 @@ Latency colours, used everywhere in xping: **green** < 30 ms,
 | `-c`, `--count N` | 5 | Number of packets |
 | `-t`, `--timeout SEC` | 2.0 | Per-packet timeout |
 | `-i`, `--interval SEC` | 0.5 | Interval between packets |
-| `-w`, `--watch` | — | Continuous live mode with an in-place sparkline (Ctrl-C to stop) |
-| `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) in watch mode (down = 3 lost pings in a row) |
+| `-w`, `--watch` | — | Continuous live mode with an in-place sparkline (Ctrl-C to stop); the session is judged and saved like a normal run |
+| `--until-up` | — | Ping until the host answers, then exit 0 ([watch mode](#35-watch-mode-and-alerts)) |
+| `--every SEC` | 2 | Seconds between pings with `--until-up` |
+| `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) in watch mode (`--watch`: down = 3 lost pings in a row) |
 | `--max-loss PCT` | — | Exit 1 if packet loss is above PCT % |
 | `--max-latency MS` | — | Exit 1 if the average RTT is above MS |
 | `-4`, `-6` | — | Address family |
@@ -504,6 +509,7 @@ Exit code 1 when the host cannot be resolved or answers no ping at all.
 xping ping 1.1.1.1
 xping ping google.com -c 20 -i 0.2
 xping ping router.local --watch --notify
+xping ping 10.0.0.1 --until-up -q && ssh 10.0.0.1
 xping ping 8.8.8.8 -c 10 --max-loss 5 -q
 ```
 

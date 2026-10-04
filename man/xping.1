@@ -635,6 +635,18 @@ Default:
 .B \-\-watch ", " \-w
 Continuous live ping mode. Displays a live sparkline with running
 min/avg/max statistics. Press Ctrl-C to stop and print a final summary.
+The session is judged like a normal run (exit status, thresholds,
+.BR \-\-save ).
+.TP
+.B \-\-until\-up
+Ping once per check until the host answers, then exit 0 (see
+.BR "WATCH MODE" ).
+.TP
+.BI \-\-every " SEC"
+Seconds between checks with
+.BR \-\-until\-up .
+Default:
+.BR 2 .
 .TP
 .BI \-\-max\-loss " PCT"
 Exit 1 if packet loss exceeds
@@ -1127,6 +1139,10 @@ or
 .BR http ,
 and
 .B health
+(and
+.B ping
+for
+.BR \-\-until\-up )
 accept:
 .TP
 .B \-\-watch
