@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from xping.cli.parser import build_parser
-from xping.cli.verdict import evaluate
+from xping.verdict import evaluate
 from xping.diagnostics import ntp as ntp_diag
 from xping.diagnostics import udp as udp_diag
 from xping.diagnostics.check import load_config

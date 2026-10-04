@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from xping.cli.parser import build_parser
-from xping.cli.verdict import evaluate
+from xping.verdict import evaluate
 from xping.models.dnscheck import DnsCheckResult
 from xping.models.health import HealthResult
 from xping.models.http import HttpResult

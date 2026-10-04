@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from xping.cli.verdict import evaluate
+from xping.verdict import evaluate
 from xping.diagnostics import check as check_diag
 from xping.models.ping import PingResult
 from xping.models.tcp import TcpAttempt, TcpResult

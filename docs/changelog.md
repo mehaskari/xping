@@ -8,6 +8,12 @@
   has to stay clean.
 
 ### Fixed
+- `xping.diagnostics.check` can be imported on its own (it failed with a
+  circular-import error when it was the first xping module loaded, e.g.
+  from a script using xping as a library). The pass/fail verdicts moved
+  from `xping.cli.verdict` to `xping.verdict`, below the CLI layer; a
+  test now imports every module standalone and keeps the lower layers
+  free of CLI imports.
 - `xping history` no longer shows an empty trend line for a single run,
   and says "1 run" rather than "1 runs".
 
