@@ -25,6 +25,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: System :: Networking",
     "Topic :: System :: Systems Administration",
     "Topic :: Utilities",
@@ -66,7 +68,7 @@ omit = [
 
 [tool.coverage.report]
 # Ratchet: raise this when coverage grows, never lower it (it was 79% when set)
-fail_under = 75
+fail_under = 80
 show_missing = true
 
 [tool.mypy]

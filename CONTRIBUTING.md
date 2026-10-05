@@ -14,7 +14,7 @@ pytest
 
 `main` is protected: changes land through pull requests, and a PR can
 only merge once the required CI checks pass (tests on Linux and macOS
-for Python 3.10–3.12, lint, version consistency, build). Auto-merge is
+for Python 3.10–3.14, lint, version consistency, build). Auto-merge is
 enabled, so a PR merges by itself as soon as it is green.
 
 1. Branch from `main` (`fix/…`, `feat/…`, `docs/…`).

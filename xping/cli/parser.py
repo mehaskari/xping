@@ -82,6 +82,7 @@ SAVE_COMMANDS = (
     "speedtest",
     "wifi",
     "doctor",
+    "check",
 )
 
 
@@ -901,6 +902,20 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         default=8.0,
         metavar="SEC",
         help="Maximum download measurement time [default: 8]",
+    )
+    p_speed.add_argument(
+        "--min-download",
+        type=_non_negative_float,
+        default=None,
+        metavar="MBPS",
+        help="Exit 1 if the download speed is below MBPS",
+    )
+    p_speed.add_argument(
+        "--min-upload",
+        type=_non_negative_float,
+        default=None,
+        metavar="MBPS",
+        help="Exit 1 if the upload speed is below MBPS",
     )
 
     p_completion = sub.add_parser(

@@ -6,8 +6,21 @@
 - `ping --until-up` and `--every`, like `tcp`, `udp`, `http` and
   `health`: ping once per check until the host answers, then exit 0
   (`xping ping 10.0.0.1 --until-up -q && ssh 10.0.0.1`).
+- Check files support `trace`, `mtr`, `wifi`, `doctor` and `speedtest`,
+  with their thresholds (`max_loss` / `max_latency` for mtr,
+  `min_signal` for wifi, `min_download` / `min_upload` for speedtest).
+  Speedtest checks run on their own after the parallel ones.
+- `xping check --save` keeps the whole report in the history, one
+  history per check file.
+- `speedtest --min-download MBPS` and `--min-upload MBPS`: exit 1 when
+  the link is slower than that.
 
 ### Changed
+- Every terminal view is now tested with realistic results, with colour
+  on and off: the layout must be identical either way (the cause of past
+  column drift), and escape codes in remote text (whois, DNS,
+  certificates) must never reach the terminal. Coverage rose from 79% to
+  82%, and the minimum from 75% to 80%.
 - mypy now checks every module: the last three on the baseline
   (`exporters/tables.py`, `verdict.py`, `diagnostics/speedtest.py`) are
   typed, and the baseline is gone.
@@ -15,6 +28,9 @@
   `--max-loss` / `--max-latency` and the exit code apply (1 when every
   ping was lost), and `--save` keeps the session in history. An
   unresolvable host now exits 1 instead of 0.
+- Python 3.13 and 3.14 are tested in CI (Linux and macOS) and listed
+  as supported on PyPI. Python 3.10 stays supported: Ubuntu 22.04,
+  which the PPA builds for, ships it.
 - `--save` confirms the save with the run number and the `xping history`
   command to use, except with `-q` or an export format, where the output
   has to stay clean.

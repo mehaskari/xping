@@ -464,6 +464,12 @@ Supported types:
 .BR blocklist ,
 .BR health ,
 .BR propagation ,
+.BR trace ,
+.BR mtr ,
+.BR wifi ,
+.BR doctor ,
+.B speedtest
+(run on its own after the others),
 each with the same thresholds as the command
 .RB ( max_loss ,
 .BR max_latency ,
@@ -471,7 +477,10 @@ each with the same thresholds as the command
 .BR min_days ,
 .BR min_score ,
 .BR max_offset ,
-.BR require_tls ).
+.BR require_tls ,
+.BR min_signal ,
+.BR min_download ,
+.BR min_upload ).
 Saved profile names work as hosts.
 .B "xping check \-\-example"
 prints a commented starter file; see
@@ -522,9 +531,10 @@ is accepted by
 .BR blocklist ,
 .BR ntp ,
 .BR speedtest ,
-.B wifi
+.BR wifi ,
+.B doctor
 and
-.BR doctor ;
+.BR check ;
 nothing is recorded without it (or
 .B save = true
 in the config file).
@@ -1053,6 +1063,9 @@ Default:
 .TP
 .B \-\-example
 Print an example check file and exit.
+.TP
+.B \-\-save
+Keep the whole report in the history (one history per check file).
 .SS diff
 .TP
 .BI \-\-max\-regression " PCT"
@@ -1124,6 +1137,16 @@ for a single stream.
 Maximum download measurement time.
 Default:
 .BR 8 .
+.TP
+.BI \-\-min\-download " MBPS"
+Exit 1 if the download speed is below
+.I MBPS
+Mbit/s.
+.TP
+.BI \-\-min\-upload " MBPS"
+Exit 1 if the upload speed is below
+.I MBPS
+Mbit/s (or the upload failed).
 .SS listen
 .TP
 .BI \-\-proto " PROTO"
