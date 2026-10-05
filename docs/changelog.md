@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.5.0] - 2026-10-05
 
 ### Deprecated
 - Short options that meant something else in one command than in all
