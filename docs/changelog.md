@@ -27,6 +27,7 @@
   history under the same name as the single command, `--rounds N` stops
   after N runs. Ctrl-C ends with a summary (uptime, outages, longest
   outage, average); the exit code says whether everything was up.
+  Durations drop a zero remainder: `1m` rather than `1m00s`.
 - `ping --until-up` and `--every`, like `tcp`, `udp`, `http` and
   `health`: ping once per check until the host answers, then exit 0
   (`xping ping 10.0.0.1 --until-up -q && ssh 10.0.0.1`).

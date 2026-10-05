@@ -210,6 +210,7 @@ def test_view_helpers():
     assert [monitor_view.duration(s) for s in (5, 65, 3725, 90000)] == [
         "5s", "1m05s", "1h02m", "1d01h",
     ]
+    assert [monitor_view.duration(s) for s in (60, 3600, 7200, 86400)] == ["1m", "1h", "2h", "1d"]
     assert monitor_view.value_text(12.345, "ms") == "12.3 ms"
     assert monitor_view.value_text(60, "days") == "60 days"
     assert monitor_view.value_text(None, "ms") == "–"
