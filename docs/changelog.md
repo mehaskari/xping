@@ -8,6 +8,11 @@
   (`xping ping 10.0.0.1 --until-up -q && ssh 10.0.0.1`).
 
 ### Changed
+- Every terminal view is now tested with realistic results, with colour
+  on and off: the layout must be identical either way (the cause of past
+  column drift), and escape codes in remote text (whois, DNS,
+  certificates) must never reach the terminal. Coverage rose from 79% to
+  82%, and the minimum from 75% to 80%.
 - `ping --watch` now judges the whole session when you stop it:
   `--max-loss` / `--max-latency` and the exit code apply (1 when every
   ping was lost), and `--save` keeps the session in history. An
