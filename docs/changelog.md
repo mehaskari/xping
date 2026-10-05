@@ -21,6 +21,9 @@
   column drift), and escape codes in remote text (whois, DNS,
   certificates) must never reach the terminal. Coverage rose from 79% to
   82%, and the minimum from 75% to 80%.
+- mypy now checks every module: the last three on the baseline
+  (`exporters/tables.py`, `verdict.py`, `diagnostics/speedtest.py`) are
+  typed, and the baseline is gone.
 - `ping --watch` now judges the whole session when you stop it:
   `--max-loss` / `--max-latency` and the exit code apply (1 when every
   ping was lost), and `--save` keeps the session in history. An

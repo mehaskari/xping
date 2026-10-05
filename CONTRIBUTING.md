@@ -38,11 +38,9 @@ mypy                       # settings in pyproject.toml [tool.mypy]
 - **Coverage** must stay at or above the `fail_under` value in
   `pyproject.toml`. It is a ratchet: raise it when coverage grows, never
   lower it.
-- **Types:** every module is type-checked except three listed under
-  `[[tool.mypy.overrides]]` (`exporters/tables.py`, `verdict.py`,
-  `diagnostics/speedtest.py`), which predate the check. New code must
-  pass mypy. When you clean up one of those three, remove it from the
-  list.
+- **Types:** every module is type-checked, with no exceptions; new code
+  must pass mypy too. Please don't add `[[tool.mypy.overrides]]` with
+  `ignore_errors`.
 
 ## Version Bump Protocol
 
