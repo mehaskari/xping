@@ -46,6 +46,7 @@ TARGETS = {
     "speedtest": lambda a: "cloudflare",
     "wifi": lambda a: a.interface or "default",
     "doctor": lambda a: a.host or "internet",
+    "check": lambda a: str(Path(a.file).resolve()),
 }
 # The metrics worth following over time, where they differ from the first
 # three diff compares (for ping, loss and jitter matter more than min/max)

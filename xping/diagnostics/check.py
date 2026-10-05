@@ -247,6 +247,62 @@ def _run_smtp(e: dict):
     )
 
 
+def _run_trace(e: dict):
+    from xping.diagnostics.trace import trace
+
+    port = e.get("port")
+    return trace(
+        host=_host(e),
+        max_hops=int(e.get("max_hops", 30)),
+        timeout=float(e.get("timeout", 2.0)),
+        probes=int(e.get("probes", 1)),
+        quiet=True,
+        family=_family(e),
+        tcp_port=int(port) if port else (443 if e.get("tcp") else None),
+    )
+
+
+def _run_mtr(e: dict):
+    from xping.diagnostics.mtr import mtr
+
+    return mtr(
+        host=_host(e),
+        max_hops=int(e.get("max_hops", 30)),
+        cycles=int(e.get("cycles", 5)),
+        timeout=float(e.get("timeout", 2.0)),
+        quiet=True,
+        family=_family(e),
+    )
+
+
+def _run_wifi(e: dict):
+    from xping.diagnostics.wifi import wifi
+
+    interface = e.get("interface")
+    return wifi(interface=interface if interface != "default" else None, quiet=True)
+
+
+def _run_doctor(e: dict):
+    from xping.diagnostics.doctor import doctor
+
+    target = e.get("target")
+    return doctor(
+        target=_host(e, "target") if target and target != "internet" else None,
+        port=int(e.get("port", 443)),
+        quiet=True,
+    )
+
+
+def _run_speedtest(e: dict):
+    from xping.diagnostics.speedtest import speedtest
+
+    return speedtest(
+        connections=int(e.get("connections", 4)),
+        duration=float(e.get("duration", 8.0)),
+        quiet=True,
+    )
+
+
 # type -> (runner, required keys, target key)
 CHECK_TYPES: dict[str, tuple[Callable[[dict], Any], tuple[str, ...], str]] = {
     "ping": (_run_ping, ("host",), "host"),
@@ -261,6 +317,21 @@ CHECK_TYPES: dict[str, tuple[Callable[[dict], Any], tuple[str, ...], str]] = {
     "blocklist": (_run_blocklist, ("target",), "target"),
     "health": (_run_health, ("host",), "host"),
     "propagation": (_run_propagation, ("name_to_query",), "name_to_query"),
+    "trace": (_run_trace, ("host",), "host"),
+    "mtr": (_run_mtr, ("host",), "host"),
+    "wifi": (_run_wifi, (), "interface"),
+    "doctor": (_run_doctor, (), "target"),
+    "speedtest": (_run_speedtest, (), "server"),
+}
+# Types that measure this machine's own link: run one at a time after the
+# parallel batch, so they neither disturb nor get disturbed by other checks.
+EXCLUSIVE_TYPES = ("speedtest",)
+# Shown as the target when an entry does not name one
+_DEFAULT_TARGETS = {
+    "ntp": "pool.ntp.org",
+    "wifi": "default",
+    "doctor": "internet",
+    "speedtest": "cloudflare",
 }
 THRESHOLD_KEYS = (
     "max_loss",
@@ -270,6 +341,9 @@ THRESHOLD_KEYS = (
     "min_score",
     "max_offset",
     "require_tls",
+    "min_signal",
+    "min_download",
+    "min_upload",
 )
 
 
@@ -335,16 +409,17 @@ def load_config(path: str) -> list[dict]:
         if missing:
             raise ConfigError(f"check #{index} ({kind}): missing {', '.join(missing)}")
         entry["type"] = kind
-        if kind == "ntp":
-            entry.setdefault("server", "pool.ntp.org")
-        entry.setdefault("name", f"{kind} {entry[CHECK_TYPES[kind][2]]}")
+        target_key = CHECK_TYPES[kind][2]
+        if kind in _DEFAULT_TARGETS and not entry.get(target_key):
+            entry[target_key] = _DEFAULT_TARGETS[kind]
+        entry.setdefault("name", f"{kind} {entry[target_key]}")
         entries.append(entry)
     return entries
 
 
 def _run_one(entry: dict) -> CheckOutcome:
     runner, _required, target_key = CHECK_TYPES[entry["type"]]
-    target = str(entry[target_key])
+    target = str(entry.get(target_key, ""))
     if entry["type"] == "tcp":
         target = f"{target}:{entry['port']}"
     elif entry["type"] == "udp":
@@ -376,8 +451,16 @@ def run_checks(path: str, workers: int = 8, quiet: bool = False) -> CheckReport:
         spinner = Spinner(c(f"Running {len(entries)} checks…", BRAND_TEAL))
         spinner.start()
     try:
-        with ThreadPoolExecutor(max_workers=max(1, min(workers, len(entries)))) as pool:
-            report.outcomes = list(pool.map(_run_one, entries))
+        parallel = [e for e in entries if e["type"] not in EXCLUSIVE_TYPES]
+        outcomes: dict[int, CheckOutcome] = {}
+        if parallel:
+            with ThreadPoolExecutor(max_workers=max(1, min(workers, len(parallel)))) as pool:
+                for entry, outcome in zip(parallel, pool.map(_run_one, parallel), strict=True):
+                    outcomes[id(entry)] = outcome
+        for entry in entries:
+            if entry["type"] in EXCLUSIVE_TYPES:
+                outcomes[id(entry)] = _run_one(entry)
+        report.outcomes = [outcomes[id(e)] for e in entries]
     finally:
         if spinner:
             spinner.stop()

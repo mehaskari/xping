@@ -312,5 +312,15 @@ def evaluate(result, opts=None) -> list[Failure]:
             return [Failure(result.error)]
         if result.download_mbps is None:
             return [Failure("download measurement failed")]
-        return []
+        failures = []
+        for what, value, name in (
+            ("download", result.download_mbps, "min_download"),
+            ("upload", result.upload_mbps, "min_upload"),
+        ):
+            limit = _opt(opts, name)
+            if limit is not None and (value is None or value < limit):
+                shown = "failed" if value is None else f"{value:.1f} Mbit/s"
+                flag = "--" + name.replace("_", "-")
+                failures.append(Failure(f"{what} {shown} is below {flag} {limit:g}", True))
+        return failures
     return []

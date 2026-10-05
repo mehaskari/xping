@@ -1266,7 +1266,7 @@ xping ntp time.cloudflare.com --max-offset 100 -q || echo "clock drift"
 #### `xping speedtest`
 
 ```
-xping speedtest [-c N] [-d SEC]
+xping speedtest [-c N] [-d SEC] [--min-download MBPS] [--min-upload MBPS]
 ```
 
 Measures latency, download and upload speed against Cloudflare's speed
@@ -1282,11 +1282,14 @@ Poor ≥ 1, Critical below.
 |--------|---------|-------------|
 | `-c`, `--connections N` | 4 | Parallel connections (1 = single stream) |
 | `-d`, `--duration SEC` | 8 | Maximum download measurement time |
+| `--min-download MBPS` | — | Exit 1 if the download speed is below MBPS |
+| `--min-upload MBPS` | — | Exit 1 if the upload speed is below MBPS (or the upload failed) |
 | `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 ```bash
 xping speedtest
 xping speedtest -c 8 --json
+xping speedtest --min-download 50 -q || echo "slower than the plan"
 ```
 
 ---
@@ -1296,7 +1299,7 @@ xping speedtest -c 8 --json
 #### `xping check`
 
 ```
-xping check FILE [-w N]
+xping check FILE [-w N] [--save]
 xping check --example
 ```
 
@@ -1308,6 +1311,7 @@ exit code**, which makes the file a monitoring script. See
 |--------|---------|-------------|
 | `-w`, `--workers N` | 8 | Checks run in parallel |
 | `--example` | — | Print a commented example file and exit |
+| `--save` | — | Keep the whole report for [`xping history`](#xping-history), one history per check file |
 
 ```bash
 xping check --example > checks.toml
@@ -1387,11 +1391,12 @@ Follows results over time. Runs are recorded **only when you ask**:
   save every run of every command that supports it.
 
 `--save` is available on `ping`, `trace`, `mtr`, `health`, `tls`, `tcp`,
-`udp`, `http`, `smtp`, `dnscheck`, `blocklist`, `ntp`, `speedtest`, `wifi`
-and `doctor`. Each command-and-target pair is kept in its own file under
+`udp`, `http`, `smtp`, `dnscheck`, `blocklist`, `ntp`, `speedtest`, `wifi`,
+`doctor` and `check` (one history per check file). Each command-and-target pair is kept in its own file under
 `~/.xping/history/<command>/`, one line per run: the time, whether the
-check passed, and the full result. The newest 500 runs are kept. Watch
-mode is never saved.
+check passed, and the full result. The newest 500 runs are kept.
+`--watch` / `--until-up` runs are not saved, except `ping --watch`, whose
+whole session counts as one run.
 
 | Usage | Shows |
 |-------|-------|
@@ -1585,11 +1590,18 @@ max_latency = 1500
 | `blocklist` | `target` | `zones` (list), `timeout` (5.0) | — (fails when listed) |
 | `health` | `host` | `count` (8), `timeout` (2.0), `family` | `min_score` |
 | `propagation` | `name_to_query` | `record` ("A"), `servers` (list) | `expect` (string or list) |
+| `trace` | `host` | `max_hops` (30), `probes` (1), `timeout` (2.0), `tcp` (false), `port` (TCP SYN to this port), `family` | — (fails without any hop) |
+| `mtr` | `host` | `max_hops` (30), `cycles` (5), `timeout` (2.0), `family` | `max_loss`, `max_latency` (at the destination) |
+| `wifi` | — | `interface` | `min_signal` (dBm) |
+| `doctor` | — | `target` (a host to test end to end), `port` (443) | — (fails on a failed step) |
+| `speedtest` | — | `connections` (4), `duration` (8.0) | `min_download`, `min_upload` (Mbit/s) |
 
 Additional rules:
 
 - `name` is optional. It defaults to `"<type> <target>"`.
 - `family` is `4` / `"ipv4"` or `6` / `"ipv6"`.
+- `speedtest` checks run one at a time **after** the others, so they
+  neither slow down nor are slowed down by the parallel checks.
 - Files may be UTF-8 (with or without BOM) or UTF-16 with a BOM, which
   is what Windows PowerShell writes for `xping check --example > checks.toml`.
 - An invalid file (unknown type, missing key, bad syntax) exits 2 with a
