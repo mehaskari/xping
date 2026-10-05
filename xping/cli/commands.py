@@ -307,6 +307,26 @@ def cmd_check(args: argparse.Namespace) -> object:
     return result
 
 
+def cmd_monitor(args: argparse.Namespace) -> object:
+    from xping.diagnostics.monitor import monitor
+
+    try:
+        result = monitor(
+            args.file,
+            every=args.every,
+            workers=args.workers,
+            rounds=args.rounds,
+            save=args.save,
+            notify=args.notify,
+            webhook=args.webhook,
+            quiet=output_suppressed(args),
+        )
+    except ConfigError as exc:
+        raise UsageError(str(exc)) from exc
+    emit_export(result, args)
+    return result
+
+
 def cmd_diff(args: argparse.Namespace) -> object:
     try:
         result = diff(

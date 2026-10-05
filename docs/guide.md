@@ -30,7 +30,7 @@ output means, and walks through common tasks.
    - Web, mail and TLS: [`http`](#xping-http) · [`tls`](#xping-tls) · [`smtp`](#xping-smtp)
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
    - Local machine: [`wifi`](#xping-wifi) · [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
-   - Automation: [`check`](#xping-check) · [`diff`](#xping-diff) · [`history`](#xping-history) · [`profile`](#xping-profile)
+   - Automation: [`check`](#xping-check) · [`monitor`](#xping-monitor) · [`diff`](#xping-diff) · [`history`](#xping-history) · [`profile`](#xping-profile)
    - Utilities: [`config`](#xping-config) · [`completion`](#xping-completion) · [`deps`](#xping-deps) · [`about`](#xping-about)
 5. [Batch check files](#5-batch-check-files)
 6. [Recipes](#6-recipes)
@@ -1319,6 +1319,62 @@ xping check checks.toml
 xping check checks.toml --markdown > status.md
 ```
 
+#### `xping monitor`
+
+```
+xping monitor FILE [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL]
+```
+
+A live dashboard for a [check file](#5-batch-check-files): every check runs
+again and again, each on its own schedule, and the terminal shows a table
+that is redrawn in place:
+
+```
+  State   Check             Type  Target          Now       Trend             Up    For     Detail
+  ● UP    Cloudflare DNS    ping  1.1.1.1         12.4 ms   ▂▁▁▃▂▁▂▁▁█▂▁▁▂▁▁  100%  2h03m   avg 12.4 ms, 0% loss
+  ● DOWN  Database          tcp   prod-db:5432    –         ▁▁▂▁▁▁▁▁▁▁▁▁××××  93%   1m30s   prod-db:5432 refused …
+  ● UP    Certificate       tls   example.com     41 days   ▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪▪  100%  2h03m   TLSv1.3, expires in 41 days
+
+  2 up  ·  1 down  ·  running 2h03m  ·  14:32:10
+```
+
+| Column | Meaning |
+|--------|---------|
+| State | UP or DOWN, judged exactly like `xping check` (thresholds included) |
+| Now | the latest value of the check's headline metric: average RTT for ping, connect time for tcp, total time for http, days left for tls, score for health and dnscheck, download speed for speedtest, signal for wifi… |
+| Trend | the last 16 runs: a bar per value (scaled to that window), `×` for a failed run, `▪` for a pass without a number |
+| Up | share of runs that passed |
+| For | how long the current state has lasted |
+
+On a narrow terminal the Type, Target, Trend and For columns are dropped,
+in that order, before anything gets cut off.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--every SEC` | 30 | Seconds between runs of each check. A check can set its own `every` in the file (e.g. ping every 10 s, speedtest every hour) |
+| `-w`, `--workers N` | 8 | Checks run in parallel (`speedtest` always runs on its own) |
+| `--rounds N` | — | Stop after every check ran N times, instead of running until Ctrl-C |
+| `--save` | — | Keep every result in the [history](#xping-history), under the same command and target as the single command (`xping history ping 1.1.1.1`) |
+| `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) on every DOWN/UP change of any check |
+
+- **Not a terminal** (cron, systemd, `| tee log`): instead of the table,
+  one timestamped line per state change, with how long an outage lasted
+  when the check comes back.
+- **Ctrl-C** ends the run with a summary: uptime, runs, outages and the
+  longest outage per check, and the average of its metric. The exit code
+  is 0 when every check was up at the end, 1 otherwise.
+- `--json`, `--csv` and `--markdown` export that summary (combine with
+  `--rounds`, or stop with Ctrl-C); `-q` prints nothing and only sets the
+  exit code.
+
+```bash
+xping check --example > checks.toml
+xping monitor checks.toml
+xping monitor checks.toml --every 60 --notify --save
+xping monitor checks.toml --webhook https://hooks.slack.com/services/T000/B000/XXXX >> monitor.log
+xping monitor checks.toml --rounds 1 --json      # one pass, summary as JSON
+```
+
 #### `xping diff`
 
 ```
@@ -1600,6 +1656,8 @@ Additional rules:
 
 - `name` is optional. It defaults to `"<type> <target>"`.
 - `family` is `4` / `"ipv4"` or `6` / `"ipv6"`.
+- `every` (seconds) is used only by [`xping monitor`](#xping-monitor): how
+  often that check runs. Without it, monitor's `--every` applies.
 - `speedtest` checks run one at a time **after** the others, so they
   neither slow down nor are slowed down by the parallel checks.
 - Files may be UTF-8 (with or without BOM) or UTF-16 with a BOM, which
@@ -1614,6 +1672,12 @@ underlying result.
 ---
 
 ## 6. Recipes
+
+**Keep an eye on everything that matters, all day**
+
+```bash
+xping monitor checks.toml --notify --save    # dashboard, desktop alerts, history
+```
 
 **"The internet is down" — start here**
 

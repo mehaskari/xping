@@ -12,6 +12,7 @@ from .http import HttpResult, RedirectHop, SecurityHeader
 from .ipscan import IpProbe, IpScanResult
 from .listen import ListenEntry, ListenResult
 from .lookup import DnsResult
+from .monitor import MonitoredCheck, MonitorResult, MonitorSample
 from .mtr import MtrHop, MtrResult
 from .mtu import MtuResult
 from .net import NetInterface, NetResult
@@ -87,5 +88,8 @@ __all__ = [
     "ListenResult",
     "OsDetectResult",
     "WatchResult",
+    "MonitorSample",
+    "MonitoredCheck",
+    "MonitorResult",
     "WatchSample",
 ]

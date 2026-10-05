@@ -448,6 +448,21 @@ Run a full diagnostic bundle: lookup (full DNS), ping (4 packets),
 trace, and TCP checks on ports 443 and 80.
 Finishes with a unified one-page summary table.
 .TP
+.BR monitor " \fIFILE\fR [\fIOPTIONS\fR]"
+Run the checks of a check file (as for
+.BR check )
+continuously, each every
+.B \-\-every
+seconds or its own
+.B every
+key, and show a table redrawn in place: state, the latest value of the
+check's headline metric, a trend of the last 16 runs, uptime, and how long
+the current state has lasted.
+When standard output is not a terminal, one line is printed per state
+change instead.
+Ctrl-C prints a summary (uptime, outages, longest outage, average);
+the exit status is 0 when every check was up at the end.
+.TP
 .BR check " \fIFILE\fR [\fIOPTIONS\fR]"
 Run many checks from a TOML (Python 3.11+) or JSON file in parallel
 and exit 1 if any failed.
@@ -1066,6 +1081,31 @@ Print an example check file and exit.
 .TP
 .B \-\-save
 Keep the whole report in the history (one history per check file).
+.SS monitor
+.TP
+.BI \-\-every " SEC"
+Seconds between runs of each check, unless the check sets
+.BR every .
+Default:
+.BR 30 .
+.TP
+.BI \-w " N" ", \-\-workers " N
+Checks run in parallel.
+Default:
+.BR 8 .
+.TP
+.BI \-\-rounds " N"
+Stop after every check ran
+.I N
+times instead of running until Ctrl-C.
+.TP
+.B \-\-save
+Keep every result in the history, under the same command and target as
+the single command.
+.TP
+.BR \-\-notify ", " \-\-webhook " \fIURL\fR"
+Alert on every DOWN / UP change of any check (see
+.BR "WATCH MODE" ).
 .SS diff
 .TP
 .BI \-\-max\-regression " PCT"

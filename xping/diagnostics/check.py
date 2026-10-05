@@ -417,13 +417,19 @@ def load_config(path: str) -> list[dict]:
     return entries
 
 
-def _run_one(entry: dict) -> CheckOutcome:
-    runner, _required, target_key = CHECK_TYPES[entry["type"]]
-    target = str(entry.get(target_key, ""))
+def display_target(entry: dict) -> str:
+    """What a check is aimed at, as shown in reports: host, host:port, URL…"""
+    target = str(entry.get(CHECK_TYPES[entry["type"]][2], ""))
     if entry["type"] == "tcp":
-        target = f"{target}:{entry['port']}"
-    elif entry["type"] == "udp":
-        target = f"{target}:{entry['port']}/udp"
+        return f"{target}:{entry['port']}"
+    if entry["type"] == "udp":
+        return f"{target}:{entry['port']}/udp"
+    return target
+
+
+def _run_one(entry: dict) -> CheckOutcome:
+    runner = CHECK_TYPES[entry["type"]][0]
+    target = display_target(entry)
     started = time.perf_counter()
     try:
         result = runner(entry)
@@ -434,6 +440,21 @@ def _run_one(entry: dict) -> CheckOutcome:
         result, ok, detail = None, False, f"error: {exc}"
     elapsed = (time.perf_counter() - started) * 1000
     return CheckOutcome(entry["name"], entry["type"], target, ok, detail, round(elapsed, 1), result)
+
+
+def run_entries(entries: list[dict], workers: int = 8) -> list[CheckOutcome]:
+    """Run *entries* in parallel (exclusive types one at a time afterwards);
+    outcomes come back in the same order."""
+    parallel = [e for e in entries if e["type"] not in EXCLUSIVE_TYPES]
+    outcomes: dict[int, CheckOutcome] = {}
+    if parallel:
+        with ThreadPoolExecutor(max_workers=max(1, min(workers, len(parallel)))) as pool:
+            for entry, outcome in zip(parallel, pool.map(_run_one, parallel), strict=True):
+                outcomes[id(entry)] = outcome
+    for entry in entries:
+        if entry["type"] in EXCLUSIVE_TYPES:
+            outcomes[id(entry)] = _run_one(entry)
+    return [outcomes[id(e)] for e in entries]
 
 
 def run_checks(path: str, workers: int = 8, quiet: bool = False) -> CheckReport:
@@ -451,16 +472,7 @@ def run_checks(path: str, workers: int = 8, quiet: bool = False) -> CheckReport:
         spinner = Spinner(c(f"Running {len(entries)} checks…", BRAND_TEAL))
         spinner.start()
     try:
-        parallel = [e for e in entries if e["type"] not in EXCLUSIVE_TYPES]
-        outcomes: dict[int, CheckOutcome] = {}
-        if parallel:
-            with ThreadPoolExecutor(max_workers=max(1, min(workers, len(parallel)))) as pool:
-                for entry, outcome in zip(parallel, pool.map(_run_one, parallel), strict=True):
-                    outcomes[id(entry)] = outcome
-        for entry in entries:
-            if entry["type"] in EXCLUSIVE_TYPES:
-                outcomes[id(entry)] = _run_one(entry)
-        report.outcomes = [outcomes[id(e)] for e in entries]
+        report.outcomes = run_entries(entries, workers)
     finally:
         if spinner:
             spinner.stop()

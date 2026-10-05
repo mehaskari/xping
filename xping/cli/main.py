@@ -23,6 +23,7 @@ from xping.cli.commands import (
     cmd_ipscan,
     cmd_listen,
     cmd_lookup,
+    cmd_monitor,
     cmd_mtr,
     cmd_mtu,
     cmd_net,
@@ -91,6 +92,7 @@ _DISPATCH = {
     "ipscan": cmd_ipscan,
     "all": cmd_all,
     "check": cmd_check,
+    "monitor": cmd_monitor,
     "diff": cmd_diff,
     "rdns": cmd_rdns,
     "dnscheck": cmd_dnscheck,
@@ -209,6 +211,8 @@ def _save(args, result, ok: bool) -> None:
 
     if result is None or isinstance(result, WatchResult | bool):
         return
+    if args.command not in history.TARGETS:
+        return  # e.g. monitor, which saves each of its checks itself
     if not (hasattr(result, "to_dict") or isinstance(result, list)):
         return
     try:

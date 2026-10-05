@@ -35,6 +35,7 @@ from xping.models import (
     HttpResult,
     IpScanResult,
     ListenResult,
+    MonitorResult,
     MtrResult,
     MtuResult,
     NetResult,
@@ -303,6 +304,13 @@ def evaluate(result, opts=None) -> list[Failure]:
         if result.ok:
             return []
         return [Failure(f"{result.failed} of {len(result.outcomes)} checks failed")]
+    if isinstance(result, MonitorResult):
+        if result.ok:
+            return []
+        down = ", ".join(result.down)
+        return [
+            Failure(f"{len(result.down)} of {len(result.checks)} checks down at the end: {down}")
+        ]
     if isinstance(result, WatchResult):
         if result.last_ok:
             return []

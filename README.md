@@ -56,6 +56,7 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 - **Compare runs** — `xping diff before.json after.json`: what got better or worse (latency, loss, the route of a trace, DNS records, check statuses); `--max-regression` for CI
 - **History** — `--save` keeps a result in `~/.xping/history`; `xping history ping example.net` shows the runs, a trend line and how the latest compares with the usual
 - **Batch checks** — `xping check checks.toml` runs many checks in parallel with one exit code
+- **Live monitor** — `xping monitor checks.toml`: the same checks continuously, as a live table with trend, uptime and time in state; alerts on every change, results kept in the history
 - **Speed test** — Multi-connection download/upload via Cloudflare
 - **All-in-one** — Run lookup, ping, trace, and TCP checks in a single command
 - **Listening ports** — `xping listen`: local TCP/UDP listeners with process names (Linux)
@@ -603,6 +604,22 @@ type = "tls"
 host = "example.com"
 min_days = 14
 ```
+
+### Live monitor
+
+Run the checks of that file continuously, each on its own schedule
+(`every = 10` in a check, or `--every`), as a table redrawn in place:
+state, latest value, a trend of the last runs, uptime and how long the
+current state has lasted.
+
+```bash
+xping monitor checks.toml                         # live dashboard, Ctrl-C for a summary
+xping monitor checks.toml --notify --save         # desktop alerts + history for every check
+xping monitor checks.toml --webhook URL >> log    # not a terminal: one line per change
+```
+
+The exit code after Ctrl-C (or `--rounds N`) is 0 when every check was up
+at the end.
 
 ---
 

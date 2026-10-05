@@ -215,6 +215,7 @@ Commands:
   ipscan <range>       Discover live IPs with ICMP echo probes
   all    <host>        Run lookup, ping, trace, and TCP checks
   check  <file>        Run many checks from a TOML/JSON file — one exit code
+  monitor <file>       Live dashboard: a check file's checks, continuously
   diff   <old> <new>   Compare two --json results of the same check (- = stdin)
   history [cmd target] Runs saved with --save: table, trend, vs. the usual
   rdns   <ip>          Reverse DNS (PTR) lookup
@@ -615,6 +616,41 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     p_check.add_argument(
         "--example", action="store_true", help="Print an example check file and exit"
     )
+
+    p_monitor = sub.add_parser(
+        "monitor",
+        parents=[export_parent],
+        help="Live dashboard: run a check file's checks continuously, alert on changes",
+    )
+    p_monitor.add_argument("file", help="Check file (.toml or .json), as for xping check")
+    p_monitor.add_argument(
+        "--every",
+        type=_positive_float,
+        default=30.0,
+        metavar="SEC",
+        help="Seconds between runs of each check, unless it sets 'every' [default: 30]",
+    )
+    p_monitor.add_argument(
+        "-w",
+        "--workers",
+        type=_positive_int,
+        default=8,
+        metavar="N",
+        help="Checks to run in parallel [default: 8]",
+    )
+    p_monitor.add_argument(
+        "--rounds",
+        type=_positive_int,
+        default=None,
+        metavar="N",
+        help="Stop after every check ran N times [default: run until Ctrl-C]",
+    )
+    p_monitor.add_argument(
+        "--save",
+        action="store_true",
+        help="Keep every result in ~/.xping/history (see: xping history)",
+    )
+    _add_notify(p_monitor)
 
     p_diff = sub.add_parser(
         "diff",
