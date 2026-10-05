@@ -30,18 +30,18 @@ _BLOCKS = "▁▂▃▄▅▆▇█"
 
 
 def duration(seconds: float) -> str:
-    """12s, 4m05s, 2h03m, 3d04h."""
+    """12s, 4m05s, 2h03m, 3d04h; a zero remainder is left out (1m, 2h, 1d)."""
     seconds = max(0, int(round(seconds)))
     if seconds < 60:
         return f"{seconds}s"
     minutes, secs = divmod(seconds, 60)
     if minutes < 60:
-        return f"{minutes}m{secs:02d}s"
+        return f"{minutes}m{secs:02d}s" if secs else f"{minutes}m"
     hours, minutes = divmod(minutes, 60)
     if hours < 24:
-        return f"{hours}h{minutes:02d}m"
+        return f"{hours}h{minutes:02d}m" if minutes else f"{hours}h"
     days, hours = divmod(hours, 24)
-    return f"{days}d{hours:02d}h"
+    return f"{days}d{hours:02d}h" if hours else f"{days}d"
 
 
 def value_text(value: float | None, unit: str) -> str:
