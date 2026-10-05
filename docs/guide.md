@@ -1360,7 +1360,8 @@ that is redrawn in place:
 | For | how long the current state has lasted |
 
 On a narrow terminal the Type, Target, Trend and For columns are dropped,
-in that order, before anything gets cut off.
+in that order; then check names are shortened (to no less than 12
+characters), and as a last resort the Detail column is left out.
 
 | Option | Default | Description |
 |--------|---------|-------------|
