@@ -35,6 +35,26 @@ def describe(result) -> str:
         if result.expected:
             return f"{result.matching}/{answered} resolvers match"
         return f"{answered} resolvers, {result.distinct_answers} distinct answer(s)"
+    if name == "list":  # trace hops
+        last = result[-1] if result else None
+        rtts = [r for r in (last.rtts if last else []) if r >= 0]
+        rtt = f", {min(rtts):.1f} ms" if rtts else ""
+        return f"{len(result)} hops to {last.ip if last and last.ip else '?'}{rtt}"
+    if name == "MtrResult":
+        dest = next((h for h in reversed(result.hops) if h.ip == result.dest_ip), None)
+        if dest is None:
+            return f"{len(result.hops)} hops"
+        return f"{len(result.hops)} hops, avg {dest.avg:.1f} ms, {dest.loss_pct:.0f}% loss"
+    if name == "WifiResult":
+        net = result.current
+        ssid = (net.ssid if net else None) or "connected"
+        signal = f", {net.signal_dbm} dBm" if net and net.signal_dbm is not None else ""
+        return f"{ssid}{signal}"
+    if name == "DoctorResult":
+        return result.diagnosis or "ok"
+    if name == "SpeedResult":
+        up = f"{result.upload_mbps:.1f}" if result.upload_mbps is not None else "–"
+        return f"↓ {result.download_mbps:.1f}  ↑ {up} Mbit/s"
     return "ok"
 
 

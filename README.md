@@ -573,7 +573,7 @@ xping history ping example.net --since 7d       # runs, trend, latest vs. the me
 ```
 
 `--save` works on ping, trace, mtr, health, tls, tcp, udp, http, smtp,
-dnscheck, blocklist, ntp, speedtest, wifi and doctor. The newest 500 runs
+dnscheck, blocklist, ntp, speedtest, wifi, doctor and check. The newest 500 runs
 per command and target are kept; `--clear` deletes them.
 
 ### Batch checks
@@ -592,7 +592,7 @@ timeout = 3
 
 [[check]]
 name = "Database"
-type = "tcp"            # ping | tcp | udp | ntp | http | tls | smtp | lookup | dnscheck | blocklist | health | propagation
+type = "tcp"            # ping tcp udp ntp http tls smtp lookup dnscheck blocklist health propagation trace mtr wifi doctor speedtest
 host = "prod-db"        # saved profile names work
 port = 5432
 max_latency = 50

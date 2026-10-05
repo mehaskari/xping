@@ -6,6 +6,14 @@
 - `ping --until-up` and `--every`, like `tcp`, `udp`, `http` and
   `health`: ping once per check until the host answers, then exit 0
   (`xping ping 10.0.0.1 --until-up -q && ssh 10.0.0.1`).
+- Check files support `trace`, `mtr`, `wifi`, `doctor` and `speedtest`,
+  with their thresholds (`max_loss` / `max_latency` for mtr,
+  `min_signal` for wifi, `min_download` / `min_upload` for speedtest).
+  Speedtest checks run on their own after the parallel ones.
+- `xping check --save` keeps the whole report in the history, one
+  history per check file.
+- `speedtest --min-download MBPS` and `--min-upload MBPS`: exit 1 when
+  the link is slower than that.
 
 ### Changed
 - `ping --watch` now judges the whole session when you stop it:
