@@ -642,7 +642,7 @@ Interval between packets in seconds.
 Default:
 .BR 0.5 .
 .TP
-.B \-\-watch ", " \-w
+.B \-\-watch
 Continuous live ping mode. Displays a live sparkline with running
 min/avg/max statistics. Press Ctrl-C to stop and print a final summary.
 The session is judged like a normal run (exit status, thresholds,
@@ -679,7 +679,7 @@ Per-hop timeout in seconds.
 Default:
 .BR 2.0 .
 .TP
-.BI \-p " N" ", \-\-probes " N
+.BI \-\-probes " N"
 Probes per TTL value.
 Default:
 .BR 3 .
@@ -1031,7 +1031,7 @@ Default:
 .BR 5 .
 .SS propagation
 .TP
-.BI \-t " TYPE" ", \-\-type " TYPE
+.BI \-r " TYPE" ", \-\-type " TYPE
 Record type:
 .BR A ,
 .BR AAAA ,
@@ -1105,7 +1105,7 @@ Default:
 .BR 443 .
 .SS wifi
 .TP
-.BI \-i " NAME" ", \-\-interface " NAME
+.BI \-I " NAME" ", \-\-interface " NAME
 Use this Wi-Fi interface.
 .TP
 .B \-\-nearby
@@ -1456,6 +1456,39 @@ Read this config file instead of
 .IR ~/.xping/config.toml ;
 .B none
 ignores the config for this run.
+.
+.SH DEPRECATED OPTIONS
+A short option means the same in every command
+.RB ( \-t
+timeout,
+.B \-i
+interval,
+.B \-w
+workers,
+.B \-p
+ports).
+These older spellings broke that rule; they still work until 2.0, with a
+warning on standard error:
+.TP
+.BI "trace \-p" " N"
+Use
+.BR \-\-probes .
+.TP
+.BI "propagation \-t" " TYPE"
+Use
+.B \-r
+or
+.BR \-\-type .
+.TP
+.B ping \-w
+Use
+.BR \-\-watch .
+.TP
+.BI "wifi \-i" " NAME"
+Use
+.B \-I
+or
+.BR \-\-interface .
 .
 .SH EXIT STATUS
 .TP

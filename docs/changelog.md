@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Deprecated
+- Short options that meant something else in one command than in all
+  the others. The old spelling still works until 2.0 and prints a
+  warning on stderr:
+  - `trace -p N` (probes; `-p` is `--ports` elsewhere): use `--probes N`.
+  - `propagation -t TYPE` (`-t` is `--timeout` elsewhere): use `-r` /
+    `--type`.
+  - `ping -w` (`-w` is `--workers` elsewhere): use `--watch`.
+  - `wifi -i NAME` (`-i` is `--interval` elsewhere): use `-I` /
+    `--interface`.
+
 ### Added
 - `ping --until-up` and `--every`, like `tcp`, `udp`, `http` and
   `health`: ping once per check until the host answers, then exit 0

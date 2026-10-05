@@ -106,6 +106,19 @@ Options can come before or after the arguments. Short and long forms are
 equivalent (`-c 10` = `--count 10`). Running `xping` alone prints the
 banner and the command list.
 
+A short option means the same thing in every command: `-t` is always
+`--timeout`, `-i` `--interval`, `-w` `--workers`, `-p` `--ports`, `-c` a
+count (packets, attempts, cycles or connections). Four commands used to
+break that rule. Their old spelling still works until 2.0, with a warning
+on stderr:
+
+| Old | Use instead |
+|-----|-------------|
+| `trace -p N` | `trace --probes N` |
+| `propagation -t TYPE` | `propagation -r TYPE` / `--type TYPE` |
+| `ping -w` | `ping --watch` |
+| `wifi -i NAME` | `wifi -I NAME` / `--interface NAME` |
+
 The shorthand `xping 8.8.8.8` sends five pings. In an interactive
 terminal it then lists other commands worth running for that host.
 
@@ -494,7 +507,7 @@ Latency colours, used everywhere in xping: **green** < 30 ms,
 | `-c`, `--count N` | 5 | Number of packets |
 | `-t`, `--timeout SEC` | 2.0 | Per-packet timeout |
 | `-i`, `--interval SEC` | 0.5 | Interval between packets |
-| `-w`, `--watch` | — | Continuous live mode with an in-place sparkline (Ctrl-C to stop); the session is judged and saved like a normal run |
+| `--watch` | — | Continuous live mode with an in-place sparkline (Ctrl-C to stop); the session is judged and saved like a normal run |
 | `--until-up` | — | Ping until the host answers, then exit 0 ([watch mode](#35-watch-mode-and-alerts)) |
 | `--every SEC` | 2 | Seconds between pings with `--until-up` |
 | `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) in watch mode (`--watch`: down = 3 lost pings in a row) |
@@ -516,7 +529,7 @@ xping ping 8.8.8.8 -c 10 --max-loss 5 -q
 #### `xping trace`
 
 ```
-xping trace HOST [-m N] [-t SEC] [-p N] [--asn] [--tcp] [--port PORT]
+xping trace HOST [-m N] [-t SEC] [--probes N] [--asn] [--tcp] [--port PORT]
 ```
 
 Shows the path packets take to HOST, one line per router ("hop"), printed
@@ -541,7 +554,7 @@ No root is needed on Linux or macOS. TCP mode is not available on Windows.
 |--------|---------|-------------|
 | `-m`, `--max-hops N` | 30 | Maximum number of hops |
 | `-t`, `--timeout SEC` | 2.0 | Per-hop timeout |
-| `-p`, `--probes N` | 3 | Probes per hop |
+| `--probes N` | 3 | Probes per hop |
 | `--asn` | — | Show each hop's network operator (AS number and name) via Team Cymru DNS. Opt-in, because hop addresses are sent to Cymru. |
 | `-T`, `--tcp` | — | Probe with TCP SYNs instead of ICMP |
 | `--port PORT` | 443 | TCP port for `--tcp` (implies `--tcp`) |
@@ -859,7 +872,7 @@ xping blocklist mail.mycompany.com -q || echo "we are on a blocklist"
 #### `xping propagation`
 
 ```
-xping propagation NAME [--type TYPE] [--expect VALUE]... [--server IP]... [--no-system]
+xping propagation NAME [-r TYPE] [--expect VALUE]... [--server IP]... [--no-system]
 ```
 
 After you change a DNS record, resolvers keep serving the old value until
@@ -873,7 +886,7 @@ command into a pass/fail check.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `-t`, `--type TYPE` | A | Record type: A, AAAA, CNAME, MX, NS or TXT |
+| `-r`, `--type TYPE` | A | Record type: A, AAAA, CNAME, MX, NS or TXT |
 | `--expect VALUE` | — | Exit 1 unless every answering resolver returns VALUE. Repeatable. Write MX as `"PRIO HOST"`. |
 | `-s`, `--server IP` | — | Also query this resolver (repeatable) |
 | `--no-system` | — | Skip your own system resolver |
@@ -1153,7 +1166,7 @@ xping osdetect 192.168.1.1
 #### `xping wifi`
 
 ```
-xping wifi [-i NAME] [--nearby] [--min-signal DBM]
+xping wifi [-I NAME] [--nearby] [--min-signal DBM]
 ```
 
 Shows how good your Wi-Fi link is, and why it might be slow:
@@ -1183,7 +1196,7 @@ Below that, xping gives concrete advice when something is off:
 
 | Option | Description |
 |--------|-------------|
-| `-i`, `--interface NAME` | Use this Wi-Fi interface (e.g. `en0`, `wlan0`) |
+| `-I`, `--interface NAME` | Use this Wi-Fi interface (e.g. `en0`, `wlan0`) |
 | `--nearby` | List the nearby networks, strongest first, marking those on your channel |
 | `--min-signal DBM` | Exit 1 if the signal is weaker than DBM. Write negative values as `--min-signal=-67` |
 | `--save` | Keep this result for [`xping history`](#xping-history) |
