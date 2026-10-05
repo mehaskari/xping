@@ -14,6 +14,17 @@
     `--interface`.
 
 ### Added
+- **`xping monitor FILE`: a live dashboard for a check file.** Every
+  check runs again and again, each on its own schedule (`every` in the
+  file, or `--every`). In a terminal the state is a table redrawn in
+  place: up or down, the latest value of the check's headline metric, a
+  trend of the last 16 runs, uptime and how long the current state has
+  lasted; narrow terminals drop the least important columns. Elsewhere
+  (cron, systemd, a pipe) it prints one line per state change. `--notify`
+  / `--webhook` alert on every change, `--save` keeps each result in the
+  history under the same name as the single command, `--rounds N` stops
+  after N runs. Ctrl-C ends with a summary (uptime, outages, longest
+  outage, average); the exit code says whether everything was up.
 - `ping --until-up` and `--every`, like `tcp`, `udp`, `http` and
   `health`: ping once per check until the host answers, then exit 0
   (`xping ping 10.0.0.1 --until-up -q && ssh 10.0.0.1`).

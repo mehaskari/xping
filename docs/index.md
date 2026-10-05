@@ -28,3 +28,4 @@ xping doctor          # why is the internet not working?
 | How good is my Wi-Fi? | [`xping wifi`](guide.md#xping-wifi) |
 | Did it get worse? | [`xping diff`](guide.md#xping-diff), [`xping history`](guide.md#xping-history) |
 | Many checks, one exit code | [`xping check`](guide.md#xping-check) |
+| Watch everything that matters, live | [`xping monitor`](guide.md#xping-monitor) |

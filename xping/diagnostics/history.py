@@ -68,13 +68,32 @@ def _file(command: str, target: str, base: Path | None = None) -> Path:
     return (base or HISTORY_DIR) / command / f"{_slug(target)}.jsonl"
 
 
+def result_data(result: object) -> Any:
+    """A result as stored: its dict, or a list of dicts for trace hops."""
+    if isinstance(result, list):
+        return [item.to_dict() for item in result]
+    return result.to_dict()  # type: ignore[attr-defined]  # every result model has it
+
+
+def followed_metrics(command: str) -> list:
+    """The metrics history follows for *command*, headline first."""
+    known = METRICS.get(command, ())
+    wanted = _FOLLOW.get(command)
+    return [m for m in known if m.label in wanted] if wanted else list(known[:SHOWN_METRICS])
+
+
+def headline(command: str, result: object):
+    """(metric, value) of the number most worth following for *result*,
+    e.g. ("Average RTT", 12.3); (None, None) when the type has none."""
+    metrics = followed_metrics(command)
+    if not metrics:
+        return None, None
+    return metrics[0], _number(_get(result_data(result), metrics[0].path))
+
+
 def record(command: str, target: str, result: object, ok: bool, base: Path | None = None) -> Path:
     """Append one run; trim the file to the newest MAX_RUNS runs."""
-    data: Any
-    if isinstance(result, list):
-        data = [item.to_dict() for item in result]
-    else:
-        data = result.to_dict()  # type: ignore[attr-defined]  # every result model has it
+    data = result_data(result)
     path = _file(command, target, base)
     path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps({"ts": time.time(), "ok": ok, "target": target, "result": data})
@@ -151,9 +170,7 @@ def show(
         runs = [r for r in runs if r["ts"] >= cutoff]
     if last:
         runs = runs[-last:]
-    known = METRICS.get(command, ())
-    wanted = _FOLLOW.get(command)
-    metrics = [m for m in known if m.label in wanted] if wanted else list(known[:SHOWN_METRICS])
+    metrics = followed_metrics(command)
     result.metrics = [m.label for m in metrics]
     result.units = {m.label: m.unit for m in metrics}
     for run in runs:
