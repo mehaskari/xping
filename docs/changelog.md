@@ -12,6 +12,9 @@
   `--max-loss` / `--max-latency` and the exit code apply (1 when every
   ping was lost), and `--save` keeps the session in history. An
   unresolvable host now exits 1 instead of 0.
+- Python 3.13 and 3.14 are tested in CI (Linux and macOS) and listed
+  as supported on PyPI. Python 3.10 stays supported: Ubuntu 22.04,
+  which the PPA builds for, ships it.
 - `--save` confirms the save with the run number and the `xping history`
   command to use, except with `-q` or an export format, where the output
   has to stay clean.
