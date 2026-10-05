@@ -6,6 +6,7 @@ import os
 import sys
 
 from xping.cli import config as user_config
+from xping.cli import deprecated
 from xping.cli.commands import (
     cmd_about,
     cmd_all,
@@ -131,7 +132,7 @@ def _is_bare_host(argv: list[str]) -> str | None:
 
 
 def main() -> None:
-    raw_argv = sys.argv[1:]
+    raw_argv = deprecated.rewrite(sys.argv[1:])
 
     parser = build_parser()
     try:
@@ -168,7 +169,7 @@ def main() -> None:
             sys.exit(130)
         sys.exit(1 if evaluate(result) else 0)
 
-    args = parser.parse_args()
+    args = parser.parse_args(raw_argv)
     user_config.resolve_conflicts(build_parser(), args, raw_argv)
 
     if args.version:

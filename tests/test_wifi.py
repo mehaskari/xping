@@ -177,7 +177,7 @@ def test_render(capsys):
     assert "Neighbour" in out and "1 networks, 0 on your channel" in out
 
 
-@pytest.mark.parametrize("argv", [["wifi"], ["wifi", "-i", "en0", "--nearby", "--min-signal", "-67"]])
+@pytest.mark.parametrize("argv", [["wifi"], ["wifi", "-I", "en0", "--nearby", "--min-signal", "-67"]])
 def test_parser(argv):
     args = build_parser().parse_args(argv)
     assert args.command == "wifi"

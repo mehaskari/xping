@@ -118,7 +118,7 @@ def test_bash_completes_commands_options_values_profiles_and_files(fake_env, tmp
         "xping pi": "ping",
         "xping ping --max": "--max-loss --max-latency",
         "xping listen --proto ": "tcp udp",
-        "xping propagation h -t ": "A AAAA CNAME MX NS TXT",
+        "xping propagation h -r ": "A AAAA CNAME MX NS TXT",
         "xping completion ": "bash zsh fish",
         "xping profile show ": "prod-db staging-api",
         "xping ping pro": "prod-db",

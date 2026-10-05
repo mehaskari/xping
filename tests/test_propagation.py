@@ -81,7 +81,7 @@ def test_csv_and_cli(capsys):
     r = PropagationResult(name="h", rtype="A", expected=["1.1.1.1"], answers=[_answer("a", ["1.1.1.1"])])
     rows = export_csv(r).splitlines()
     assert rows[0].endswith(",matches") and rows[1].endswith(",True")
-    args = build_parser().parse_args(["propagation", "h", "-t", "mx", "--expect", "10 mx.h", "--json"])
+    args = build_parser().parse_args(["propagation", "h", "-r", "mx", "--expect", "10 mx.h", "--json"])
     assert args.rtype == "MX" and args.expect == ["10 mx.h"]
     with patch("xping.cli.commands.propagation", return_value=r) as fake:
         commands.cmd_propagation(args)

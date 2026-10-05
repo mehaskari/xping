@@ -323,7 +323,6 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     )
     p_ping.add_argument(
         "--watch",
-        "-w",
         action="store_true",
         help="Continuous live ping with sparkline (Ctrl-C to stop)",
     )
@@ -363,7 +362,7 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         help="Per-hop timeout [default: 2.0]",
     )
     p_trace.add_argument(
-        "-p", "--probes", type=int, default=3, metavar="N", help="Probes per hop [default: 3]"
+        "--probes", type=_positive_int, default=3, metavar="N", help="Probes per hop [default: 3]"
     )
     p_trace.add_argument(
         "-T",
@@ -673,7 +672,7 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     p_prop.add_argument("name", help="DNS name to query")
     p_prop.add_argument(
         "--type",
-        "-t",
+        "-r",
         dest="rtype",
         default="A",
         type=str.upper,
@@ -968,7 +967,7 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         help="Wi-Fi link quality: signal, noise, channel, rate, nearby networks",
     )
     p_wifi.add_argument(
-        "-i", "--interface", default=None, metavar="NAME", help="Wi-Fi interface (e.g. en0, wlan0)"
+        "-I", "--interface", default=None, metavar="NAME", help="Wi-Fi interface (e.g. en0, wlan0)"
     )
     p_wifi.add_argument(
         "--nearby", action="store_true", help="List the nearby networks, strongest first"
