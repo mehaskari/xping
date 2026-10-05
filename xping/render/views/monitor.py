@@ -25,6 +25,7 @@ from ..tables import print_table
 
 TREND = 16  # samples shown in the trend column
 _MIN_DETAIL = 12  # keep at least this much room for the detail column
+_MIN_NAME = 12  # check names are never cut shorter than this
 _BLOCKS = "▁▂▃▄▅▆▇█"
 
 
@@ -123,17 +124,26 @@ def live_lines(result, now: float, width: int | None = None) -> list[str]:
     # On a narrow terminal, drop the least important columns rather than
     # cutting off the uptime: Type first, then Target, Trend and For.
     shown = list(range(len(headers)))
+
+    def room() -> int:  # columns left for the detail
+        return width - 2 - sum(widths[i] + 2 for i in shown)
+
     for column in (2, 3, 5, 7):
-        if 2 + sum(widths[i] + 2 for i in shown) + _MIN_DETAIL <= width:
+        if room() >= _MIN_DETAIL:
             break
         shown.remove(column)
+    # still too narrow: shorten the check names, and if even that is not
+    # enough, leave the detail out rather than show a couple of letters
+    if room() < _MIN_DETAIL:
+        widths[1] = max(_MIN_NAME, widths[1] - (_MIN_DETAIL - room()))
+    with_detail = room() >= _MIN_DETAIL
 
     def line(cells: list[str], detail: str) -> str:
         parts = [pad(fit(cells[i], widths[i]), widths[i]) for i in shown]
         text = "  " + "  ".join(parts)
-        if detail:
+        if detail and with_detail:
             text += "  " + detail
-        return fit(text, width)
+        return fit(text.rstrip(), width)
 
     lines = [line([c(h, BRAND_INDIGO, BOLD) for h in headers], c("Detail", BRAND_INDIGO, BOLD))]
     for k, row in zip(checks, rows, strict=True):

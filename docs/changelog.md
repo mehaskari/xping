@@ -19,7 +19,9 @@
   file, or `--every`). In a terminal the state is a table redrawn in
   place: up or down, the latest value of the check's headline metric, a
   trend of the last 16 runs, uptime and how long the current state has
-  lasted; narrow terminals drop the least important columns. Elsewhere
+  lasted; narrow terminals drop the least important columns, then
+  shorten check names, and hide the detail rather than show two letters
+  of it. Elsewhere
   (cron, systemd, a pipe) it prints one line per state change. `--notify`
   / `--webhook` alert on every change, `--save` keeps each result in the
   history under the same name as the single command, `--rounds N` stops

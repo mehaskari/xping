@@ -228,3 +228,21 @@ def test_live_lines_never_wrap(width):
         result.checks.append(check)
     for line in monitor_view.live_lines(result, now=60, width=width):
         assert len(ANSI_RE.sub("", line)) <= width - 1
+
+
+def test_narrow_terminal_shortens_names_then_hides_the_detail():
+    result = MonitorResult(source="checks.toml", started=0)
+    for name, ok, value, detail in [
+        ("Cloudflare HTTPS", True, 124.4, "connected in 124.4 ms"),
+        ("Local DB (closed port)", False, None, "127.0.0.1:1 refused or timed out on every attempt"),
+    ]:
+        check = MonitoredCheck(name, "tcp", "h:1", 5, "Average connect", "ms")
+        check.samples, check.since, check.detail = [MonitorSample(1, ok, value)], 0, detail
+        result.checks.append(check)
+    at_56 = [ANSI_RE.sub("", ln) for ln in monitor_view.live_lines(result, now=10, width=56)]
+    assert at_56[0].rstrip().endswith("Detail")
+    assert "Local DB (clos…" in at_56[2]  # the name was shortened, not the detail
+    assert len(at_56[2].split("0%")[1].strip()) >= 12  # and the detail stays readable
+    at_46 = [ANSI_RE.sub("", ln) for ln in monitor_view.live_lines(result, now=10, width=46)]
+    assert "Detail" not in at_46[0] and "refused" not in at_46[2]
+    assert all(ln == ln.rstrip() for ln in at_46)
