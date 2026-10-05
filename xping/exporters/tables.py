@@ -82,6 +82,7 @@ def sections_for(result: Any) -> list[Section]:
     """Tables for *result*, primary table first (empty if it has none)."""
     from xping import models as m
 
+    rows: list[list[Any]]  # cells are any scalar; the exporters format them
     if isinstance(result, list):
         if result and all(isinstance(h, m.Hop) for h in result):
             return [_hops_section(result)]

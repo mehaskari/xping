@@ -8,6 +8,9 @@
   (`xping ping 10.0.0.1 --until-up -q && ssh 10.0.0.1`).
 
 ### Changed
+- mypy now checks every module: the last three on the baseline
+  (`exporters/tables.py`, `verdict.py`, `diagnostics/speedtest.py`) are
+  typed, and the baseline is gone.
 - `ping --watch` now judges the whole session when you stop it:
   `--max-loss` / `--max-latency` and the exit code apply (1 when every
   ping was lost), and `--save` keeps the session in history. An

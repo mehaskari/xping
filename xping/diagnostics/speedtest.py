@@ -12,6 +12,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from dataclasses import dataclass, field
 
 from xping.diagnostics.sslctx import secure_context
 from xping.models.speedtest import SpeedResult
@@ -52,6 +53,16 @@ def _measure_ping(timeout: float = 5.0) -> tuple[float | None, str | None]:
     return (min(times) if times else None), colo
 
 
+@dataclass
+class _Progress:
+    """Download progress shared by the streaming threads (under a lock)."""
+
+    bytes: int = 0
+    first: float | None = None
+    last: float | None = None
+    errors: list[str] = field(default_factory=list)
+
+
 def _measure_download(
     connections: int = 4, duration: float = 8.0, timeout: float = 20.0
 ) -> tuple[float | None, int, str | None]:
@@ -62,7 +73,7 @@ def _measure_download(
     """
     ctx = secure_context()
     lock = threading.Lock()
-    state = {"bytes": 0, "first": None, "last": None, "errors": []}
+    state = _Progress()
     deadline = time.perf_counter() + duration + 3  # allow for setup
 
     size = _DOWN_LARGE if connections <= 2 else _DOWN_SMALL
@@ -88,14 +99,14 @@ def _measure_download(
                     if not chunk:
                         break
                     with lock:
-                        state["first"] = state["first"] or now
-                        state["last"] = now
-                        state["bytes"] += len(chunk)
-                        if now - state["first"] >= duration or now >= deadline:
+                        first = state.first = state.first or now
+                        state.last = now
+                        state.bytes += len(chunk)
+                        if now - first >= duration or now >= deadline:
                             break
         except Exception as exc:
             with lock:
-                state["errors"].append(str(exc))
+                state.errors.append(str(exc))
 
     threads = [threading.Thread(target=stream, daemon=True) for _ in range(connections)]
     for t in threads:
@@ -103,9 +114,9 @@ def _measure_download(
     for t in threads:
         t.join(timeout + duration)
 
-    total, first, last = state["bytes"], state["first"], state["last"]
+    total, first, last = state.bytes, state.first, state.last
     if not total or first is None or last is None or last <= first:
-        return None, total, state["errors"][0] if state["errors"] else "no data received"
+        return None, total, state.errors[0] if state.errors else "no data received"
     return (total * 8) / (last - first) / 1_000_000, total, None
 
 

@@ -76,13 +76,6 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 
-# Baseline: these modules predate type checking and need a larger rework
-# (loosely typed table rows, the verdict dispatch tuple, speedtest's shared
-# state). Every other module is checked; remove an entry once it is clean.
-[[tool.mypy.overrides]]
-module = ["xping.exporters.tables", "xping.verdict", "xping.diagnostics.speedtest"]
-ignore_errors = true
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["xping*"]

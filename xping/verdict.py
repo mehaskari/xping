@@ -17,7 +17,9 @@ serve argparse namespaces and `xping check` config entries alike.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from xping.models import (
     BlocklistResult,
@@ -263,7 +265,7 @@ def evaluate(result, opts=None) -> list[Failure]:
             return []
         return _trace(result, opts)
 
-    handlers = (
+    handlers: tuple[tuple[type, Callable[[Any, Any], list[Failure]]], ...] = (
         (PingResult, _ping),
         (TcpResult, _tcp),
         (HttpResult, _http),
