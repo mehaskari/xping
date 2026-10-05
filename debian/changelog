@@ -1,3 +1,18 @@
+xping (1.5.0-1) noble; urgency=medium
+
+  * New: xping monitor - a live dashboard for a check file: every check
+    on its own schedule, state, trend, uptime and time in state; alerts
+    on every change and results kept in the history.
+  * Short options mean the same in every command; trace -p,
+    propagation -t, ping -w and wifi -i still work until 2.0 with a
+    warning (use --probes, -r, --watch, -I).
+  * ping --until-up; ping --watch is judged and can be saved.
+  * Check files: trace, mtr, wifi, doctor and speedtest types;
+    check --save; speedtest --min-download / --min-upload.
+  * Python 3.13 and 3.14 supported.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Mon, 05 Oct 2026 19:00:00 +0000
+
 xping (1.4.9-1) noble; urgency=medium
 
   * New: --save and xping history: keep results over time and see the
