@@ -68,7 +68,7 @@ omit = [
 
 [tool.coverage.report]
 # Ratchet: raise this when coverage grows, never lower it (it was 79% when set)
-fail_under = 75
+fail_under = 80
 show_missing = true
 
 [tool.mypy]
