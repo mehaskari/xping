@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from xping.diagnostics import history
 from xping.diagnostics.portscan import parse_ports
 
 
@@ -66,24 +67,9 @@ def _doh_value(value: str) -> str:
     raise argparse.ArgumentTypeError("use cloudflare, google, quad9, or an https:// DoH URL")
 
 
-SAVE_COMMANDS = (
-    "ping",
-    "trace",
-    "mtr",
-    "health",
-    "tls",
-    "tcp",
-    "udp",
-    "http",
-    "smtp",
-    "dnscheck",
-    "blocklist",
-    "ntp",
-    "speedtest",
-    "wifi",
-    "doctor",
-    "check",
-)
+# Commands whose results can be kept with --save: those history knows how
+# to name a target for (one list, in xping/diagnostics/history.py).
+SAVE_COMMANDS = tuple(history.TARGETS)
 
 
 def _hex_payload(value: str) -> str:

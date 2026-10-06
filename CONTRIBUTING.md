@@ -110,22 +110,27 @@ No new external dependencies without discussion — xping is stdlib +
    result has natural rows (otherwise it exports `field,value` pairs)
 5. `xping/diagnostics/NAME.py` — diagnostic function taking `quiet=`
    (and `family=` if it resolves hosts — use `diagnostics/resolve.py`)
-6. `xping/render/views/NAME.py` — `print_result()`
-7. `xping/render/views/__init__.py` — import
-8. `xping/verdict.py` — when does the result count as a failure
+6. `xping/render/views/NAME.py` — `print_result()`; import it where it is
+   used (`from xping.render.views import NAME as NAME_view`)
+7. `xping/verdict.py` — when does the result count as a failure
    (exit code 1)? Add thresholds here if the command gets any.
-9. `xping/cli/commands.py` — `cmd_NAME()` handler that **returns** the result
-10. `xping/cli/parser.py` — subcommand + flags; add it to the `--help`
-    epilog (a test checks this)
-11. `xping/cli/main.py` — dispatch table entry
-12. `man/xping.1` — COMMANDS entry, OPTIONS section and an example
-13. `README.md` — usage section; `docs/changelog.md` — entry
-14. `docs/guide.md` — a `#### \`xping NAME\`` section with every option
+8. `xping/cli/commands.py` — `cmd_NAME()` handler that **returns** the
+   result. It is found by its name: there is no dispatch table to edit
+   (a test checks that every subcommand has a handler).
+9. `xping/cli/parser.py` — subcommand + flags; add it to the `--help`
+   epilog (a test checks this)
+10. Only if its results should be kept over time: one entry in
+    `TARGETS` in `xping/diagnostics/history.py` (how to name the target).
+    That alone gives the command `--save` and makes `xping history` and
+    `xping report` accept it.
+11. `man/xping.1` — COMMANDS entry, OPTIONS section and an example
+12. `README.md` — usage section; `docs/changelog.md` — entry
+13. `docs/guide.md` — a `#### \`xping NAME\`` section with every option
     (it is also the documentation site: preview with
     `pip install -r docs/requirements.txt && mkdocs serve`; the site is
     built with `--strict`, so broken links or section anchors fail CI)
     (a test checks that each command and long option is documented)
-15. Write real tests, mock all network calls, and **run them**.
+14. Write real tests, mock all network calls, and **run them**.
 
 Shell completion needs no changes: `xping/cli/completion.py` reads
 commands, options, choices and help text from the parser. If a new

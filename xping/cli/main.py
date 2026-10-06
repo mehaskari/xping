@@ -5,48 +5,9 @@ from __future__ import annotations
 import os
 import sys
 
+from xping.cli import commands, deprecated
 from xping.cli import config as user_config
-from xping.cli import deprecated
-from xping.cli.commands import (
-    cmd_about,
-    cmd_all,
-    cmd_blocklist,
-    cmd_check,
-    cmd_completion,
-    cmd_config,
-    cmd_deps,
-    cmd_diff,
-    cmd_dnscheck,
-    cmd_doctor,
-    cmd_health,
-    cmd_history,
-    cmd_http,
-    cmd_ipscan,
-    cmd_listen,
-    cmd_lookup,
-    cmd_monitor,
-    cmd_mtr,
-    cmd_mtu,
-    cmd_net,
-    cmd_ntp,
-    cmd_osdetect,
-    cmd_ping,
-    cmd_portscan,
-    cmd_profile,
-    cmd_propagation,
-    cmd_rdns,
-    cmd_report,
-    cmd_smtp,
-    cmd_speedtest,
-    cmd_sweep,
-    cmd_tcp,
-    cmd_tls,
-    cmd_trace,
-    cmd_udp,
-    cmd_whois,
-    cmd_wifi,
-    print_version,
-)
+from xping.cli.commands import print_version
 from xping.cli.errors import UsageError
 from xping.cli.export import output_suppressed
 from xping.cli.parser import build_parser
@@ -82,44 +43,12 @@ def _print_next_steps(host: str) -> None:
     print()
 
 
+# Every subcommand NAME is handled by commands.cmd_NAME (a test checks that
+# each parser subcommand has one), so a new command needs no entry here.
 _DISPATCH = {
-    "ping": cmd_ping,
-    "trace": cmd_trace,
-    "lookup": cmd_lookup,
-    "tcp": cmd_tcp,
-    "udp": cmd_udp,
-    "ntp": cmd_ntp,
-    "portscan": cmd_portscan,
-    "sweep": cmd_sweep,
-    "ipscan": cmd_ipscan,
-    "all": cmd_all,
-    "check": cmd_check,
-    "monitor": cmd_monitor,
-    "diff": cmd_diff,
-    "rdns": cmd_rdns,
-    "dnscheck": cmd_dnscheck,
-    "blocklist": cmd_blocklist,
-    "propagation": cmd_propagation,
-    "tls": cmd_tls,
-    "smtp": cmd_smtp,
-    "http": cmd_http,
-    "whois": cmd_whois,
-    "health": cmd_health,
-    "report": cmd_report,
-    "history": cmd_history,
-    "mtr": cmd_mtr,
-    "mtu": cmd_mtu,
-    "profile": cmd_profile,
-    "speedtest": cmd_speedtest,
-    "listen": cmd_listen,
-    "osdetect": cmd_osdetect,
-    "net": cmd_net,
-    "wifi": cmd_wifi,
-    "doctor": cmd_doctor,
-    "completion": cmd_completion,
-    "config": cmd_config,
-    "deps": cmd_deps,
-    "about": cmd_about,
+    name.removeprefix("cmd_"): handler
+    for name, handler in vars(commands).items()
+    if name.startswith("cmd_") and callable(handler)
 }
 
 
@@ -186,7 +115,7 @@ def main() -> None:
         sys.exit(0)
 
     try:
-        result = _DISPATCH[args.command](args)  # type: ignore[assignment]  # any result type
+        result = _DISPATCH[args.command](args)
     except KeyboardInterrupt:
         print(c("\n\n  Interrupted.", BRAND_AMBER))
         sys.exit(130)

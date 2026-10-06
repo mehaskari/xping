@@ -121,3 +121,18 @@ def test_ping_watch_rejects_export_flags():
         with pytest.raises(ValueError, match="--watch"):
             commands.cmd_ping(args)
     mock_watch.assert_not_called()
+
+
+def test_save_is_offered_exactly_where_history_has_a_target():
+    """One list (history.TARGETS) decides which commands get --save and
+    which ones history and report accept."""
+    from xping.diagnostics import history
+
+    _, subparsers = _subcommand_parsers()
+    with_save = {
+        name
+        for name, sub in subparsers.items()
+        if name != "monitor"  # its --save saves each check under its own command
+        and any("--save" in a.option_strings for a in sub._actions)
+    }
+    assert with_save == set(history.TARGETS)
