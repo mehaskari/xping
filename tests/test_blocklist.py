@@ -162,7 +162,8 @@ def test_ipv6_address_is_checked_on_ipv6_lists():
 
     def lookup(name, timeout):
         queried.append(name)
-        return (["127.0.0.2"] if name.endswith("zen.spamhaus.org") else []), 5.0
+        zone = name.split(".", 32)[32]  # after the 32 reversed nibbles
+        return (["127.0.0.2"] if zone == "zen.spamhaus.org" else []), 5.0
 
     with patch.object(bl, "lookup_a", side_effect=lookup):
         result = bl.blocklist("2001:DB8::25", quiet=True)
