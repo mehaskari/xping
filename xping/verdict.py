@@ -45,6 +45,7 @@ from xping.models import (
     PortScanResult,
     PropagationResult,
     RdnsResult,
+    ReportResult,
     SmtpResult,
     SpeedResult,
     SweepResult,
@@ -296,6 +297,8 @@ def evaluate(result, opts=None) -> list[Failure]:
         return _errored(result)
     if isinstance(result, ListenResult | NetResult):
         return _errored(result)
+    if isinstance(result, ReportResult):
+        return [Failure(result.error)] if result.error else []
     if isinstance(result, HistoryResult):
         return [Failure(result.error)] if result.error else []
     if isinstance(result, DoctorResult):

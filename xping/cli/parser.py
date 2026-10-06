@@ -237,6 +237,7 @@ Commands:
   monitor <file>       Live dashboard: a check file's checks, continuously
   diff   <old> <new>   Compare two --json results of the same check (- = stdin)
   history [cmd target] Runs saved with --save: table, trend, vs. the usual
+  report [cmd target]  Saved history as one HTML page: uptime, outages, charts
   rdns   <ip>          Reverse DNS (PTR) lookup
   tls    <host>        TLS/SSL certificate inspector
   smtp   <host>        Mail server check: greeting, STARTTLS, certificate (domain → MX)
@@ -1090,6 +1091,32 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         "--clear",
         action="store_true",
         help="Delete saved runs (all, one command, or one command + target)",
+    )
+
+    p_report = sub.add_parser(
+        "report",
+        parents=[export_parent],
+        help="Write the saved history as one HTML page: uptime, outages, charts",
+    )
+    p_report.add_argument(
+        "report_command", nargs="?", choices=SAVE_COMMANDS, metavar="COMMAND", help="e.g. ping"
+    )
+    p_report.add_argument("report_target", nargs="?", metavar="TARGET", help="e.g. example.net")
+    p_report.add_argument(
+        "-o",
+        "--output",
+        default="xping-report.html",
+        metavar="FILE",
+        help="Where to write the page (- for stdout) [default: xping-report.html]",
+    )
+    p_report.add_argument(
+        "--since", default=None, metavar="AGE", help="Only runs from the last AGE, e.g. 24h or 7d"
+    )
+    p_report.add_argument(
+        "--last", type=_positive_int, default=None, metavar="N", help="Only the newest N runs"
+    )
+    p_report.add_argument(
+        "--title", default="xping report", metavar="TEXT", help="Page title [default: xping report]"
     )
 
     # --save on every command whose results history can follow

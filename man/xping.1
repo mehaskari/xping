@@ -555,6 +555,12 @@ nothing is recorded without it (or
 in the config file).
 The newest 500 runs per command and target are kept.
 .TP
+.BR report " [\fICOMMAND\fR [\fITARGET\fR]] [\fIOPTIONS\fR]"
+Write the saved history as one self-contained HTML page (no scripts,
+nothing loaded from the network): per target, uptime, outages, the
+latest and median value of its headline metric, and a chart over time.
+Exit status 1 when nothing has been saved.
+.TP
 .B deps
 Check whether the optional system binaries
 .RB ( ping ,
@@ -1156,6 +1162,26 @@ Delete saved runs: all, one command, or one command and target.
 .B \-\-save
 (on the measurement commands) Keep the result in
 .IR ~/.xping/history .
+.SS report
+.TP
+.BI \-o " FILE" ", \-\-output " FILE
+Where to write the page;
+.B \-
+writes it to standard output.
+Default:
+.IR xping\-report.html .
+.TP
+.BI \-\-since " AGE"
+Only runs from the last
+.IR AGE .
+.TP
+.BI \-\-last " N"
+Only the newest
+.I N
+runs of each target.
+.TP
+.BI \-\-title " TEXT"
+Page title.
 .SS doctor
 .TP
 .BI \-\-port " PORT"

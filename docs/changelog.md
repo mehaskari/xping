@@ -3,6 +3,13 @@
 ## [Unreleased]
 
 ### Added
+- **`xping report`: the saved history as one HTML page.** An overview of
+  every target (state, uptime, outages, latest value), and per target the
+  uptime, outages and downtime, latest and median value, a chart of the
+  headline metric over time with failures and outages marked, and the
+  list of outages. One self-contained file, no scripts, nothing loaded
+  from the network, light and dark theme. `-o FILE` (or `-` for stdout),
+  `--since`, `--last`, `--title`; narrow to one command or target.
 - `mtr --tcp` / `--port PORT`: every probe is a TCP SYN to that port
   (443 by default), like `trace --tcp`, so mtr works where ICMP is
   dropped. Also in check files (`tcp = true`, `port`).

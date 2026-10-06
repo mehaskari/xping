@@ -30,7 +30,7 @@ output means, and walks through common tasks.
    - Web, mail and TLS: [`http`](#xping-http) · [`tls`](#xping-tls) · [`smtp`](#xping-smtp)
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
    - Local machine: [`wifi`](#xping-wifi) · [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
-   - Automation: [`check`](#xping-check) · [`monitor`](#xping-monitor) · [`diff`](#xping-diff) · [`history`](#xping-history) · [`profile`](#xping-profile)
+   - Automation: [`check`](#xping-check) · [`monitor`](#xping-monitor) · [`diff`](#xping-diff) · [`history`](#xping-history) · [`report`](#xping-report) · [`profile`](#xping-profile)
    - Utilities: [`config`](#xping-config) · [`completion`](#xping-completion) · [`deps`](#xping-deps) · [`about`](#xping-about)
 5. [Batch check files](#5-batch-check-files)
 6. [Recipes](#6-recipes)
@@ -1506,6 +1506,45 @@ xping history http https://example.com --last 50 --csv > http.csv
 xping history --clear                         # start over
 ```
 
+#### `xping report`
+
+```
+xping report [COMMAND [TARGET]] [-o FILE] [--since AGE] [--last N] [--title TEXT]
+```
+
+Turns the [history](#xping-history) into **one HTML page** you can mail,
+archive or put on any web server. The page is a single file: no
+scripts and nothing loaded from the network, and it follows the reader's
+light or dark theme.
+
+- An overview table: every target with its state, uptime, number of
+  outages and latest value; each row links to its section.
+- Per target: state, uptime, runs, outages and total downtime, the latest
+  and median value of its headline metric, and a chart of that metric over
+  time with failed runs marked in red and outages shaded.
+- The outages themselves: when each began (first failed run), when the
+  target was back (first good run) and how long it lasted.
+
+Everything saved with `--save` counts, including `xping monitor --save`.
+Without arguments, every recorded target is included; name a command, or
+a command and target, to narrow it down.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-o`, `--output FILE` | `xping-report.html` | Where to write the page; `-` writes it to stdout |
+| `--since AGE` | — | Only runs from the last AGE, e.g. `24h`, `7d`, `2w` |
+| `--last N` | — | Only the newest N runs of each target |
+| `--title TEXT` | xping report | Page title |
+
+`--json`, `--csv` and `--markdown` export the same summary as data.
+Exit code 1 when there is nothing to report.
+
+```bash
+xping report                                   # everything → xping-report.html
+xping report --since 7d -o weekly.html --title "Office network, last week"
+xping report ping 1.1.1.1 -o - > ping.html
+```
+
 #### `xping profile`
 
 ```
@@ -1701,6 +1740,13 @@ underlying result.
 ---
 
 ## 6. Recipes
+
+**A weekly uptime page**
+
+```bash
+xping monitor checks.toml --save --fail-after 3      # all week
+xping report --since 7d -o /var/www/html/uptime.html # e.g. from cron
+```
 
 **Keep an eye on everything that matters, all day**
 
