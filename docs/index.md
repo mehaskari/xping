@@ -26,6 +26,6 @@ xping doctor          # why is the internet not working?
 | Why is a website slow? | [`xping http`](guide.md#xping-http) |
 | Is my mail set up right? | [`xping dnscheck`](guide.md#xping-dnscheck), [`xping smtp`](guide.md#xping-smtp), [`xping blocklist`](guide.md#xping-blocklist) |
 | How good is my Wi-Fi? | [`xping wifi`](guide.md#xping-wifi) |
-| Did it get worse? | [`xping diff`](guide.md#xping-diff), [`xping history`](guide.md#xping-history) |
+| Did it get worse? | [`xping diff`](guide.md#xping-diff), [`xping history`](guide.md#xping-history), [`xping report`](guide.md#xping-report) |
 | Many checks, one exit code | [`xping check`](guide.md#xping-check) |
 | Watch everything that matters, live | [`xping monitor`](guide.md#xping-monitor) |

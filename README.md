@@ -578,6 +578,13 @@ xping history ping example.net --since 7d       # runs, trend, latest vs. the me
 dnscheck, blocklist, ntp, speedtest, wifi, doctor and check. The newest 500 runs
 per command and target are kept; `--clear` deletes them.
 
+`xping report` turns that history into one HTML page (no scripts, nothing
+loaded from the network): uptime, outages, and a chart per target.
+
+```bash
+xping report --since 7d -o weekly.html
+```
+
 ### Batch checks
 
 Put many checks in one file and get one exit code (TOML needs Python 3.11+; JSON works everywhere):
