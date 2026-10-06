@@ -5,7 +5,7 @@ HTTP, mail servers, Wi-Fi and more, behind one consistent command line with
 readable output, meaningful exit codes and JSON / CSV / Markdown export.
 
 ```bash
-pipx install xping
+pipx install xping                  # or: brew install mehaskari/tap/xping
 xping doctor          # why is the internet not working?
 ```
 

@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- Homebrew: `brew install mehaskari/tap/xping` (man page and completion
+  for bash, zsh and fish included). The tap follows PyPI releases on its
+  own, after building and testing each new version on macOS.
 - `blocklist` checks IPv6 addresses too (nibble format) on the lists
   that publish IPv6 data, Spamhaus ZEN and DroneBL — both for an IPv6
   address given directly and for a domain's IPv6 mail and web servers,
