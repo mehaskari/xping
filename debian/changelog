@@ -1,3 +1,17 @@
+xping (1.5.1-1) noble; urgency=medium
+
+  * xping report: the saved history as one HTML page (uptime, outages,
+    charts).
+  * --fail-after / --recover-after: one blip is not an outage (watch mode,
+    ping --watch, xping monitor).
+  * Default check file ~/.xping/checks.toml for check and monitor;
+    xping check --init creates it; xping monitor HOST HOST:PORT URL works
+    without a file.
+  * mtr --tcp / --port; blocklist checks IPv6 addresses.
+  * Homebrew: brew install mehaskari/tap/xping.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Tue, 06 Oct 2026 19:55:36 +0000
+
 xping (1.5.0-1) noble; urgency=medium
 
   * New: xping monitor - a live dashboard for a check file: every check
