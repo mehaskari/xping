@@ -898,6 +898,19 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         metavar="SEC",
         help="Interval between cycles [default: 0.3]",
     )
+    p_mtr.add_argument(
+        "-T",
+        "--tcp",
+        action="store_true",
+        help="Probe with TCP SYNs instead of ICMP — gets through firewalls that drop ping",
+    )
+    p_mtr.add_argument(
+        "--port",
+        type=_tcp_port,
+        default=None,
+        metavar="PORT",
+        help="TCP port for --tcp (implies --tcp) [default: 443]",
+    )
     _add_max_loss(p_mtr, "destination packet loss")
     _add_max_latency(p_mtr, "destination average RTT")
 

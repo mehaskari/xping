@@ -265,6 +265,7 @@ def _run_trace(e: dict):
 def _run_mtr(e: dict):
     from xping.diagnostics.mtr import mtr
 
+    port = e.get("port")
     return mtr(
         host=_host(e),
         max_hops=int(e.get("max_hops", 30)),
@@ -272,6 +273,7 @@ def _run_mtr(e: dict):
         timeout=float(e.get("timeout", 2.0)),
         quiet=True,
         family=_family(e),
+        tcp_port=int(port) if port else (443 if e.get("tcp") else None),
     )
 
 

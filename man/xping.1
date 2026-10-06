@@ -749,6 +749,17 @@ Default:
 Add an AS number/operator column (see
 .BR trace ).
 .TP
+.BR \-T ", " \-\-tcp
+Probe with TCP SYNs instead of ICMP (Linux and macOS), like
+.BR "trace \-\-tcp" .
+.TP
+.BI \-\-port " PORT"
+TCP port for
+.B \-\-tcp
+(implies it).
+Default:
+.BR 443 .
+.TP
 .BI \-\-max\-loss " PCT"
 Exit 1 if packet loss at the destination hop exceeds
 .I PCT

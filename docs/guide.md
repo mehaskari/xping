@@ -578,7 +578,7 @@ xping trace example.com --csv > hops.csv
 #### `xping mtr`
 
 ```
-xping mtr HOST [-c N] [-m N] [-t SEC] [-i SEC] [--asn] [--max-loss PCT] [--max-latency MS]
+xping mtr HOST [-c N] [-m N] [-t SEC] [-i SEC] [--asn] [--tcp] [--port PORT] [--max-loss PCT] [--max-latency MS]
 ```
 
 "My traceroute": discovers the path once, then pings every hop repeatedly
@@ -597,6 +597,8 @@ problem at that hop.
 | `-t`, `--timeout SEC` | 2.0 | Per-probe timeout |
 | `-i`, `--interval SEC` | 0.3 | Interval between cycles |
 | `--asn` | — | AS number/operator column (Team Cymru DNS) |
+| `-T`, `--tcp` | — | Probe with TCP SYNs instead of ICMP, like [`trace --tcp`](#xping-trace): gets through firewalls that drop ping (Linux and macOS) |
+| `--port PORT` | 443 | TCP port for `--tcp` (implies `--tcp`) |
 | `--max-loss PCT` | — | Exit 1 if loss **at the destination** is above PCT % |
 | `--max-latency MS` | — | Exit 1 if the destination's average RTT is above MS |
 | `-4`, `-6` | — | Address family |
@@ -605,6 +607,8 @@ problem at that hop.
 ```bash
 xping mtr 1.1.1.1 --cycles 30
 xping mtr example.com --asn --max-loss 2
+xping mtr example.com --tcp            # where ICMP is blocked
+xping mtr db.internal --port 5432
 ```
 
 #### `xping tcp`
@@ -1669,7 +1673,7 @@ max_latency = 1500
 | `health` | `host` | `count` (8), `timeout` (2.0), `family` | `min_score` |
 | `propagation` | `name_to_query` | `record` ("A"), `servers` (list) | `expect` (string or list) |
 | `trace` | `host` | `max_hops` (30), `probes` (1), `timeout` (2.0), `tcp` (false), `port` (TCP SYN to this port), `family` | — (fails without any hop) |
-| `mtr` | `host` | `max_hops` (30), `cycles` (5), `timeout` (2.0), `family` | `max_loss`, `max_latency` (at the destination) |
+| `mtr` | `host` | `max_hops` (30), `cycles` (5), `timeout` (2.0), `tcp` (false), `port` (TCP SYN to this port), `family` | `max_loss`, `max_latency` (at the destination) |
 | `wifi` | — | `interface` | `min_signal` (dBm) |
 | `doctor` | — | `target` (a host to test end to end), `port` (443) | — (fails on a failed step) |
 | `speedtest` | — | `connections` (4), `duration` (8.0) | `min_download`, `min_upload` (Mbit/s) |
