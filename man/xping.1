@@ -154,10 +154,11 @@ Checks whose DNS query failed (e.g. SERVFAIL or timeout) are marked
 as not verified and excluded from the score.
 .TP
 .BR blocklist " \fIIP\fR|\fIDOMAIN\fR [\fIOPTIONS\fR]"
-Check an IPv4 address, or a domain and the IPv4 addresses of its mail
-(MX) and web (A) servers, against spam blocklists (DNSBL/RHSBL):
+Check an IP address, or a domain and the addresses of its mail (MX) and
+web (A/AAAA) servers, against spam blocklists (DNSBL/RHSBL):
 Spamhaus ZEN, SpamCop, Barracuda, PSBL, Mailspike, UCEPROTECT L1, DroneBL
-and s5h for addresses; Spamhaus DBL, SURBL and URIBL for domains.
+and s5h for IPv4 addresses (Spamhaus ZEN and DroneBL for IPv6, the only
+ones with IPv6 data); Spamhaus DBL, SURBL and URIBL for domains.
 Each result is
 .BR listed ,
 .B policy
