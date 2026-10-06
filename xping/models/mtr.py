@@ -72,6 +72,7 @@ class MtrResult:
     dest_ip: str | None = None
     cycles: int = 0
     hops: list[MtrHop] = field(default_factory=list)
+    tcp_port: int | None = None  # None: ICMP probes
     error: str | None = None
 
     def to_dict(self, *, include_computed: bool = True) -> dict:

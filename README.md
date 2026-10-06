@@ -186,6 +186,7 @@ xping mtr google.com              # combined traceroute + live per-hop ping
 xping mtr 1.1.1.1 --cycles 20    # 20 ping cycles per hop
 xping mtr example.com --json      # export full hop statistics
 xping mtr 1.1.1.1 --asn           # add an AS / operator column
+xping mtr example.com --tcp       # TCP SYN probes where ICMP is blocked
 ```
 
 ### DNS Lookup

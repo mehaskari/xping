@@ -10,6 +10,9 @@
   list of outages. One self-contained file, no scripts, nothing loaded
   from the network, light and dark theme. `-o FILE` (or `-` for stdout),
   `--since`, `--last`, `--title`; narrow to one command or target.
+- `mtr --tcp` / `--port PORT`: every probe is a TCP SYN to that port
+  (443 by default), like `trace --tcp`, so mtr works where ICMP is
+  dropped. Also in check files (`tcp = true`, `port`).
 - `--fail-after N` and `--recover-after N` for watch mode (`--watch` /
   `--until-up` on ping, tcp, udp, http, health) and `xping monitor`
   (also per check: `fail_after`, `recover_after`). A target counts as

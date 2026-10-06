@@ -143,3 +143,54 @@ def test_linux_error_queue_probe_end_to_end():
     with tracer:
         responder, rtt = tracer.probe(1, timeout=0.5)
     assert (responder is None and rtt == -1.0) or rtt >= 0
+
+
+class _FakeTracer:
+    """Answers TTL 1 with a router, TTL 2 silently, TTL 3 from the target."""
+
+    def __init__(self, dest_ip, port):
+        self.dest_ip, self.port, self.closed = dest_ip, port, False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.closed = True
+
+    def probe(self, ttl, timeout=2.0):
+        return {1: ("10.0.0.1", 1.5), 2: (None, -1.0)}.get(ttl, (self.dest_ip, 9.0))
+
+
+def test_mtr_tcp_mode(monkeypatch):
+    from xping.cli.parser import build_parser
+    from xping.diagnostics import mtr as mtr_mod
+    from xping.verdict import evaluate
+
+    made = []
+
+    def factory(dest_ip, port):
+        made.append(_FakeTracer(dest_ip, port))
+        return made[-1]
+
+    monkeypatch.setattr(mtr_mod.tcptrace, "supported", lambda: True)
+    monkeypatch.setattr(mtr_mod.tcptrace, "TcpTracer", factory)
+    monkeypatch.setattr(mtr_mod, "resolve", lambda host, family=None: "192.0.2.9")
+    monkeypatch.setattr(mtr_mod, "_reverse", lambda ip: None)
+    monkeypatch.setattr(mtr_mod.time, "sleep", lambda s: None)
+    result = mtr_mod.mtr("h", cycles=2, quiet=True, tcp_port=22)
+    assert result.tcp_port == 22 and made[0].port == 22 and made[0].closed
+    assert [h.ip for h in result.hops] == ["10.0.0.1", None, "192.0.2.9"]
+    assert result.hops[2].rtts == [9.0, 9.0] and result.hops[1].rtts == [-1.0, -1.0]
+    assert evaluate(result) == []
+    args = build_parser().parse_args(["mtr", "h", "--port", "22"])
+    assert args.port == 22 and not args.tcp
+    assert build_parser().parse_args(["mtr", "h", "-T"]).tcp
+
+
+def test_mtr_tcp_unsupported(monkeypatch):
+    from xping.diagnostics import mtr as mtr_mod
+
+    monkeypatch.setattr(mtr_mod.tcptrace, "supported", lambda: False)
+    monkeypatch.setattr(mtr_mod, "resolve", lambda host, family=None: "192.0.2.9")
+    result = mtr_mod.mtr("h", quiet=True, tcp_port=443)
+    assert result.error == "TCP mtr needs Linux or macOS" and not result.hops
