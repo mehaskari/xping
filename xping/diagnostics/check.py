@@ -395,7 +395,13 @@ def load_config(path: str) -> list[dict]:
     checks = data.get("check", data.get("checks"))
     if not isinstance(defaults, dict) or not isinstance(checks, list) or not checks:
         raise ConfigError(f'{path}: define at least one [[check]] (TOML) or "checks": [...] (JSON)')
+    return normalize(checks, defaults)
 
+
+def normalize(checks: list, defaults: dict | None = None) -> list[dict]:
+    """Validate raw check tables and apply *defaults* (also used for checks
+    built from command-line targets)."""
+    defaults = defaults or {}
     entries = []
     for index, raw in enumerate(checks, 1):
         if not isinstance(raw, dict):
@@ -482,3 +488,124 @@ def run_checks(path: str, workers: int = 8, quiet: bool = False) -> CheckReport:
     if not quiet:
         check_view.print_report(report)
     return report
+
+
+# ── the default check file, --init, and checks from command-line targets ──
+
+DEFAULT_DIR = Path.home() / ".xping"
+
+
+def default_file(base: Path | None = None) -> Path:
+    """~/.xping/checks.toml, or checks.json when only that one exists."""
+    root = base or DEFAULT_DIR
+    toml, json_file = root / "checks.toml", root / "checks.json"
+    return json_file if json_file.exists() and not toml.exists() else toml
+
+
+class NoCheckFile(ConfigError):
+    """No check file was given and there is none in the default place."""
+
+
+def require_default(base: Path | None = None) -> Path:
+    path = default_file(base)
+    if not path.exists():
+        raise NoCheckFile(
+            f"no check file yet ({_tilde(path)})\n"
+            "  create one:        xping check --init\n"
+            "  or watch targets:  xping monitor 1.1.1.1 router.local db.internal:5432"
+        )
+    return path
+
+
+def _tilde(path: Path) -> str:
+    try:
+        return "~/" + str(path.relative_to(Path.home()))
+    except ValueError:
+        return str(path)
+
+
+def entries_from_targets(targets: list[str]) -> list[dict]:
+    """Quick checks without a file: a URL becomes an http check, host:port
+    (or [IPv6]:port) a tcp check, anything else a ping."""
+    import ipaddress
+
+    raw: list[dict] = []
+    for target in targets:
+        if target.startswith(("http://", "https://")):
+            raw.append({"type": "http", "url": target, "name": target})
+            continue
+        host, port = target, None
+        if target.startswith("[") and "]:" in target:  # [2001:db8::1]:22
+            host, _, port = target[1:].partition("]:")
+        elif target.count(":") == 1:  # host:port (a bare IPv6 address has more colons)
+            host, _, port = target.partition(":")
+        if port is not None:
+            if not port.isdigit() or not 0 < int(port) < 65536:
+                raise ConfigError(f"'{target}': port must be 1-65535")
+            raw.append({"type": "tcp", "host": host, "port": int(port), "name": target})
+        else:
+            try:
+                ipaddress.ip_address(host.strip("[]"))
+                host = host.strip("[]")
+            except ValueError:
+                pass
+            raw.append({"type": "ping", "host": host, "name": target})
+    return normalize(raw)
+
+
+def _starter(gateway: str | None, as_json: bool) -> str:
+    checks = []
+    if gateway:
+        checks.append(("Router", {"type": "ping", "host": gateway, "every": 10}))
+    checks += [
+        ("Internet (Cloudflare DNS)", {"type": "ping", "host": "1.1.1.1", "every": 10}),
+        ("Internet (Google DNS)", {"type": "ping", "host": "8.8.8.8", "every": 10}),
+        ("DNS resolution", {"type": "lookup", "host": "cloudflare.com", "every": 60}),
+        ("HTTPS", {"type": "http", "url": "https://www.cloudflare.com", "every": 60}),
+    ]
+    if as_json:
+        data = {
+            "defaults": {"timeout": 3, "fail_after": 3},
+            "checks": [{"name": name, **body} for name, body in checks],
+        }
+        return json.dumps(data, indent=2) + "\n"
+    lines = [
+        "# xping checks - used by `xping check` and `xping monitor` when no file is given.",
+        "# Edit freely: add your own servers, ports, URLs and thresholds.",
+        "# All check types and keys: `xping check --example`, or `man xping`.",
+        "",
+        "[defaults]",
+        "timeout = 3",
+        "fail_after = 3      # monitor: count as DOWN only after 3 failures in a row",
+    ]
+    for name, body in checks:
+        lines += ["", "[[check]]", f'name = "{name}"']
+        lines += [f"{k} = {json.dumps(v)}" for k, v in body.items()]
+    lines += [
+        "",
+        "# [[check]]",
+        '# name = "Database"',
+        '# type = "tcp"',
+        '# host = "db.example.com"',
+        "# port = 5432",
+        "# max_latency = 50",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def init_file(base: Path | None = None, gateway: str | None = None) -> tuple[Path, bool]:
+    """Create the default check file; (path, created). An existing file is
+    never overwritten."""
+    existing = default_file(base)
+    if existing.exists():
+        return existing, False
+    try:
+        import tomllib  # noqa: F401  (TOML files need Python 3.11+)
+
+        path, as_json = existing, False
+    except ModuleNotFoundError:
+        path, as_json = existing.with_suffix(".json"), True
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_starter(gateway, as_json), encoding="utf-8")
+    return path, True

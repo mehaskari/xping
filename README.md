@@ -600,7 +600,9 @@ xping report --since 7d -o weekly.html
 Put many checks in one file and get one exit code (TOML needs Python 3.11+; JSON works everywhere):
 
 ```bash
-xping check --example > checks.toml   # commented starter file
+xping check --init                    # starter file: ~/.xping/checks.toml
+xping check                           # run it (the default file)
+xping check --example > checks.toml   # every check type, commented
 xping check checks.toml               # parallel run, pass/fail table
 xping check checks.toml --json > report.json
 ```
@@ -631,7 +633,9 @@ state, latest value, a trend of the last runs, uptime and how long the
 current state has lasted.
 
 ```bash
-xping monitor checks.toml                         # live dashboard, Ctrl-C for a summary
+xping monitor                                     # live dashboard of ~/.xping/checks.toml
+xping monitor 1.1.1.1 router.local db:5432        # no file: ping, ping, TCP connect
+xping monitor checks.toml                         # any check file, Ctrl-C for a summary
 xping monitor checks.toml --notify --save         # desktop alerts + history for every check
 xping monitor checks.toml --webhook URL >> log    # not a terminal: one line per change
 ```

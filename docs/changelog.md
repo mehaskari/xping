@@ -3,6 +3,13 @@
 ## [Unreleased]
 
 ### Added
+- A default check file, `~/.xping/checks.toml`: `xping check` and
+  `xping monitor` use it when no file is given, and say how to create it
+  when it does not exist. `xping check --init` creates it with checks that
+  work anywhere (your router, 1.1.1.1, 8.8.8.8, DNS, HTTPS); it never
+  overwrites an existing file.
+- `xping monitor HOST HOST:PORT URL…` without a file: hosts are pinged,
+  `HOST:PORT` gets a TCP connect, URLs an HTTP check.
 - Homebrew: `brew install mehaskari/tap/xping` (man page and completion
   for bash, zsh and fish included). The tap follows PyPI releases on its
   own, after building and testing each new version on macOS.

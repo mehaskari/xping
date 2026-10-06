@@ -109,7 +109,7 @@ class _Tracker:
 
 
 def monitor(
-    path: str,
+    path: str | None,
     every: float = 30.0,
     workers: int = 8,
     rounds: int | None = None,
@@ -123,10 +123,16 @@ def monitor(
     clock: Callable[[], float] = time.time,
     sleep: Callable[[float], None] = time.sleep,
     run: Callable[[list[dict], int], list[CheckOutcome]] = run_entries,
+    entries: list[dict] | None = None,
 ) -> MonitorResult:
-    """Run the checks in *path* until Ctrl-C (or *rounds* runs of each)."""
-    entries = load_config(path)
-    result = MonitorResult(source=path, started=clock())
+    """Run the checks in *path* (or the ready-made *entries*, e.g. built from
+    command-line targets) until Ctrl-C, or *rounds* runs of each."""
+    if entries is None:
+        if path is None:
+            raise ConfigError("no checks to monitor")
+        entries = load_config(path)
+    source = path or ", ".join(str(e["name"]) for e in entries)
+    result = MonitorResult(source=source, started=clock())
     trackers = []
     for index, entry in enumerate(entries, 1):
         metrics = history.followed_metrics(entry["type"])
