@@ -9,6 +9,9 @@ import pytest
 
 from xping.diagnostics import check as check_diag
 
+# --init writes TOML where Python can read it (3.11+), JSON on 3.10
+STARTER = "checks.toml" if sys.version_info >= (3, 11) else "checks.json"
+
 
 @pytest.fixture
 def home(tmp_path, monkeypatch):
@@ -47,11 +50,10 @@ def test_missing_default_file_explains_what_to_do(home):
 
 def test_init_creates_once_and_never_overwrites(home):
     path, created = check_diag.init_file(gateway="192.168.1.1")
-    assert created and path == home / "checks.toml"
-    entries = check_diag.load_config(str(path)) if sys.version_info >= (3, 11) else None
-    if entries is not None:
-        assert [e["host"] for e in entries[:3]] == ["192.168.1.1", "1.1.1.1", "8.8.8.8"]
-        assert all(e["fail_after"] == 3 for e in entries)
+    assert created and path == home / STARTER
+    entries = check_diag.load_config(str(path))
+    assert [e["host"] for e in entries[:3]] == ["192.168.1.1", "1.1.1.1", "8.8.8.8"]
+    assert all(e["fail_after"] == 3 for e in entries)
     path.write_text("# mine\n")
     assert check_diag.init_file() == (path, False) and path.read_text() == "# mine\n"
     assert check_diag.require_default() == path
@@ -92,11 +94,11 @@ def test_cli_check_init_and_default_file(home, capsys):
     with patch("xping.diagnostics.net.net") as fake_net:
         fake_net.return_value.gateway_ipv4 = "10.0.0.1"
         code, captured = _main(["check", "--init"], capsys)
-    assert code == 0 and "created" in captured.out and (home / "checks.toml").exists()
+    assert code == 0 and "created" in captured.out and (home / STARTER).exists()
     with patch("xping.cli.commands.run_checks") as fake_run:
         fake_run.return_value = None
         _main(["check", "-q"], capsys)
-    assert fake_run.call_args.args[0] == str(home / "checks.toml")
+    assert fake_run.call_args.args[0] == str(home / STARTER)
 
 
 def test_cli_monitor_targets_and_file(home, tmp_path, capsys):
