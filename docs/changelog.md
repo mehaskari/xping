@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.5.1] - 2026-10-06
 
 ### Added
 - A default check file, `~/.xping/checks.toml`: `xping check` and
