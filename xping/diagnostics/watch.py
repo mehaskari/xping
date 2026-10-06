@@ -8,6 +8,7 @@ from collections.abc import Callable
 from xping.models.watch import WatchResult, WatchSample
 from xping.render import BOLD, BRAND_TEAL, c, kv, section_header
 from xping.render.views import watch as watch_view
+from xping.statefilter import StateFilter
 
 Probe = Callable[[], tuple[bool, "float | None", str]]
 
@@ -22,6 +23,8 @@ def watch(
     clock: Callable[[], float] = time.time,
     sleep: Callable[[float], None] = time.sleep,
     notifier=None,
+    fail_after: int = 1,
+    recover_after: int = 1,
 ) -> WatchResult:
     """Run *probe* every *every* seconds.
 
@@ -29,7 +32,9 @@ def watch(
     function returns as soon as a check passes; otherwise it runs until
     Ctrl-C and then prints a summary. Ctrl-C in --until-up mode propagates
     (exit code 130) because the awaited state was never reached.
-    *notifier* (see diagnostics.notify) is told about every up/down change.
+    *notifier* (see diagnostics.notify) is told about every confirmed
+    up/down change: DOWN after *fail_after* failed checks in a row, UP after
+    *recover_after* passing ones (--until-up also waits for those).
     """
     result = WatchResult(target=target, check=check, until_up=until_up)
     if not quiet:
@@ -41,13 +46,14 @@ def watch(
         print()
 
     try:
-        return _loop(result, probe, every, until_up, quiet, clock, sleep, notifier)
+        state = StateFilter(fail_after, recover_after)
+        return _loop(result, probe, every, until_up, quiet, clock, sleep, notifier, state)
     finally:
         if notifier is not None:
             notifier.flush()
 
 
-def _loop(result, probe, every, until_up, quiet, clock, sleep, notifier) -> WatchResult:
+def _loop(result, probe, every, until_up, quiet, clock, sleep, notifier, state) -> WatchResult:
     seq = 0
     try:
         while True:
@@ -59,15 +65,16 @@ def _loop(result, probe, every, until_up, quiet, clock, sleep, notifier) -> Watc
             result.samples.append(sample)
             if not quiet:
                 watch_view.print_sample(sample, previous, result)
-            if notifier is not None:
+            confirmed_before = state.state
+            if state.update(ok) and notifier is not None:
                 notifier.observe(
                     ok,
-                    previous.ok if previous else None,
+                    confirmed_before,
                     detail,
                     latency,
                     final=until_up and ok,
                 )
-            if until_up and ok:
+            if until_up and ok and state.state:
                 if not quiet:
                     watch_view.print_up(result)
                 return result

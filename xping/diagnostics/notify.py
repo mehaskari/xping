@@ -124,14 +124,17 @@ class Notifier:
         detail: str = "",
         latency=None,
         final: bool = False,
+        since: float | None = None,
     ) -> None:
         """Feed one check result. Events fire on every up/down change; the
         first check only sets the baseline, except when it ends an
-        --until-up wait (*final*), which always announces "up"."""
-        now = self.clock()
+        --until-up wait (*final*), which always announces "up". *since* is
+        when a confirmed outage really began (its first failed check), so
+        "up again after …" covers the whole outage."""
+        start = since if since is not None else self.clock()
         if previous_ok is None:
             if not ok:
-                self.down_since = now
+                self.down_since = start
             elif final:
                 self.event("up", detail, latency)
             return
@@ -141,7 +144,7 @@ class Notifier:
             self.event("up", detail, latency)
             self.down_since = None
         else:
-            self.down_since = now
+            self.down_since = start
             self.event("down", detail, latency)
 
     # -- delivery ---------------------------------------------------------

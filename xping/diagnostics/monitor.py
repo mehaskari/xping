@@ -28,6 +28,7 @@ from xping.models.check import CheckOutcome
 from xping.models.monitor import MonitoredCheck, MonitorResult, MonitorSample
 from xping.render.errors import warn
 from xping.render.views import monitor as monitor_view
+from xping.statefilter import StateFilter
 
 # Field defaults the single commands use, so a monitored check is saved
 # under the same history target as e.g. `xping tls example.com --save`.
@@ -51,6 +52,13 @@ def history_target(entry: dict) -> str | None:
     return history.TARGETS[kind](SimpleNamespace(**fields))
 
 
+def _count(entry: dict, key: str, default: int, index: int) -> int:
+    value = entry.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ConfigError(f"check #{index}: '{key}' must be a whole number of at least 1")
+    return value
+
+
 def _every(entry: dict, default: float, index: int) -> float:
     value = entry.get("every", default)
     try:
@@ -71,22 +79,27 @@ class _Tracker:
         self.notifier = notifier
         self.save = save
         self.target = history_target(entry) if save else None
+        self.state = StateFilter(check.fail_after, check.recover_after)
 
     def apply(self, outcome: CheckOutcome, ts: float, report: Callable | None) -> None:
         check = self.check
         value = None
         if outcome.result is not None and check.metric:
             _metric, value = history.headline(check.type, outcome.result)
-        previous = check.last_ok
         check.samples.append(MonitorSample(ts=ts, ok=outcome.ok, value=value))
         check.detail = outcome.detail
-        if previous is None or previous != outcome.ok:
-            check.since = ts
+        previous, previous_since = check.up, check.since
+        if self.state.update(outcome.ok):
+            # the outage (or recovery) began with the first run of this streak
+            changed_at = check.samples[-self.state.run].ts
+            check.up, check.since = self.state.state, changed_at
             if report is not None:
-                report(check, ts, previous)
-        if self.notifier is not None:
-            latency = value if check.unit == "ms" else None
-            self.notifier.observe(outcome.ok, previous, outcome.detail, latency)
+                report(check, ts, previous, previous_since)
+            if self.notifier is not None:
+                latency = value if check.unit == "ms" else None
+                self.notifier.observe(
+                    bool(check.up), previous, outcome.detail, latency, since=changed_at
+                )
         if self.target is not None and outcome.result is not None:
             try:
                 history.record(check.type, self.target, outcome.result, outcome.ok)
@@ -103,6 +116,8 @@ def monitor(
     save: bool = False,
     notify: bool = False,
     webhook: str | None = None,
+    fail_after: int = 1,
+    recover_after: int = 1,
     quiet: bool = False,
     live: bool | None = None,
     clock: Callable[[], float] = time.time,
@@ -120,11 +135,17 @@ def monitor(
             type=entry["type"],
             target=display_target(entry),
             every=_every(entry, every, index),
+            fail_after=_count(entry, "fail_after", fail_after, index),
+            recover_after=_count(entry, "recover_after", recover_after, index),
             metric=metrics[0].label if metrics else None,
             unit=metrics[0].unit if metrics else "",
         )
         result.checks.append(check)
-        notifier = Notifier(check.name, check.type, notify, webhook) if notify or webhook else None
+        notifier = (
+            Notifier(check.name, check.type, notify, webhook, clock=clock)
+            if notify or webhook
+            else None
+        )
         trackers.append(_Tracker(entry, check, notifier, save))
 
     if live is None:

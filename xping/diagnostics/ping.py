@@ -24,6 +24,7 @@ from xping.render import (
 from xping.render.animations import Spinner
 from xping.render.errors import resolve_error
 from xping.render.views import ping as ping_view
+from xping.statefilter import StateFilter
 
 
 def _icmp_ping(host: str, seq: int, timeout: float = 2.0) -> float | None:
@@ -151,14 +152,16 @@ def watch(
     interval: float = 1.0,
     family: int | None = None,
     notifier=None,
+    fail_after: int = DOWN_AFTER_LOSSES,
+    recover_after: int = 1,
 ) -> PingResult:
     """Continuous live ping with in-place sparkline (Ctrl-C to stop).
 
     Returns every ping of the session as one PingResult, so the exit code,
     --max-loss / --max-latency and --save treat it like a normal run.
-    With a *notifier*, the host counts as down after DOWN_AFTER_LOSSES
-    consecutive lost pings and as up again at the next reply — a single
-    lost packet is not an outage."""
+    With a *notifier*, the host counts as down after *fail_after*
+    consecutive lost pings (default DOWN_AFTER_LOSSES) and as up again after
+    *recover_after* replies in a row — a single lost packet is not an outage."""
     try:
         ip = resolve(host, family)
     except socket.gaierror:
@@ -179,8 +182,7 @@ def watch(
     rtts: list[float] = []
     use_subprocess = False
     printed_rows = 0
-    state: bool | None = None  # up/down as reported to the notifier
-    losses = 0
+    state = StateFilter(fail_after, recover_after)
 
     try:
         seq = 0
@@ -201,14 +203,12 @@ def watch(
             rtts.append(rtt)
             printed_rows = ping_view.redraw_watch(rtts, printed_rows)
             if notifier is not None:
-                losses = 0 if rtt >= 0 else losses + 1
-                new_state = True if rtt >= 0 else False if losses >= DOWN_AFTER_LOSSES else state
-                if new_state is not None:
+                before = state.state
+                if state.update(rtt >= 0):
                     detail = (
-                        f"reply in {rtt:.1f} ms" if new_state else f"{losses} pings lost in a row"
+                        f"reply in {rtt:.1f} ms" if rtt >= 0 else f"{state.run} pings lost in a row"
                     )
-                    notifier.observe(new_state, state, detail, rtt if rtt >= 0 else None)
-                    state = new_state
+                    notifier.observe(rtt >= 0, before, detail, rtt if rtt >= 0 else None)
 
             remaining = interval - elapsed
             if remaining > 0:
