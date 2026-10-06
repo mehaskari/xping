@@ -3,6 +3,13 @@
 ## [Unreleased]
 
 ### Added
+- **`xping report`: the saved history as one HTML page.** An overview of
+  every target (state, uptime, outages, latest value), and per target the
+  uptime, outages and downtime, latest and median value, a chart of the
+  headline metric over time with failures and outages marked, and the
+  list of outages. One self-contained file, no scripts, nothing loaded
+  from the network, light and dark theme. `-o FILE` (or `-` for stdout),
+  `--since`, `--last`, `--title`; narrow to one command or target.
 - `--fail-after N` and `--recover-after N` for watch mode (`--watch` /
   `--until-up` on ping, tcp, udp, http, health) and `xping monitor`
   (also per check: `fail_after`, `recover_after`). A target counts as

@@ -23,6 +23,7 @@ from .portscan import PortResult, PortScanResult
 from .profile import ProfileEntry, ProfileListResult
 from .propagation import PropagationResult, ResolverAnswer
 from .rdns import RdnsResult
+from .report import ReportOutage, ReportPoint, ReportResult, ReportSeries
 from .smtp import SmtpResult
 from .speedtest import SpeedResult
 from .sweep import HostProbe, SweepResult
@@ -91,5 +92,9 @@ __all__ = [
     "MonitorSample",
     "MonitoredCheck",
     "MonitorResult",
+    "ReportPoint",
+    "ReportOutage",
+    "ReportSeries",
+    "ReportResult",
     "WatchSample",
 ]

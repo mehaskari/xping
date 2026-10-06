@@ -638,6 +638,51 @@ def cmd_doctor(args: argparse.Namespace) -> object:
     return result
 
 
+def cmd_report(args: argparse.Namespace) -> object:
+    import sys
+    from pathlib import Path
+
+    from xping.diagnostics import history
+    from xping.diagnostics.report import build
+    from xping.exporters.html_report import to_html
+    from xping.render import error
+
+    command, target = args.report_command, args.report_target
+    if target and not command:
+        raise UsageError("name the command first, e.g. xping report ping example.net")
+    try:
+        since = history.parse_since(args.since) if args.since else None
+    except ValueError as exc:
+        raise UsageError(f"--since: {exc}") from exc
+    result = build(command, target, since=since, last=args.last)
+    if result.error:
+        if not output_suppressed(args):
+            error(result.error, hint="Save runs first, e.g. xping ping example.net --save")
+        emit_export(result, args)
+        return result
+    page = to_html(result, title=args.title)
+    if args.output == "-":
+        if export_requested(args):
+            raise UsageError("-o - writes the page to stdout; it cannot be combined with an export")
+        sys.stdout.write(page)
+        return result
+    path = Path(args.output).expanduser()
+    try:
+        path.write_text(page, encoding="utf-8")
+    except OSError as exc:
+        raise UsageError(f"cannot write {path}: {exc.strerror or exc}") from exc
+    result.path = str(path.resolve())
+    if not output_suppressed(args):
+        targets = len(result.series)
+        print(
+            c(f"  ✔ wrote {path}", BRAND_TEAL)
+            + c(f"  ·  {targets} target{'s' if targets != 1 else ''}, {result.runs} runs", DIM)
+        )
+        print()
+    emit_export(result, args)
+    return result
+
+
 def cmd_history(args: argparse.Namespace) -> object:
     from xping.diagnostics import history
     from xping.models.history import HistoryResult

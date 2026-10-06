@@ -264,6 +264,35 @@ def sections_for(result: Any) -> list[Section]:
         rows = [[o.name, o.type, o.target, o.ok, o.detail, o.elapsed_ms] for o in result.outcomes]
         columns = ["name", "type", "target", "ok", "detail", "elapsed_ms"]
         return [Section("Checks", columns, rows)]
+    if isinstance(result, m.ReportResult):
+        rows = [
+            [
+                s.command,
+                s.target,
+                s.runs,
+                s.up_pct,
+                len(s.outages),
+                s.last_ok,
+                s.metric or "",
+                s.latest,
+                s.median,
+                s.unit,
+            ]
+            for s in result.series
+        ]
+        columns = [
+            "command",
+            "target",
+            "runs",
+            "up_pct",
+            "outages",
+            "last_ok",
+            "metric",
+            "latest",
+            "median",
+            "unit",
+        ]
+        return [Section("Targets", columns, rows)]
     if isinstance(result, m.MonitorResult):
         rows = [
             [
