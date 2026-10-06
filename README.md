@@ -96,6 +96,15 @@ sudo apt install xping
 
 Built for Ubuntu 24.04 LTS (noble) and distributions based on it (Linux Mint 22, Pop!\_OS 24.04). This package also sets up tab completion for bash, zsh and fish.
 
+### macOS — Homebrew
+
+```bash
+brew install mehaskari/tap/xping
+```
+
+Installs the man page and tab completion for bash, zsh and fish. The
+formula follows PyPI releases automatically ([mehaskari/homebrew-tap](https://github.com/mehaskari/homebrew-tap)).
+
 ### PyPI (all platforms)
 
 ```bash

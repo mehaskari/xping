@@ -64,6 +64,7 @@ does not apply to them), but the PR route runs the full CI first.
 | `codeql.yml` | every push / PR | CodeQL security analysis |
 | `release-pypi.yml` | tag `vX.Y.Z` | build → PyPI (OIDC trusted publishing, no token) → GitHub Release with the `docs/changelog.md` entry as notes |
 | `release-launchpad.yml` | tag `vX.Y.Z` | build source package → sign → upload to the PPA; Launchpad then builds it for noble (15–60 min) |
+| Homebrew tap | daily, in [mehaskari/homebrew-tap](https://github.com/mehaskari/homebrew-tap) | its own workflow follows PyPI: points the formula at the new sdist, builds and tests it on macOS, commits. Run it at once with `gh workflow run update.yml -R mehaskari/homebrew-tap`. |
 | Snap Store | any push to `main` | built by Snapcraft.io's GitHub integration into the **edge** channel — not a GitHub Actions workflow. Promote a build to **stable** in snapcraft.io → xping → Releases. |
 
 ## Versioning
