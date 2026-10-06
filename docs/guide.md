@@ -1325,7 +1325,8 @@ xping speedtest --min-download 50 -q || echo "slower than the plan"
 #### `xping check`
 
 ```
-xping check FILE [-w N] [--save]
+xping check [FILE] [-w N] [--save]
+xping check --init
 xping check --example
 ```
 
@@ -1333,27 +1334,46 @@ Runs many checks from one TOML or JSON file in parallel and returns **one
 exit code**, which makes the file a monitoring script. See
 [Batch check files](#5-batch-check-files) for the format.
 
+Without FILE, xping uses **`~/.xping/checks.toml`** (or `checks.json`
+when only that exists), the same file `xping monitor` uses by default.
+`xping check --init` creates it with a few checks that work anywhere: your
+router (found from the default gateway), 1.1.1.1 and 8.8.8.8, DNS
+resolution and an HTTPS request. Edit it to add your own servers. An
+existing file is never overwritten. When there is no file, xping says how
+to create one (exit code 2).
+
 | Option | Default | Description |
 |--------|---------|-------------|
 | `-w`, `--workers N` | 8 | Checks run in parallel |
 | `--example` | — | Print a commented example file and exit |
+| `--init` | — | Create `~/.xping/checks.toml` with a few useful checks (never overwrites) |
 | `--save` | — | Keep the whole report for [`xping history`](#xping-history), one history per check file |
 
 ```bash
-xping check --example > checks.toml
-xping check checks.toml
+xping check --init                  # once: ~/.xping/checks.toml
+xping check                         # run it
 xping check checks.toml --markdown > status.md
 ```
 
 #### `xping monitor`
 
 ```
-xping monitor FILE [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL]
+xping monitor [FILE | TARGET...] [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL]
 ```
 
 A live dashboard for a [check file](#5-batch-check-files): every check runs
 again and again, each on its own schedule, and the terminal shows a table
-that is redrawn in place:
+that is redrawn in place.
+
+What it watches:
+
+- **nothing given**: `~/.xping/checks.toml`, the default check file (create
+  it with `xping check --init`);
+- **a file** (`.toml` / `.json`): that check file;
+- **targets**, no file needed: `HOST` is pinged, `HOST:PORT` (or
+  `[IPv6]:PORT`) gets a TCP connect, and an `http://` or `https://` URL an
+  HTTP check, e.g. `xping monitor 1.1.1.1 router.local db.internal:5432`.
+
 
 ```
   State   Check             Type  Target          Now       Trend             Up    For     Detail
@@ -1397,8 +1417,8 @@ characters), and as a last resort the Detail column is left out.
   exit code.
 
 ```bash
-xping check --example > checks.toml
-xping monitor checks.toml
+xping monitor                                    # ~/.xping/checks.toml
+xping monitor 1.1.1.1 gw.local db:5432 https://example.com/health
 xping monitor checks.toml --every 60 --notify --save
 xping monitor checks.toml --webhook https://hooks.slack.com/services/T000/B000/XXXX >> monitor.log
 xping monitor checks.toml --rounds 1 --json      # one pass, summary as JSON
@@ -1883,6 +1903,7 @@ xping doctor --json > doctor.json
 | `~/.xping/health_history.json` | `health` score history (last 50 per host) |
 | `~/.xping/completions/` | Completion scripts written by `completion --install` |
 | `~/.xping/config.toml` | Your defaults (you write it; xping only reads it) |
+| `~/.xping/checks.toml` | The default check file of `xping check` and `xping monitor` (create it with `xping check --init`) |
 | `~/.xping/history/` | Results saved with `--save` (newest 500 runs per command and target) |
 
 `completion --install` also adds a marked block to your shell's rc file

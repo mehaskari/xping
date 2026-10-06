@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 
 from xping import __author__, __copyright__, __email__, __license__, __url__, __version__
 from xping.cli.errors import UsageError
@@ -297,14 +298,31 @@ def cmd_all(args: argparse.Namespace) -> object:
 
 
 def cmd_check(args: argparse.Namespace) -> object:
+    from xping.diagnostics import check as check_diag
+
     if args.example:
         print(EXAMPLE, end="")
         return True
-    if not args.file:
-        raise UsageError("a check file is required (see: xping check --example)")
+    if args.init:
+        from xping.diagnostics.net import net
+
+        try:
+            gateway = net(public=False, quiet=True).gateway_ipv4
+        except Exception:  # no gateway is fine: the file just has no router check
+            gateway = None
+        path, created = check_diag.init_file(gateway=gateway)
+        shown = check_diag._tilde(path)
+        if created:
+            print(c(f"  ✔ created {shown}", BRAND_TEAL))
+            print(c("    edit it, then: xping check  ·  xping monitor", DIM))
+        else:
+            print(c(f"  {shown} already exists — left unchanged", DIM))
+        print()
+        return True
     quiet = output_suppressed(args)
     try:
-        result = run_checks(args.file, workers=args.workers, quiet=quiet)
+        file = args.file or str(check_diag.require_default())
+        result = run_checks(file, workers=args.workers, quiet=quiet)
     except ConfigError as exc:
         raise UsageError(str(exc)) from exc
     emit_export(result, args)
@@ -312,11 +330,23 @@ def cmd_check(args: argparse.Namespace) -> object:
 
 
 def cmd_monitor(args: argparse.Namespace) -> object:
+    from xping.diagnostics import check as check_diag
     from xping.diagnostics.monitor import monitor
 
+    targets = args.targets
+    path, entries = None, None
     try:
+        if not targets:
+            path = str(check_diag.require_default())
+        elif len(targets) == 1 and (
+            targets[0].lower().endswith((".toml", ".json")) or Path(targets[0]).is_file()
+        ):
+            path = targets[0]
+        else:
+            entries = check_diag.entries_from_targets(targets)
         result = monitor(
-            args.file,
+            path,
+            entries=entries,
             every=args.every,
             workers=args.workers,
             rounds=args.rounds,

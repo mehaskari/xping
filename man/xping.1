@@ -449,9 +449,16 @@ Run a full diagnostic bundle: lookup (full DNS), ping (4 packets),
 trace, and TCP checks on ports 443 and 80.
 Finishes with a unified one-page summary table.
 .TP
-.BR monitor " \fIFILE\fR [\fIOPTIONS\fR]"
+.BR monitor " [\fIFILE\fR | \fITARGET\fR...] [\fIOPTIONS\fR]"
 Run the checks of a check file (as for
-.BR check )
+.BR check ;
+by default
+.IR ~/.xping/checks.toml ),
+or of targets given on the command line
+.RI ( HOST
+is pinged,
+.I HOST:PORT
+gets a TCP connect, a URL an HTTP check),
 continuously, each every
 .B \-\-every
 seconds or its own
@@ -464,9 +471,15 @@ change instead.
 Ctrl-C prints a summary (uptime, outages, longest outage, average);
 the exit status is 0 when every check was up at the end.
 .TP
-.BR check " \fIFILE\fR [\fIOPTIONS\fR]"
+.BR check " [\fIFILE\fR] [\fIOPTIONS\fR]"
 Run many checks from a TOML (Python 3.11+) or JSON file in parallel
 and exit 1 if any failed.
+Without
+.IR FILE ,
+.I ~/.xping/checks.toml
+is used
+.RB ( "xping check \-\-init"
+creates it).
 Supported types:
 .BR ping ,
 .BR tcp ,
@@ -1096,6 +1109,12 @@ Default:
 .TP
 .B \-\-example
 Print an example check file and exit.
+.TP
+.B \-\-init
+Create
+.I ~/.xping/checks.toml
+with a few useful checks (your router, public DNS, DNS resolution, HTTPS);
+an existing file is never overwritten.
 .TP
 .B \-\-save
 Keep the whole report in the history (one history per check file).
@@ -1778,6 +1797,14 @@ which also adds a marked block to
 .I ~/.bashrc
 or
 .IR ~/.bash_profile .
+.TP
+.I ~/.xping/checks.toml
+The default check file of
+.B check
+and
+.B monitor
+(created by
+.BR "xping check \-\-init" ).
 .TP
 .I ~/.xping/config.toml
 Personal defaults (see

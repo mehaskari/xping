@@ -610,7 +610,9 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         parents=[export_parent],
         help="Run many checks from a TOML/JSON file (one exit code)",
     )
-    p_check.add_argument("file", nargs="?", help="Check file (.toml or .json)")
+    p_check.add_argument(
+        "file", nargs="?", help="Check file (.toml or .json) [default: ~/.xping/checks.toml]"
+    )
     p_check.add_argument(
         "-w",
         "--workers",
@@ -622,13 +624,24 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     p_check.add_argument(
         "--example", action="store_true", help="Print an example check file and exit"
     )
+    p_check.add_argument(
+        "--init",
+        action="store_true",
+        help="Create ~/.xping/checks.toml with a few useful checks (never overwrites)",
+    )
 
     p_monitor = sub.add_parser(
         "monitor",
         parents=[export_parent],
         help="Live dashboard: run a check file's checks continuously, alert on changes",
     )
-    p_monitor.add_argument("file", help="Check file (.toml or .json), as for xping check")
+    p_monitor.add_argument(
+        "targets",
+        nargs="*",
+        metavar="FILE|TARGET",
+        help="A check file (.toml/.json) [default: ~/.xping/checks.toml], or targets to "
+        "watch: HOST (ping), HOST:PORT (tcp), URL (http)",
+    )
     p_monitor.add_argument(
         "--every",
         type=_positive_float,
