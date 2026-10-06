@@ -20,6 +20,7 @@ JSON uses the same keys: {"defaults": {...}, "checks": [{...}, ...]}.
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import sys
 import time
@@ -527,8 +528,6 @@ def _tilde(path: Path) -> str:
 def entries_from_targets(targets: list[str]) -> list[dict]:
     """Quick checks without a file: a URL becomes an http check, host:port
     (or [IPv6]:port) a tcp check, anything else a ping."""
-    import ipaddress
-
     raw: list[dict] = []
     for target in targets:
         if target.startswith(("http://", "https://")):
@@ -544,13 +543,18 @@ def entries_from_targets(targets: list[str]) -> list[dict]:
                 raise ConfigError(f"'{target}': port must be 1-65535")
             raw.append({"type": "tcp", "host": host, "port": int(port), "name": target})
         else:
-            try:
-                ipaddress.ip_address(host.strip("[]"))
+            if _is_ip(host.strip("[]")):  # [2001:db8::1] → 2001:db8::1
                 host = host.strip("[]")
-            except ValueError:
-                pass
             raw.append({"type": "ping", "host": host, "name": target})
     return normalize(raw)
+
+
+def _is_ip(value: str) -> bool:
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return True
 
 
 def _starter(gateway: str | None, as_json: bool) -> str:
