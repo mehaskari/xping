@@ -532,8 +532,9 @@ xping tcp db.local 5432 --until-up -q --notify      # "it's back" and exit
 - An event fires on every DOWN and UP change (the UP message says how
   long the outage lasted). The first check only sets the baseline, except
   that `--until-up` always announces the final UP.
-- `ping --watch` counts a host as down after **3 lost pings in a row**, so
-  a single dropped packet is not an outage.
+- `--fail-after N` / `--recover-after N` confirm a change only after N
+  failed or passing checks in a row, so one blip alerts nobody.
+  `ping --watch` defaults to `--fail-after 3`.
 - `--notify` uses Notification Center on macOS and `notify-send` on Linux;
   elsewhere it rings the terminal bell.
 - `--webhook` POSTs one JSON object per event. `text` (Slack, Mattermost,

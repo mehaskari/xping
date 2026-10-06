@@ -27,7 +27,7 @@ from xping.diagnostics.net import net
 from xping.diagnostics.notify import Notifier
 from xping.diagnostics.ntp import ntp
 from xping.diagnostics.osdetect import osdetect
-from xping.diagnostics.ping import ping
+from xping.diagnostics.ping import DOWN_AFTER_LOSSES, ping
 from xping.diagnostics.ping import watch as ping_watch
 from xping.diagnostics.portscan import portscan
 from xping.diagnostics.propagation import propagation
@@ -103,6 +103,8 @@ def _run_watch(args: argparse.Namespace, target: str, check: str, run_once, desc
         until_up=getattr(args, "until_up", False),
         quiet=getattr(args, "quiet", False),
         notifier=_notifier(args, target, check),
+        fail_after=getattr(args, "fail_after", None) or 1,
+        recover_after=getattr(args, "recover_after", 1),
     )
 
 
@@ -131,6 +133,8 @@ def cmd_ping(args: argparse.Namespace) -> object:
             interval=args.interval,
             family=family_of(args),
             notifier=_notifier(args, args.host, "ping"),
+            fail_after=args.fail_after or DOWN_AFTER_LOSSES,
+            recover_after=args.recover_after,
         )
     quiet = output_suppressed(args)
     result = ping(
@@ -319,6 +323,8 @@ def cmd_monitor(args: argparse.Namespace) -> object:
             save=args.save,
             notify=args.notify,
             webhook=args.webhook,
+            fail_after=args.fail_after,
+            recover_after=args.recover_after,
             quiet=output_suppressed(args),
         )
     except ConfigError as exc:

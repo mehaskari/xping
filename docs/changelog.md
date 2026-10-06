@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `--fail-after N` and `--recover-after N` for watch mode (`--watch` /
+  `--until-up` on ping, tcp, udp, http, health) and `xping monitor`
+  (also per check: `fail_after`, `recover_after`). A target counts as
+  DOWN only after N failed checks in a row and as UP again after N
+  passing ones, so a single blip neither flips the state nor alerts
+  anybody. Uptime still counts every check; outages, the "down at the
+  end" verdict and alerts follow the confirmed state, and an outage is
+  measured from its first failed check. `--until-up` waits for N passes.
+  `ping --watch` keeps its 3-lost-pings rule as the default.
+- `xping monitor` marks a check `◐` while its latest runs disagree with
+  the confirmed state.
+
 ## [1.5.0] - 2026-10-05
 
 ### Deprecated

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from xping.statefilter import outages as confirmed_outages
+
 from ._export import model_to_dict
 
 
@@ -26,7 +28,10 @@ class MonitoredCheck:
     metric: str | None = None  # e.g. "Average RTT"; None when the type has no number to follow
     unit: str = ""
     detail: str = ""  # the latest verdict or one-line summary
-    since: float | None = None  # when the current up/down state began
+    fail_after: int = 1  # failed runs in a row before the check counts as DOWN
+    recover_after: int = 1  # passing runs in a row before it counts as UP again
+    up: bool | None = None  # the confirmed state (None until first confirmed)
+    since: float | None = None  # when the confirmed state began
     samples: list[MonitorSample] = field(default_factory=list)
 
     @property
@@ -47,30 +52,27 @@ class MonitoredCheck:
             return None
         return sum(s.ok for s in self.samples) / len(self.samples) * 100
 
+    def _outages(self) -> list[tuple[float, float | None]]:
+        return confirmed_outages(
+            [(s.ts, s.ok) for s in self.samples],
+            self.fail_after,
+            self.recover_after,
+        )
+
     @property
     def outages(self) -> int:
-        """Times the check went down (including starting down)."""
-        count, previous = 0, True
-        for sample in self.samples:
-            if previous and not sample.ok:
-                count += 1
-            previous = sample.ok
-        return count
+        """Confirmed outages (fail_after failures in a row each)."""
+        return len(self._outages())
 
     @property
     def longest_outage_s(self) -> float:
-        """Longest run of failures, from the first failure to the next
-        success (or the last check)."""
-        longest, start = 0.0, None
-        for sample in self.samples:
-            if not sample.ok and start is None:
-                start = sample.ts
-            elif sample.ok and start is not None:
-                longest = max(longest, sample.ts - start)
-                start = None
-        if start is not None:
-            longest = max(longest, self.samples[-1].ts - start)
-        return longest
+        """Longest confirmed outage, from its first failed run to the first
+        good run of the recovery (or the last run while still down)."""
+        end_of_data = self.samples[-1].ts if self.samples else 0.0
+        return max(
+            ((end if end is not None else end_of_data) - start for start, end in self._outages()),
+            default=0.0,
+        )
 
     @property
     def average(self) -> float | None:
@@ -90,8 +92,8 @@ class MonitorResult:
 
     @property
     def down(self) -> list[str]:
-        """Checks that failed their latest run."""
-        return [c.name for c in self.checks if c.last_ok is False]
+        """Checks whose confirmed state is DOWN."""
+        return [c.name for c in self.checks if c.up is False]
 
     @property
     def ok(self) -> bool:

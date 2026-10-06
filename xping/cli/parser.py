@@ -145,6 +145,24 @@ def _add_notify(p: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_debounce(p: argparse.ArgumentParser, fail_default: int | None = 1) -> None:
+    shown = f"{fail_default}" if fail_default else "1; 3 for --watch"
+    p.add_argument(
+        "--fail-after",
+        type=_positive_int,
+        default=fail_default,
+        metavar="N",
+        help=f"Count as DOWN (and alert) only after N failed checks in a row [default: {shown}]",
+    )
+    p.add_argument(
+        "--recover-after",
+        type=_positive_int,
+        default=1,
+        metavar="N",
+        help="Count as UP again only after N passing checks in a row [default: 1]",
+    )
+
+
 def _add_watch(p: argparse.ArgumentParser, every: float) -> None:
     p.add_argument(
         "--watch",
@@ -163,6 +181,7 @@ def _add_watch(p: argparse.ArgumentParser, every: float) -> None:
         metavar="SEC",
         help=f"Seconds between checks in watch mode [default: {every:g}]",
     )
+    _add_debounce(p)
     _add_notify(p)
 
 
@@ -339,6 +358,7 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         metavar="SEC",
         help="Seconds between pings with --until-up [default: 2]",
     )
+    _add_debounce(p_ping, fail_default=None)
     _add_notify(p_ping)
     _add_max_loss(p_ping)
     _add_max_latency(p_ping, "average RTT")
@@ -649,6 +669,7 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         action="store_true",
         help="Keep every result in ~/.xping/history (see: xping history)",
     )
+    _add_debounce(p_monitor)
     _add_notify(p_monitor)
 
     p_diff = sub.add_parser(

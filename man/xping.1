@@ -1103,6 +1103,15 @@ times instead of running until Ctrl-C.
 Keep every result in the history, under the same command and target as
 the single command.
 .TP
+.BI \-\-fail\-after " N" ", \-\-recover\-after " N
+A check counts as DOWN only after
+.I N
+failed runs in a row, and as UP again only after
+.I N
+passing runs (defaults 1; per check:
+.BR fail_after ,
+.BR recover_after ).
+.TP
 .BR \-\-notify ", " \-\-webhook " \fIURL\fR"
 Alert on every DOWN / UP change of any check (see
 .BR "WATCH MODE" ).
@@ -1221,6 +1230,20 @@ Repeat the check until it passes, then exit 0 \(em useful to wait for a
 service in scripts (works with
 .BR \-\-quiet ).
 Ctrl-C exits 130.
+.TP
+.BI \-\-fail\-after " N"
+Count the target as DOWN, and alert, only after
+.I N
+failed checks in a row (default 1;
+.BR "ping \-\-watch" :
+3).
+.TP
+.BI \-\-recover\-after " N"
+Count it as UP again only after
+.I N
+passing checks in a row (default 1);
+.B \-\-until\-up
+waits for that many passes too.
 .PP
 Each run is judged like a normal run, so thresholds such as
 .B \-\-max\-latency
@@ -1264,7 +1287,10 @@ The first check only sets the baseline, except that
 always announces the final UP.
 The UP message includes how long the outage lasted.
 .B ping \-\-watch
-counts a host as down after three consecutive lost pings.
+counts a host as down after three consecutive lost pings unless
+.B \-\-fail\-after
+says otherwise; the UP message measures the outage from its first
+failed check.
 .
 .SH SCRIPTING AND MONITORING
 .RS

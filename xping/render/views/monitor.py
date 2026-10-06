@@ -8,6 +8,7 @@ from pathlib import Path
 from ..animations import fit
 from ..ansi import (
     BOLD,
+    BRAND_AMBER,
     BRAND_INDIGO,
     BRAND_MINT,
     BRAND_ROSE,
@@ -72,9 +73,15 @@ def trend(check) -> str:
 
 
 def _state(check) -> str:
-    if check.last_ok is None:
+    """The confirmed state; ◐ while the latest runs disagree with it (a
+    failure not yet confirmed by fail_after, or a recovery by recover_after)."""
+    if check.up is None:
         return c("○ wait", DIM)
-    return c("● UP  ", BRAND_MINT, BOLD) if check.last_ok else c("● DOWN", BRAND_ROSE, BOLD)
+    unsure = check.last_ok is not None and check.last_ok != check.up
+    mark = "◐" if unsure else "●"
+    if check.up:
+        return c(f"{mark} UP  ", BRAND_AMBER if unsure else BRAND_MINT, BOLD)
+    return c(f"{mark} DOWN", BRAND_AMBER if unsure else BRAND_ROSE, BOLD)
 
 
 def _every_text(result) -> str:
@@ -149,8 +156,8 @@ def live_lines(result, now: float, width: int | None = None) -> list[str]:
     for k, row in zip(checks, rows, strict=True):
         colour = DIM if k.last_ok else BRAND_ROSE
         lines.append(line(row, c(safe(k.detail), colour) if k.detail else ""))
-    up = sum(1 for k in checks if k.last_ok)
-    down = sum(1 for k in checks if k.last_ok is False)
+    up = sum(1 for k in checks if k.up)
+    down = sum(1 for k in checks if k.up is False)
     footer = c(f"  {up} up", BRAND_MINT, BOLD) + c("  ·  ", DIM)
     footer += c(f"{down} down", BRAND_ROSE, BOLD) if down else c("0 down", DIM)
     footer += c(f"  ·  running {duration(now - result.started)}", DIM)
@@ -168,21 +175,21 @@ def redraw(result, now: float, printed: int = 0) -> int:
     return len(lines)
 
 
-def print_change(check, ts: float, previous: bool | None) -> None:
-    """One line per state change, for output that is not a terminal."""
+def print_change(
+    check, ts: float, previous: bool | None, previous_since: float | None = None
+) -> None:
+    """One line per confirmed state change, for output that is not a terminal."""
     clock = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts))
-    if check.last_ok:
+    if check.up:
         state = c("UP  ", BRAND_MINT, BOLD)
     else:
         state = c("DOWN", BRAND_ROSE, BOLD)
     note = ""
-    if previous is False:  # back up: say how long the outage lasted
-        index = len(check.samples) - 2
-        while index > 0 and not check.samples[index - 1].ok:
-            index -= 1
-        note = c(f"  (down for {duration(ts - check.samples[index].ts)})", DIM)
+    if previous is False and previous_since is not None and check.since is not None:
+        # back up: the outage lasted from its first failure to the first good run
+        note = c(f"  (down for {duration(check.since - previous_since)})", DIM)
     name = c(safe(check.name), BWHITE, BOLD)
-    detail = c(safe(check.detail), DIM if check.last_ok else BRAND_ROSE)
+    detail = c(safe(check.detail), DIM if check.up else BRAND_ROSE)
     print(f"  {c(clock, DIM)}  {state}  {name}  {c(check.type, BRAND_SLATE)}  {detail}{note}")
 
 

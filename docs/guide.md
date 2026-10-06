@@ -209,6 +209,8 @@ xping tls example.com --min-days 14 -q || echo "renew the certificate"
 | `--watch` | Repeat every `--every` seconds until Ctrl-C. Prints one line per check, highlights DOWN/UP changes with the downtime, and ends with a summary (uptime %, state changes, longest outage, average latency). The exit code reflects the final state. |
 | `--until-up` | Repeat until the check passes, then exit 0. Combine with `-q` to wait silently in scripts. Ctrl-C exits 130. |
 | `--every SEC` | Seconds between checks. Defaults: `ping` 2, `tcp` 2, `udp` 5, `http` 5, `health` 30. |
+| `--fail-after N` | Count the target as DOWN only after N failed checks in a row (default 1; `ping --watch`: 3). A single blip then changes nothing and alerts nobody. |
+| `--recover-after N` | Count it as UP again only after N passing checks in a row (default 1). `--until-up` also waits for N passes, i.e. until the service is stable. |
 
 Each round is judged exactly like a single run. Thresholds such as
 `--max-latency` or `--expect-status` therefore decide UP and DOWN too.
@@ -233,8 +235,11 @@ Rules:
   an event, and the UP message includes how long the outage lasted.
 - `--until-up` always announces the final UP, even when the first check
   already succeeds.
-- `ping --watch` counts a host as down only after **three lost pings in a
-  row**, so a single dropped packet is not an outage.
+- Alerts follow the confirmed state (`--fail-after`, `--recover-after`).
+  `ping --watch` counts a host as down only after **three lost pings in a
+  row** unless you set `--fail-after`, so a single dropped packet is not
+  an outage. The UP message measures the outage from its first failed
+  check.
 - Webhooks are sent in the background, so a slow endpoint never delays
   checks. A failing endpoint is reported once and never stops the watch.
 
@@ -449,7 +454,7 @@ will sound choppy".
 | `-c`, `--count N` | 8 | Ping packets used for scoring |
 | `-t`, `--timeout SEC` | 2.0 | Per-packet timeout |
 | `--min-score N` | — | Exit 1 if the score is below N |
-| `--watch`, `--until-up`, `--every SEC`, `--notify`, `--webhook URL` | every: 30 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
+| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL` | every: 30 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
 | `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
@@ -510,6 +515,7 @@ Latency colours, used everywhere in xping: **green** < 30 ms,
 | `--watch` | — | Continuous live mode with an in-place sparkline (Ctrl-C to stop); the session is judged and saved like a normal run |
 | `--until-up` | — | Ping until the host answers, then exit 0 ([watch mode](#35-watch-mode-and-alerts)) |
 | `--every SEC` | 2 | Seconds between pings with `--until-up` |
+| `--fail-after N`, `--recover-after N` | 3 / 1 | Lost pings in a row before DOWN, replies in a row before UP again ([watch mode](#35-watch-mode-and-alerts)) |
 | `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) in watch mode (`--watch`: down = 3 lost pings in a row) |
 | `--max-loss PCT` | — | Exit 1 if packet loss is above PCT % |
 | `--max-latency MS` | — | Exit 1 if the average RTT is above MS |
@@ -618,7 +624,7 @@ service listening, and is the firewall letting me through?".
 | `-t`, `--timeout SEC` | 2.0 | Per-attempt timeout |
 | `-i`, `--interval SEC` | 0.5 | Interval between attempts |
 | `--max-latency MS` | — | Exit 1 if the average connect time is above MS |
-| `--watch`, `--until-up`, `--every SEC`, `--notify`, `--webhook URL` | every: 2 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
+| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL` | every: 2 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
 | `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
@@ -663,7 +669,7 @@ The request is chosen by port (`--probe auto`), or set explicitly:
 | `--probe KIND` | auto | `auto`, `dns`, `ntp`, `snmp` or `empty` |
 | `--payload HEX` | — | Send these bytes instead, e.g. `--payload "de ad be ef"` |
 | `--max-latency MS` | — | Exit 1 if the average reply time is above MS |
-| `--watch`, `--until-up`, `--every SEC`, `--notify`, `--webhook URL` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
+| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
 | `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
@@ -965,7 +971,7 @@ a slow resolver.
 | `-t`, `--timeout SEC` | 8.0 | Request timeout |
 | `--expect-status CODE` | — | Exit 1 unless the final status is CODE. Without it, any status ≥ 400 fails. |
 | `--max-latency MS` | — | Exit 1 if the total request time is above MS |
-| `--watch`, `--until-up`, `--every SEC`, `--notify`, `--webhook URL` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
+| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
 | `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
@@ -1353,7 +1359,7 @@ that is redrawn in place:
 
 | Column | Meaning |
 |--------|---------|
-| State | UP or DOWN, judged exactly like `xping check` (thresholds included) |
+| State | UP or DOWN, judged exactly like `xping check` (thresholds included) and confirmed by `--fail-after` / `--recover-after`; `◐` while the latest runs disagree but are not confirmed yet, `○` before the first confirmation |
 | Now | the latest value of the check's headline metric: average RTT for ping, connect time for tcp, total time for http, days left for tls, score for health and dnscheck, download speed for speedtest, signal for wifi… |
 | Trend | the last 16 runs: a bar per value (scaled to that window), `×` for a failed run, `▪` for a pass without a number |
 | Up | share of runs that passed |
@@ -1368,6 +1374,8 @@ characters), and as a last resort the Detail column is left out.
 | `--every SEC` | 30 | Seconds between runs of each check. A check can set its own `every` in the file (e.g. ping every 10 s, speedtest every hour) |
 | `-w`, `--workers N` | 8 | Checks run in parallel (`speedtest` always runs on its own) |
 | `--rounds N` | — | Stop after every check ran N times, instead of running until Ctrl-C |
+| `--fail-after N` | 1 | A check counts as DOWN (and alerts) only after N failed runs in a row; a check can set its own `fail_after` |
+| `--recover-after N` | 1 | …and as UP again only after N passing runs in a row (`recover_after` per check) |
 | `--save` | — | Keep every result in the [history](#xping-history), under the same command and target as the single command (`xping history ping 1.1.1.1`) |
 | `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) on every DOWN/UP change of any check |
 
@@ -1670,6 +1678,9 @@ Additional rules:
 
 - `name` is optional. It defaults to `"<type> <target>"`.
 - `family` is `4` / `"ipv4"` or `6` / `"ipv6"`.
+- `fail_after` / `recover_after` (whole numbers) are also only for
+  `xping monitor`: how many failed or passing runs in a row confirm DOWN
+  or UP for that check.
 - `every` (seconds) is used only by [`xping monitor`](#xping-monitor): how
   often that check runs. Without it, monitor's `--every` applies.
 - `speedtest` checks run one at a time **after** the others, so they
