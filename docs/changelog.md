@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Added
+- `blocklist` checks IPv6 addresses too (nibble format) on the lists
+  that publish IPv6 data, Spamhaus ZEN and DroneBL — both for an IPv6
+  address given directly and for a domain's IPv6 mail and web servers,
+  which were previously listed as "not checked".
 - **`xping report`: the saved history as one HTML page.** An overview of
   every target (state, uptime, outages, latest value), and per target the
   uptime, outages and downtime, latest and median value, a chart of the

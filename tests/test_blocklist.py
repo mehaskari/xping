@@ -14,6 +14,10 @@ from xping.exporters.json import export_json
 
 def test_reverse_ip():
     assert bl.reverse_ip("192.0.2.10") == "10.2.0.192"
+    import ipaddress
+
+    expected = ipaddress.ip_address("2001:db8::1").reverse_pointer.removesuffix(".ip6.arpa")
+    assert bl.reverse_ip("2001:db8::1") == expected and expected.startswith("1.0.0.0.0.")
 
 
 @pytest.mark.parametrize(
@@ -69,8 +73,10 @@ def test_domain_checks_domain_lists_and_mail_ips():
     ):
         result = bl.blocklist("Example.NET.", quiet=True)
     assert result.target == "example.net" and result.kind == "domain"
-    assert result.addresses == ["192.0.2.25"] and result.skipped == ["2001:db8::25"]
-    assert len(result.checks) == len(bl.DOMAIN_LISTS) + len(bl.IP_LISTS)
+    assert result.addresses == ["192.0.2.25", "2001:db8::25"] and result.skipped == []
+    v6 = [c for c in result.checks if c.subject == "2001:db8::25"]
+    assert sorted(c.zone for c in v6) == sorted(bl.IPV6_ZONES)  # only lists with IPv6 data
+    assert len(result.checks) == len(bl.DOMAIN_LISTS) + len(bl.IP_LISTS) + len(bl.IPV6_ZONES)
     assert result.listed == ["Spamhaus DBL (example.net)"]
 
 
@@ -149,3 +155,18 @@ def test_summary_is_compact_and_all_shows_every_check(capsys):
     assert "Listed on 1 of 19 checks on 11 lists: SURBL (example.net)" in compact
     assert full.count("192.0.2.25") == 1 + len(bl.IP_LISTS)  # header + one row per list
     assert "Details:" not in full
+
+
+def test_ipv6_address_is_checked_on_ipv6_lists():
+    queried = []
+
+    def lookup(name, timeout):
+        queried.append(name)
+        return (["127.0.0.2"] if name.endswith("zen.spamhaus.org") else []), 5.0
+
+    with patch.object(bl, "lookup_a", side_effect=lookup):
+        result = bl.blocklist("2001:DB8::25", quiet=True)
+    assert result.kind == "ip" and result.addresses == ["2001:db8::25"]
+    assert len(queried) == len(bl.IPV6_ZONES)
+    assert all(q.startswith("5.2.0.0.") and ".8.b.d.0.1.0.0.2." in q for q in queried)
+    assert result.listed == ["Spamhaus ZEN (2001:db8::25)"]

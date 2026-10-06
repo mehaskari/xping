@@ -702,7 +702,7 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         parents=[export_parent],
         help="Check an IP or a domain's mail servers against spam blocklists (DNSBL)",
     )
-    p_block.add_argument("target", help="IPv4 address or domain")
+    p_block.add_argument("target", help="IP address (IPv4 or IPv6) or domain")
     p_block.add_argument(
         "--zone",
         action="append",

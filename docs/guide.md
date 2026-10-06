@@ -826,18 +826,20 @@ Checks whether an IP address or a domain's mail servers are on a spam
 addresses, so this is the first thing to check when e-mail bounces or
 lands in spam.
 
-- **For an IPv4 address**, xping checks it on the IP lists.
+- **For an IP address**, xping checks it on the IP lists. IPv6
+  addresses are checked on Spamhaus ZEN and DroneBL, the lists that
+  publish IPv6 data (asking the others would always say "not listed").
 - **For a domain**, it checks the domain on the domain lists, and the
-  IPv4 addresses of its mail servers (MX) and web host (A) on the IP
-  lists, up to 6 addresses. IPv6 addresses are shown but not checked,
-  because few lists support them.
+  addresses of its mail servers (MX) and web host (A/AAAA) on the IP
+  lists, up to 6 addresses.
 
 | IP lists | Domain lists |
 |----------|--------------|
 | Spamhaus ZEN, SpamCop, Barracuda, PSBL, Mailspike, UCEPROTECT L1, DroneBL, s5h | Spamhaus DBL, SURBL, URIBL |
 
 How it works: to check 192.0.2.10 against `zen.spamhaus.org`, xping looks
-up `10.2.0.192.zen.spamhaus.org`. An answer in `127.0.0.0/8` means
+up `10.2.0.192.zen.spamhaus.org`; an IPv6 address is reversed nibble by
+nibble (`2001:db8::1` → `1.0.0.0.…8.b.d.0.1.0.0.2.zen.spamhaus.org`). An answer in `127.0.0.0/8` means
 *listed*, and the last number says why; "does not exist" means *not
 listed*. Each result is one of:
 

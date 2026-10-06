@@ -4,11 +4,13 @@ xping.diagnostics.blocklist — is an IP or domain on a spam blocklist?
 DNS blocklists (DNSBL / RHSBL) are queried over plain DNS: to check
 192.0.2.10 against zen.spamhaus.org, look up 10.2.0.192.zen.spamhaus.org.
 An answer in 127.0.0.0/8 means "listed" (the last octet says why), and
-NXDOMAIN means "not listed". A domain is looked up as
+NXDOMAIN means "not listed". An IPv6 address is reversed nibble by nibble
+(2001:db8::1 → 1.0.0.0…8.b.d.0.1.0.0.2.zen.spamhaus.org) and checked only
+on the lists that publish IPv6 data. A domain is looked up as
 example.com.dbl.spamhaus.org.
 
-For a domain, xping checks the domain on the domain lists and the IPv4
-addresses of its mail servers (MX) and web host (A) on the IP lists —
+For a domain, xping checks the domain on the domain lists and the
+addresses of its mail servers (MX) and web host (A/AAAA) on the IP lists —
 which is what decides whether its mail gets delivered.
 
 Queries go through the system resolver. Some lists (Spamhaus, URIBL)
@@ -50,6 +52,9 @@ IP_LISTS: tuple[tuple[str, str], ...] = (
     ("DroneBL", "dnsbl.dronebl.org"),
     ("s5h", "all.s5h.net"),
 )
+# The IP lists that answer for IPv6 addresses (nibble format); asking the
+# others would only ever return "not listed".
+IPV6_ZONES = frozenset({"zen.spamhaus.org", "dnsbl.dronebl.org"})
 DOMAIN_LISTS: tuple[tuple[str, str], ...] = (
     ("Spamhaus DBL", "dbl.spamhaus.org"),
     ("SURBL", "multi.surbl.org"),
@@ -72,7 +77,11 @@ _PBL = {"127.0.0.10", "127.0.0.11"}
 
 
 def reverse_ip(ip: str) -> str:
-    return ".".join(reversed(ip.split(".")))
+    """192.0.2.10 → 10.2.0.192; IPv6 → its reversed nibbles."""
+    address = ipaddress.ip_address(ip)
+    if address.version == 4:
+        return ".".join(reversed(ip.split(".")))
+    return ".".join(reversed(address.exploded.replace(":", "")))
 
 
 def classify(zone: str, codes: list[str]) -> tuple[str, str]:
@@ -118,7 +127,7 @@ def lookup_a(name: str, timeout: float) -> tuple[list[str] | None, float]:
 
 
 def check_one(list_name: str, zone: str, subject: str, timeout: float) -> BlocklistCheck:
-    name = f"{reverse_ip(subject)}.{zone}" if _is_ipv4(subject) else f"{subject}.{zone}"
+    name = f"{reverse_ip(subject)}.{zone}" if _is_ip(subject) else f"{subject}.{zone}"
     codes, elapsed = lookup_a(name, timeout)
     if codes is None:
         return BlocklistCheck(
@@ -198,12 +207,11 @@ def blocklist(
             addresses = mail_and_web_addresses(target)
             if not addresses:
                 result.error = f"cannot resolve '{target}' (no MX or A records)"
+        v6_lists = [(name, zone) for name, zone in ip_lists if zone in IPV6_ZONES]
         for ip in addresses[:MAX_ADDRESSES]:
-            if _is_ipv4(ip):
-                result.addresses.append(ip)
-                jobs += [(name, zone, ip) for name, zone in ip_lists]
-            else:
-                result.skipped.append(ip)  # few lists support IPv6
+            result.addresses.append(ip)
+            lists = ip_lists if _is_ipv4(ip) else v6_lists
+            jobs += [(name, zone, ip) for name, zone in lists]
         with ThreadPoolExecutor(max_workers=16) as pool:
             result.checks = list(
                 pool.map(lambda job: check_one(job[0], job[1], job[2], timeout), jobs)
