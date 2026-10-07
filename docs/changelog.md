@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- `xping report` with nothing saved says so plainly ("nothing saved yet")
+  and suggests `xping monitor --save`; a filter or `--since` that leaves
+  nothing says "in this period" and points to `xping history`.
 - `xping report` charts break the line where nothing was measured (e.g.
   while monitor was stopped) instead of drawing a straight line across.
 

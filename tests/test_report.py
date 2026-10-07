@@ -48,7 +48,10 @@ def test_build_filters_and_limits(base):
     assert build("ping", "1.1.1.1", last=2, base=base).series[0].runs == 2
     recent = build(since=150, base=base, now=1_000_300)
     assert recent.series[0].runs == 3 and recent.since == 1_000_150
-    assert build("ping", "nope", base=base).error.startswith("no saved runs for ping nope")
+    assert build("ping", "nope", base=base).error == "no saved runs for ping nope"
+    old = build(since=10, base=base, now=2_000_000)
+    assert old.error == "no saved runs for anything in this period"
+    assert build(base=base.parent / "empty").error == "nothing saved yet"
 
 
 def test_html_is_self_contained_and_escaped(base):
@@ -96,3 +99,8 @@ def test_chart_breaks_the_line_across_gaps_without_runs():
                           [ReportPoint(t, True, 10.0 + i) for i, t in enumerate(times)])
     svg = _chart(series)
     assert svg.count("<polyline") == 2  # two measured stretches, not one line
+def test_cli_explains_an_empty_history(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(history, "HISTORY_DIR", tmp_path / "none")
+    code, captured = _main(["report"], capsys)
+    assert code == 1 and "nothing saved yet" in captured.err
+    assert "xping monitor --save" in captured.err
