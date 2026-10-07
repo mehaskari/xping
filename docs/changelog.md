@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- `xping monitor` change lines (in a log or pipe) line up: the check
+  name and type columns are padded to the widest name, so the details
+  start in the same column on every line.
+
 ## [1.5.2] - 2026-10-07
 
 ### Fixed
