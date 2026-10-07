@@ -247,3 +247,27 @@ def test_narrow_terminal_shortens_names_then_hides_the_detail():
     at_46 = [ANSI_RE.sub("", ln) for ln in monitor_view.live_lines(result, now=10, width=46)]
     assert "Detail" not in at_46[0] and "refused" not in at_46[2]
     assert all(ln == ln.rstrip() for ln in at_46)
+
+
+def test_not_a_terminal_writes_line_by_line(tmp_path, monkeypatch):
+    """`xping monitor >> log` must show up in `tail -f log` right away."""
+    calls = []
+
+    class Stdout:
+        def isatty(self):
+            return False
+
+        def reconfigure(self, **kwargs):
+            calls.append(kwargs)
+
+        def write(self, text):
+            return len(text)
+
+        def flush(self):
+            pass
+
+    monkeypatch.setattr("sys.stdout", Stdout())
+    path = _file(tmp_path, [{"name": "a", "type": "ping", "host": "a"}])
+    clock = Clock()
+    monitor_diag.monitor(path, rounds=1, clock=clock, sleep=clock.sleep, run=_runner({"a": [True]}))
+    assert {"line_buffering": True} in calls

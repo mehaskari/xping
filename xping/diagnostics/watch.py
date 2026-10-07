@@ -7,6 +7,7 @@ from collections.abc import Callable
 
 from xping.models.watch import WatchResult, WatchSample
 from xping.render import BOLD, BRAND_TEAL, c, kv, section_header
+from xping.render.progress import line_buffered
 from xping.render.views import watch as watch_view
 from xping.statefilter import StateFilter
 
@@ -37,6 +38,7 @@ def watch(
     *recover_after* passing ones (--until-up also waits for those).
     """
     result = WatchResult(target=target, check=check, until_up=until_up)
+    line_buffered()
     if not quiet:
         mode = "WAIT FOR UP" if until_up else "WATCH"
         print(section_header(f"{check.upper()} {mode}  {target}", "◉"))

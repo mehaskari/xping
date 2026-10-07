@@ -27,6 +27,7 @@ from xping.diagnostics.notify import Notifier
 from xping.models.check import CheckOutcome
 from xping.models.monitor import MonitoredCheck, MonitorResult, MonitorSample
 from xping.render.errors import warn
+from xping.render.progress import line_buffered
 from xping.render.views import monitor as monitor_view
 from xping.statefilter import StateFilter
 
@@ -156,6 +157,8 @@ def monitor(
 
     if live is None:
         live = sys.stdout.isatty()
+    if not live:
+        line_buffered()
     live = live and not quiet
     report = None if quiet or live else monitor_view.print_change
     if not quiet:
