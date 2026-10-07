@@ -6,6 +6,8 @@
 - `xping report` with nothing saved says so plainly ("nothing saved yet")
   and suggests `xping monitor --save`; a filter or `--since` that leaves
   nothing says "in this period" and points to `xping history`.
+- `xping report` charts break the line where nothing was measured (e.g.
+  while monitor was stopped) instead of drawing a straight line across.
 - `xping monitor` and watch mode write each line at once when the output is
   a file or a pipe, so `tail -f` on a log follows them live (the output
   used to sit in a buffer until several kilobytes had accumulated).
