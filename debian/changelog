@@ -1,3 +1,12 @@
+xping (1.5.2-1) noble; urgency=medium
+
+  * xping monitor and watch mode write each line at once to a file or
+    pipe, so tail -f on a log follows them live.
+  * xping report: charts break where nothing was measured; a plain
+    message and hint when nothing is saved yet.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Wed, 07 Oct 2026 19:17:22 +0000
+
 xping (1.5.1-1) noble; urgency=medium
 
   * xping report: the saved history as one HTML page (uptime, outages,

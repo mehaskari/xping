@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.5.2] - 2026-10-07
 
 ### Fixed
 - `xping report` with nothing saved says so plainly ("nothing saved yet")
