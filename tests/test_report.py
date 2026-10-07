@@ -85,3 +85,14 @@ def test_cli_stdout_json_and_errors(base, tmp_path, capsys):
     assert code == 1
     code, _ = _main(["report", "--since", "soon"], capsys)
     assert code == 2
+
+
+def test_chart_breaks_the_line_across_gaps_without_runs():
+    from xping.exporters.html_report import _chart
+    from xping.models.report import ReportPoint, ReportSeries
+
+    times = [0, 10, 20, 30, 400, 410, 420]  # nothing ran between 30 and 400
+    series = ReportSeries("ping", "h", "Average RTT", "ms",
+                          [ReportPoint(t, True, 10.0 + i) for i, t in enumerate(times)])
+    svg = _chart(series)
+    assert svg.count("<polyline") == 2  # two measured stretches, not one line

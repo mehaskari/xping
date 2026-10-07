@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- `xping report` charts break the line where nothing was measured (e.g.
+  while monitor was stopped) instead of drawing a straight line across.
+
 ## [1.5.1] - 2026-10-06
 
 ### Added

@@ -45,6 +45,16 @@ def _value(value: float | None, unit: str) -> str:
     return f"{text} {unit}".strip()
 
 
+def _gap_threshold(points) -> float:
+    """Seconds between two runs above which the chart line is broken: three
+    times the usual interval (the median), so a stopped monitor shows as a
+    gap rather than as a straight line through time nobody measured."""
+    steps = sorted(b.ts - a.ts for a, b in zip(points, points[1:], strict=False))
+    if not steps:
+        return float("inf")
+    return 3 * max(steps[len(steps) // 2], 1.0)
+
+
 def _chart(series: ReportSeries) -> str:
     """Line chart of the headline metric; failed runs as red ticks."""
     points = series.points
@@ -77,9 +87,15 @@ def _chart(series: ReportSeries) -> str:
             f'width="{max(2.0, x(end) - x(o.start)):.1f}" height="{plot_h}"/>'
         )
     if values:
-        # break the line where a run has no value (a failure)
+        # break the line where a run has no value (a failure), and across
+        # gaps with no runs at all (nothing was measuring then)
+        gap = _gap_threshold(points)
         segments: list[list[str]] = [[]]
+        previous_ts: float | None = None
         for p in points:
+            if previous_ts is not None and p.ts - previous_ts > gap and segments[-1]:
+                segments.append([])
+            previous_ts = p.ts
             if p.value is None:
                 if segments[-1]:
                     segments.append([])
