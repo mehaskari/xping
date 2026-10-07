@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- `xping monitor` and watch mode write each line at once when the output is
+  a file or a pipe, so `tail -f` on a log follows them live (the output
+  used to sit in a buffer until several kilobytes had accumulated).
+
 ## [1.5.1] - 2026-10-06
 
 ### Added

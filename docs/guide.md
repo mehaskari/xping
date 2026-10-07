@@ -1408,7 +1408,11 @@ characters), and as a last resort the Detail column is left out.
 
 - **Not a terminal** (cron, systemd, `| tee log`): instead of the table,
   one timestamped line per state change, with how long an outage lasted
-  when the check comes back.
+  when the check comes back. Each line is written at once, so
+  `tail -f` on the log follows it live. To keep monitor running after
+  the terminal closes, start it from a normal shell with
+  `nohup xping monitor --save >> ~/.xping/monitor.log 2>&1 &` (stop it
+  with `pkill -f "xping monitor"`), or run it as a service.
 - **Ctrl-C** ends the run with a summary: uptime, runs, outages and the
   longest outage per check, and the average of its metric. The exit code
   is 0 when every check was up at the end, 1 otherwise.

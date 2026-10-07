@@ -1,5 +1,6 @@
 """Progress line rendering."""
 
+import contextlib
 import sys
 import time
 
@@ -17,6 +18,16 @@ def progress_line(msg: str, done: bool = False) -> None:
     sys.stdout.flush()
     if done:
         sys.stdout.write("\n")
+
+
+def line_buffered() -> None:
+    """Write stdout line by line even when it is a file or a pipe, so a
+    long-running command (monitor, watch) shows up in `tail -f log` at once
+    instead of after kilobytes of buffered output."""
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure is not None:
+        with contextlib.suppress(ValueError, OSError):
+            reconfigure(line_buffering=True)
 
 
 def clear_lines(n: int) -> None:
