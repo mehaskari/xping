@@ -16,6 +16,7 @@ commands do.
 
 from __future__ import annotations
 
+import functools
 import sys
 import time
 from collections.abc import Callable
@@ -160,7 +161,10 @@ def monitor(
     if not live:
         line_buffered()
     live = live and not quiet
-    report = None if quiet or live else monitor_view.print_change
+    report = None
+    if not (quiet or live):
+        widths = monitor_view.change_widths(result)
+        report = functools.partial(monitor_view.print_change, widths=widths)
     if not quiet:
         monitor_view.print_header(result)
 

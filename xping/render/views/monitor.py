@@ -175,10 +175,23 @@ def redraw(result, now: float, printed: int = 0) -> int:
     return len(lines)
 
 
+def change_widths(result) -> tuple[int, int]:
+    """(name, type) column widths for print_change, so every line of a log
+    lines up; names are capped so one long name cannot push the rest away."""
+    names = [visible_len(safe(k.name)) for k in result.checks] or [0]
+    types = [len(k.type) for k in result.checks] or [0]
+    return min(max(names), 32), max(types)
+
+
 def print_change(
-    check, ts: float, previous: bool | None, previous_since: float | None = None
+    check,
+    ts: float,
+    previous: bool | None,
+    previous_since: float | None = None,
+    widths: tuple[int, int] = (0, 0),
 ) -> None:
-    """One line per confirmed state change, for output that is not a terminal."""
+    """One line per confirmed state change, for output that is not a terminal.
+    *widths* (see change_widths) pads the name and type columns."""
     clock = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts))
     if check.up:
         state = c("UP  ", BRAND_MINT, BOLD)
@@ -188,9 +201,13 @@ def print_change(
     if previous is False and previous_since is not None and check.since is not None:
         # back up: the outage lasted from its first failure to the first good run
         note = c(f"  (down for {duration(check.since - previous_since)})", DIM)
+    name_w, type_w = widths
     name = c(safe(check.name), BWHITE, BOLD)
+    if name_w:
+        name = pad(fit(name, name_w), name_w)
+    kind = pad(c(check.type, BRAND_SLATE), type_w)
     detail = c(safe(check.detail), DIM if check.up else BRAND_ROSE)
-    print(f"  {c(clock, DIM)}  {state}  {name}  {c(check.type, BRAND_SLATE)}  {detail}{note}")
+    print(f"  {c(clock, DIM)}  {state}  {name}  {kind}  {detail}{note}")
 
 
 def print_summary(result) -> None:

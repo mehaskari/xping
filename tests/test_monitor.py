@@ -271,3 +271,23 @@ def test_not_a_terminal_writes_line_by_line(tmp_path, monkeypatch):
     clock = Clock()
     monitor_diag.monitor(path, rounds=1, clock=clock, sleep=clock.sleep, run=_runner({"a": [True]}))
     assert {"line_buffering": True} in calls
+
+
+@pytest.mark.parametrize("colour", [False, True])
+def test_change_lines_line_up(tmp_path, capsys, colour):
+    path = _file(
+        tmp_path,
+        [
+            {"name": "db", "type": "tcp", "host": "a", "port": 1},
+            {"name": "a much longer check name", "type": "ping", "host": "b"},
+        ],
+    )
+    clock = Clock()
+    run = _runner({"db": [True], "a much longer check name": [False]})
+    with patch("xping.render.ansi.COLOR", colour), patch("xping.render.COLOR", colour):
+        monitor_diag.monitor(path, rounds=1, live=False, clock=clock, sleep=clock.sleep, run=run)
+    lines = [ANSI_RE.sub("", ln) for ln in capsys.readouterr().out.splitlines()]
+    changes = [ln for ln in lines if ln.startswith("  19") and ("UP" in ln or "DOWN" in ln)]
+    assert len(changes) == 2
+    # the type column (and so the detail after it) starts at the same place
+    assert len({ln.index(" tcp ") if " tcp " in ln else ln.index(" ping ") for ln in changes}) == 1
