@@ -688,7 +688,15 @@ def cmd_report(args: argparse.Namespace) -> object:
     result = build(command, target, since=since, last=args.last)
     if result.error:
         if not output_suppressed(args):
-            error(result.error, hint="Save runs first, e.g. xping ping example.net --save")
+            if result.error == "nothing saved yet":
+                hint = (
+                    "xping report shows results kept with --save, e.g.\n"
+                    "      xping monitor --save        (every check, all day)\n"
+                    "      xping ping 1.1.1.1 --save   (one run)"
+                )
+            else:
+                hint = "See what is saved with: xping history"
+            error(result.error, hint=hint)
         emit_export(result, args)
         return result
     page = to_html(result, title=args.title)
