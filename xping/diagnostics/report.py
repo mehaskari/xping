@@ -56,6 +56,9 @@ def build(
         ]
         result.series.append(series)
     if not result.series:
-        what = " ".join(x for x in (command, target) if x) or "anything"
-        result.error = f"no saved runs for {what} (record some with --save)"
+        what = " ".join(x for x in (command, target) if x)
+        if not pairs:
+            result.error = f"no saved runs for {what}" if what else "nothing saved yet"
+        else:
+            result.error = f"no saved runs for {what or 'anything'} in this period"
     return result
