@@ -48,7 +48,10 @@ def test_build_filters_and_limits(base):
     assert build("ping", "1.1.1.1", last=2, base=base).series[0].runs == 2
     recent = build(since=150, base=base, now=1_000_300)
     assert recent.series[0].runs == 3 and recent.since == 1_000_150
-    assert build("ping", "nope", base=base).error.startswith("no saved runs for ping nope")
+    assert build("ping", "nope", base=base).error == "no saved runs for ping nope"
+    old = build(since=10, base=base, now=2_000_000)
+    assert old.error == "no saved runs for anything in this period"
+    assert build(base=base.parent / "empty").error == "nothing saved yet"
 
 
 def test_html_is_self_contained_and_escaped(base):
@@ -85,3 +88,10 @@ def test_cli_stdout_json_and_errors(base, tmp_path, capsys):
     assert code == 1
     code, _ = _main(["report", "--since", "soon"], capsys)
     assert code == 2
+
+
+def test_cli_explains_an_empty_history(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(history, "HISTORY_DIR", tmp_path / "none")
+    code, captured = _main(["report"], capsys)
+    assert code == 1 and "nothing saved yet" in captured.err
+    assert "xping monitor --save" in captured.err

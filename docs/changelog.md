@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- `xping report` with nothing saved says so plainly ("nothing saved yet")
+  and suggests `xping monitor --save`; a filter or `--since` that leaves
+  nothing says "in this period" and points to `xping history`.
+
 ## [1.5.1] - 2026-10-06
 
 ### Added
