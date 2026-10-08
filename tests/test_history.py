@@ -187,8 +187,6 @@ def test_prune_drops_only_old_runs(tmp_path):
 
 
 def test_cli_clear_older_than(tmp_path, monkeypatch, capsys):
-    import importlib
-
     monkeypatch.setattr(history, "HISTORY_DIR", tmp_path / "hist")
     main_mod = importlib.import_module("xping.cli.main")
     for argv, code in ((["history", "--older-than", "30d"], 2),

@@ -4,7 +4,6 @@ are faked)."""
 
 import importlib
 import plistlib
-import shlex
 import subprocess
 import sys
 from types import SimpleNamespace
