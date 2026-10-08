@@ -39,7 +39,14 @@ class NetResult:
     location: str | None = None  # country code seen by Cloudflare
     colo: str | None = None  # Cloudflare data centre that answered
     interfaces: list[NetInterface] = field(default_factory=list)
+    internet_interface: str | None = None  # the interface traffic to the internet leaves by
+    vpn_interfaces: list[str] = field(default_factory=list)  # tunnels with a routable address
     error: str | None = None
+
+    @property
+    def via_vpn(self) -> bool:
+        """Internet traffic goes through a VPN tunnel (full tunnel)."""
+        return bool(self.internet_interface) and self.internet_interface in self.vpn_interfaces
 
     def to_dict(self, *, include_computed: bool = True) -> dict:
         return model_to_dict(self, include_computed=include_computed)

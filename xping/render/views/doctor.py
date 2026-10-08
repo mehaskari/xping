@@ -20,6 +20,8 @@ def print_step(step) -> None:
     # a failure's advice is printed once, with the diagnosis at the end
     if step.hint and step.status == "warn":
         print(c(f"     {'':<22}  → {step.hint}", color))
+    elif step.hint and step.status == "ok":  # a note, e.g. latency explained by a VPN
+        print(c(f"     {'':<22}  → {step.hint}", DIM))
 
 
 def print_diagnosis(result) -> None:

@@ -119,6 +119,9 @@ def _linux(result: NetResult) -> None:
     if servers and all(s.startswith("127.0.0.5") for s in servers):
         servers += [s for s in _read_resolv("/run/systemd/resolve/resolv.conf") if s not in servers]
     result.dns_servers = servers
+    result.internet_interface = parse_route_get_interface(
+        _run("ip", "route", "get", _PROBE_ADDRESS) or ""
+    )
 
 
 def _read_resolv(path: str) -> list[str]:
@@ -188,6 +191,37 @@ def parse_scutil_dns(output: str) -> list[str]:
     return servers
 
 
+# Interface names VPN clients use: utun (macOS: WireGuard, IKEv2, most apps),
+# tun/tap (OpenVPN), wg (WireGuard), ppp (PPTP/L2TP), ipsec, and a few
+# vendor names. macOS keeps idle utunN with only link-local addresses for
+# its own use, so only tunnels with a routable address count.
+_VPN_PREFIXES = ("utun", "tun", "tap", "wg", "ppp", "ipsec", "tailscale", "zt", "nordlynx")
+# A public address to ask the routing table about: VPNs often add
+# 0.0.0.0/1 + 128.0.0.0/1 and leave the default route alone.
+_PROBE_ADDRESS = "1.1.1.1"
+
+
+def vpn_interfaces(interfaces: list[NetInterface]) -> list[str]:
+    found = []
+    for iface in interfaces:
+        if iface.state == "down" or not iface.name.lower().startswith(_VPN_PREFIXES):
+            continue
+        routable = [
+            a
+            for a in iface.addresses
+            if not a.lower().startswith("fe80") and not a.startswith("127.")
+        ]
+        if routable:
+            found.append(iface.name)
+    return found
+
+
+def parse_route_get_interface(output: str) -> str | None:
+    """Interface from `route -n get ADDR` (macOS) or `ip route get ADDR` (Linux)."""
+    found = re.search(r"interface:\s*(\S+)", output) or re.search(r"\bdev\s+(\S+)", output)
+    return found.group(1) if found else None
+
+
 def _darwin(result: NetResult) -> None:
     result.interfaces = parse_ifconfig(_run("ifconfig") or "")
     result.gateway_ipv4, result.gateway_interface = parse_route_get(
@@ -197,6 +231,9 @@ def _darwin(result: NetResult) -> None:
     result.gateway_ipv6 = gw6.split("%", 1)[0] if gw6 else None
     result.dns_servers = parse_scutil_dns(_run("scutil", "--dns") or "") or _read_resolv(
         "/etc/resolv.conf"
+    )
+    result.internet_interface = parse_route_get_interface(
+        _run("route", "-n", "get", _PROBE_ADDRESS) or ""
     )
 
 
@@ -304,6 +341,10 @@ def net(public: bool = True, quiet: bool = False, show_all: bool = False) -> Net
     finally:
         if spinner:
             spinner.stop()
+
+    result.vpn_interfaces = vpn_interfaces(result.interfaces)
+    if not result.internet_interface:
+        result.internet_interface = result.gateway_interface
 
     if not result.interfaces and not result.local_ipv4 and not result.local_ipv6:
         result.error = "Could not determine any network configuration"

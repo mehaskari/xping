@@ -9,6 +9,12 @@
   if it stops, with its output in `~/.xping/monitor.log`. The checks are
   validated before anything is installed. `--service-status` shows
   whether it runs; `--uninstall-service` removes it. No root needed.
+- VPN awareness. `xping net` shows a VPN tunnel and whether internet
+  traffic goes through it (found by asking the routing table how 1.1.1.1
+  is reached, since many VPNs leave the default route alone). `xping
+  doctor` names the VPN next to the network interface and puts high
+  latency down to the tunnel rather than to your network. `--json` has
+  `internet_interface`, `vpn_interfaces` and `via_vpn`.
 
 ### Changed
 - `xping monitor` change lines (in a log or pipe) line up: the check
