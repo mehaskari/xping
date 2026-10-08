@@ -245,3 +245,42 @@ def print_summary(result) -> None:
     if any(k.outages for k in result.checks):
         print(c("  Outages are counted from the first failed run to the next good one.", DIM))
     print()
+
+
+def _home(path) -> str:
+    text = str(path)
+    home = str(Path.home())
+    return "~" + text[len(home) :] if text.startswith(home) else text
+
+
+def print_service(state, installed_now: bool = False) -> None:
+    """--install-service / --service-status."""
+    import shlex
+
+    if not state.installed:
+        print(c("  The background monitor is not installed.", DIM))
+        print(c("  Start one with: xping monitor --save --fail-after 3 --install-service", DIM))
+        print()
+        return
+    if state.running:
+        pid = f" (pid {state.pid})" if state.pid else ""
+        verb = "now runs" if installed_now else "runs"
+        print(c(f"  ✔ xping monitor {verb} in the background{pid}", BRAND_MINT, BOLD))
+    else:
+        print(c("  ✘ the background monitor is installed but not running", BRAND_ROSE, BOLD))
+    print(kv("Command", shlex.join(state.command) if state.command else "?"))
+    print(kv("Service", _home(state.path)))
+    print(kv("Log", f"{_home(state.log)}   (tail -f {_home(state.log)})"))
+    print(kv("Stop", "xping monitor --uninstall-service"))
+    if installed_now and "systemd" in str(state.path):
+        print(c("  It starts at login. To keep it running when you are logged out:", DIM))
+        print(c("    loginctl enable-linger $USER", DIM))
+    print()
+
+
+def print_service_removed(removed: bool) -> None:
+    if removed:
+        print(c("  ✔ the background monitor was stopped and removed", BRAND_MINT, BOLD))
+    else:
+        print(c("  The background monitor was not installed.", DIM))
+    print()

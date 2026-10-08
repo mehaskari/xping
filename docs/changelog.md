@@ -6,6 +6,12 @@
 - `xping report` shows the 95th percentile, and `--since 7d --compare`
   compares each target with the week before: uptime, median and p95 with
   the change marked green (better) or red (worse).
+- **`xping monitor --install-service`: keep monitoring in the background.**
+  The same monitor command runs as a per-user service, a LaunchAgent on
+  macOS or a systemd user unit on Linux, started at login and restarted
+  if it stops, with its output in `~/.xping/monitor.log`. The checks are
+  validated before anything is installed. `--service-status` shows
+  whether it runs; `--uninstall-service` removes it. No root needed.
 - `xping history --clear --older-than 30d` deletes only runs older than
   that and keeps the rest (files left empty are removed), so a monitor
   saving all day does not grow without bound.

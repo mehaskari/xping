@@ -329,10 +329,47 @@ def cmd_check(args: argparse.Namespace) -> object:
     return result
 
 
+def _monitor_service(args: argparse.Namespace) -> object:
+    from xping.diagnostics import check as check_diag
+    from xping.diagnostics import service
+    from xping.render.views import monitor as monitor_view
+
+    try:
+        if args.uninstall_service:
+            removed = service.uninstall()
+            monitor_view.print_service_removed(removed)
+            return True
+        if args.service_status:
+            state = service.status()
+            monitor_view.print_service(state)
+            return state.running
+        if args.rounds is not None or export_requested(args):
+            raise UsageError("--install-service runs until stopped: drop --rounds and exports")
+        # fail now, not later in the background, if the checks are invalid
+        targets = args.targets
+        if not targets:
+            check_diag.require_default()
+        elif len(targets) == 1 and (
+            targets[0].lower().endswith((".toml", ".json")) or Path(targets[0]).is_file()
+        ):
+            check_diag.load_config(targets[0])
+        else:
+            check_diag.entries_from_targets(targets)
+        state = service.install(service.monitor_arguments(args))
+    except ConfigError as exc:
+        raise UsageError(str(exc)) from exc
+    except service.ServiceError as exc:
+        raise UsageError(str(exc)) from exc
+    monitor_view.print_service(state, installed_now=True)
+    return state.running
+
+
 def cmd_monitor(args: argparse.Namespace) -> object:
     from xping.diagnostics import check as check_diag
     from xping.diagnostics.monitor import monitor
 
+    if args.install_service or args.uninstall_service or args.service_status:
+        return _monitor_service(args)
     targets = args.targets
     path, entries = None, None
     try:
