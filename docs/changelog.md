@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+- VPN awareness. `xping net` shows a VPN tunnel and whether internet
+  traffic goes through it (found by asking the routing table how 1.1.1.1
+  is reached, since many VPNs leave the default route alone). `xping
+  doctor` names the VPN next to the network interface and puts high
+  latency down to the tunnel rather than to your network. `--json` has
+  `internet_interface`, `vpn_interfaces` and `via_vpn`.
+
 ### Changed
 - `xping monitor` change lines (in a log or pipe) line up: the check
   name and type columns are padded to the widest name, so the details
