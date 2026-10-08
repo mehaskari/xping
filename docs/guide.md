@@ -355,11 +355,11 @@ outward from your machine and stops guessing as soon as something breaks:
 
 | # | Step | How it is checked | What a failure means |
 |---|------|-------------------|----------------------|
-| 1 | Network interface | an interface has a usable (non link-local) address | not connected, or `169.254.x.x` = DHCP failed |
+| 1 | Network interface | an interface has a usable (non link-local) address; a VPN that carries the internet traffic is named here | not connected, or `169.254.x.x` = DHCP failed |
 | 2 | Default gateway | a default route exists; the router is pinged | no router; no reply is only a *warning* (many routers ignore ping) |
 | 3 | Internet (by IP) | TCP 443 to 1.1.1.1, 8.8.8.8 and 9.9.9.9 — no DNS involved | no internet behind the router |
 | 4 | DNS | the system resolver looks up `cloudflare.com` / `google.com`. If that fails, a direct query to 1.1.1.1 follows | "your DNS server is broken" vs. "DNS traffic is blocked" |
-| 5 | Connection quality | 5 pings to 1.1.1.1 | ≥ 20 % loss or > 300 ms average is a *warning* |
+| 5 | Connection quality | 5 pings to 1.1.1.1 | ≥ 20 % loss or > 300 ms average is a *warning*. Through a VPN, the latency is put down to the tunnel (its server's distance), not to your network |
 | 6 | Captive portal | `captive.apple.com` must answer "Success" | a Wi-Fi login page is intercepting traffic |
 | 7 | HTTPS | verified TLS request to `www.cloudflare.com` | HTTPS is intercepted (proxy, antivirus). The server timestamp also reveals a system clock that is off by more than 2 minutes (*warning*) |
 | 8 | IPv6 | global IPv6 address and a TCP connection to Cloudflare over IPv6 | informational only, never a failure |
@@ -403,6 +403,12 @@ Your own network at a glance:
 - default gateways (with the interface)
 - DNS servers. With systemd-resolved, the real upstream servers are shown
   behind the `127.0.0.53` stub.
+- **VPN**: a tunnel interface with a routable address (`utun`, `tun`,
+  `wg`, `ppp`, `ipsec`, …), and whether traffic to the internet actually
+  goes through it. xping asks the routing table how it reaches 1.1.1.1,
+  because many VPNs add `0.0.0.0/1` + `128.0.0.0/1` and leave the default
+  route on Wi-Fi. "Split tunnel" means the VPN is up but internet traffic
+  does not use it.
 - public IPv4/IPv6 addresses as seen from the internet, with the country
   and the Cloudflare data centre that answered
 - a table of interfaces with state, MTU and addresses

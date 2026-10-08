@@ -369,8 +369,9 @@ is not met.
 .B net [\fIOPTIONS\fR]
 Your own network at a glance: hostname, the local IPv4/IPv6 source
 addresses used for outbound traffic, default gateways, DNS resolvers,
-public IPv4/IPv6 addresses (with country and Cloudflare data centre),
-and interfaces with state, MTU and addresses.
+a VPN tunnel and whether internet traffic goes through it (full or
+split tunnel), public IPv4/IPv6 addresses (with country and Cloudflare
+data centre), and interfaces with state, MTU and addresses.
 The public-address lookup is the only outbound request
 .RI ( https://1.1.1.1/cdn-cgi/trace )
 and is skipped with

@@ -78,7 +78,7 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     "ListenResult": ("count",),
     "OsDetectResult": (),
     "NetInterface": ("loopback",),
-    "NetResult": (),
+    "NetResult": ("via_vpn",),
     "WifiNetwork": ("snr_db",),
     "WifiResult": ("quality", "same_channel"),
     "NtpSample": (),
