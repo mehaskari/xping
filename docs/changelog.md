@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- `xping history --clear --older-than 30d` deletes only runs older than
+  that and keeps the rest (files left empty are removed), so a monitor
+  saving all day does not grow without bound.
 - VPN awareness. `xping net` shows a VPN tunnel and whether internet
   traffic goes through it (found by asking the routing table how 1.1.1.1
   is reached, since many VPNs leave the default route alone). `xping

@@ -169,3 +169,32 @@ def test_save_confirms_except_when_output_must_stay_clean(store, monkeypatch, ca
             main_mod.main()
         assert "saved to history" not in capsys.readouterr().out
     assert history.entries()[0].runs == 3  # all three runs were still saved
+
+
+def test_prune_drops_only_old_runs(tmp_path):
+    base = tmp_path / "hist"
+    with patch("xping.diagnostics.history.time.time") as clock:
+        for day in (1, 5, 9):
+            clock.return_value = day * 86400.0
+            history.record("ping", "a", PingResult("a", "1.1.1.1", 1, [5.0]), True, base=base)
+        clock.return_value = 1 * 86400.0
+        history.record("ping", "old", PingResult("old", "1.1.1.1", 1, [5.0]), True, base=base)
+    removed = history.prune(3 * 86400, base=base, now=10 * 86400.0)
+    assert removed == 3  # days 1 and 5 of "a", and the only run of "old"
+    assert [round(r.ts / 86400) for r in history.show("ping", "a", base=base).runs] == [9]
+    assert not (base / "ping" / "old.jsonl").exists()  # emptied files are removed
+    assert history.prune(3 * 86400, "ping", "a", base=base, now=10 * 86400.0) == 0
+
+
+def test_cli_clear_older_than(tmp_path, monkeypatch, capsys):
+    import importlib
+
+    monkeypatch.setattr(history, "HISTORY_DIR", tmp_path / "hist")
+    main_mod = importlib.import_module("xping.cli.main")
+    for argv, code in ((["history", "--older-than", "30d"], 2),
+                       (["history", "--clear", "--older-than", "soon"], 2),
+                       (["history", "--clear", "--older-than", "30d"], 0)):
+        with patch("sys.argv", ["xping", *argv]), pytest.raises(SystemExit) as exc:
+            main_mod.main()
+        assert exc.value.code == code, argv
+    assert "removed 0 saved run(s) older than 30d" in capsys.readouterr().out
