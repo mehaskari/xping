@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Added
+- `xping report` shows the 95th percentile, and `--since 7d --compare`
+  compares each target with the week before: uptime, median and p95 with
+  the change marked green (better) or red (worse).
 - **`xping monitor --install-service`: keep monitoring in the background.**
   The same monitor command runs as a per-user service, a LaunchAgent on
   macOS or a systemd user unit on Linux, started at login and restarted

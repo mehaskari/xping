@@ -1567,7 +1567,7 @@ xping history --clear                         # start over
 #### `xping report`
 
 ```
-xping report [COMMAND [TARGET]] [-o FILE] [--since AGE] [--last N] [--title TEXT]
+xping report [COMMAND [TARGET]] [-o FILE] [--since AGE [--compare]] [--last N] [--title TEXT]
 ```
 
 Turns the [history](#xping-history) into **one HTML page** you can mail,
@@ -1578,7 +1578,7 @@ light or dark theme.
 - An overview table: every target with its state, uptime, number of
   outages and latest value; each row links to its section.
 - Per target: state, uptime, runs, outages and total downtime, the latest
-  and median value of its headline metric, and a chart of that metric over
+  value, median and 95th percentile of its headline metric, and a chart of that metric over
   time with failed runs marked in red and outages shaded.
 - The outages themselves: when each began (first failed run), when the
   target was back (first good run) and how long it lasted.
@@ -1593,6 +1593,7 @@ a command and target, to narrow it down.
 | `--since AGE` | — | Only runs from the last AGE, e.g. `24h`, `7d`, `2w` |
 | `--last N` | — | Only the newest N runs of each target |
 | `--title TEXT` | xping report | Page title |
+| `--compare` | — | With `--since`: compare with the same length of time just before. Uptime, median and 95th percentile show the change, green when it is better (e.g. lower latency, more uptime) and red when worse |
 
 `--json`, `--csv` and `--markdown` export the same summary as data.
 Exit code 1 when there is nothing to report.
@@ -1601,6 +1602,7 @@ Exit code 1 when there is nothing to report.
 xping report                                   # everything → xping-report.html
 xping report --since 7d -o weekly.html --title "Office network, last week"
 xping report ping 1.1.1.1 -o - > ping.html
+xping report --since 7d --compare -o weekly.html   # this week vs last week
 ```
 
 #### `xping profile`

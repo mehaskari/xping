@@ -102,7 +102,7 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     "MonitorResult": ("down", "ok"),
     "ReportPoint": (),
     "ReportOutage": (),
-    "ReportSeries": ("runs", "up_pct", "last_ok", "latest", "median"),
+    "ReportSeries": ("runs", "up_pct", "last_ok", "latest", "median", "p95"),
     "ReportResult": ("runs",),
     "ResolverAnswer": ("answered",),
     "PropagationResult": ("consistent", "distinct_answers", "majority", "matching"),
