@@ -4,6 +4,28 @@ A release is: bump the version in a pull request, let CI pass and the PR
 merge, then push a `vX.Y.Z` tag on the merge commit. The tag publishes
 to PyPI, GitHub Releases and the Launchpad PPA.
 
+## The short way
+
+```bash
+git checkout main && git pull --ff-only
+python3 scripts/release.py 1.5.3 --dry-run   # what would change
+python3 scripts/release.py 1.5.3
+```
+
+`scripts/release.py` does every step below in order and stops at the
+first problem: it checks that `main` is clean and current, that the
+version is new (also on PyPI) and that `docs/changelog.md` has an
+`[Unreleased]` section; bumps all versioned files, dates the man page and
+the changelog and writes the `debian/changelog` entry from the changelog;
+runs pytest, ruff and mypy (`--skip-checks` to skip); opens the release
+PR with auto-merge and waits for it; tags the merge commit and pushes the
+tag; and asks the Homebrew tap to follow at once. It runs `git` and `gh`
+as you, so CI and the release workflows start as usual (GitHub does not
+start workflows for pushes made by a workflow's own token, which is why
+this is a local script and not a workflow).
+
+The rest of this guide is what the script does, for doing it by hand.
+
 ## Before releasing, always verify locally first
 
 ```bash
