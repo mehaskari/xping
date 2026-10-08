@@ -187,6 +187,48 @@ def show(
     return result
 
 
+def prune(
+    older_than: float,
+    command: str | None = None,
+    target: str | None = None,
+    base: Path | None = None,
+    now: float | None = None,
+) -> int:
+    """Drop runs older than *older_than* seconds (all, one command, or one
+    command and target); returns how many runs were removed. Files left
+    without runs are deleted."""
+    root = base or HISTORY_DIR
+    if command and target:
+        files = [_file(command, target, base)]
+    else:
+        folder = root / command if command else root
+        files = sorted(folder.rglob("*.jsonl")) if folder.is_dir() else []
+    cutoff = (now if now is not None else time.time()) - older_than
+    removed = 0
+    for path in files:
+        if not path.exists():
+            continue
+        lines = path.read_text(encoding="utf-8").splitlines()
+        kept = []
+        for line in lines:
+            try:
+                ts = json.loads(line).get("ts", 0)
+            except (json.JSONDecodeError, AttributeError):
+                ts = 0  # unreadable lines are dropped too
+            if isinstance(ts, (int, float)) and ts >= cutoff:
+                kept.append(line)
+        if len(kept) == len(lines):
+            continue
+        removed += len(lines) - len(kept)
+        if kept:
+            tmp = path.with_suffix(".tmp")
+            tmp.write_text("\n".join(kept) + "\n", encoding="utf-8")
+            tmp.replace(path)
+        else:
+            path.unlink()
+    return removed
+
+
 def clear(command: str | None = None, target: str | None = None, base: Path | None = None) -> int:
     """Delete saved runs; returns how many files were removed."""
     root = base or HISTORY_DIR

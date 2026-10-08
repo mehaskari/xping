@@ -1522,6 +1522,7 @@ add `:PORT`, e.g. `xping history tcp db.local:5432`.
 | `--last N` | Only the newest N runs |
 | `--since AGE` | Only runs from the last AGE: `30m`, `12h`, `7d`, `2w` |
 | `--clear` | Delete saved runs: everything, one command, or one command + target |
+| `--clear --older-than AGE` | Delete only runs older than AGE (e.g. `30d`) and keep the rest, e.g. to keep a long-running `xping monitor --save` small |
 
 `--json` gives every run with its values. `--csv` gives one row per run,
 for a spreadsheet chart.

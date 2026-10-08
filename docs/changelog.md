@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+- `xping history --clear --older-than 30d` deletes only runs older than
+  that and keeps the rest (files left empty are removed), so a monitor
+  saving all day does not grow without bound.
+
 ### Changed
 - `xping monitor` change lines (in a log or pipe) line up: the check
   name and type columns are padded to the widest name, so the details
