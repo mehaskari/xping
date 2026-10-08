@@ -104,3 +104,26 @@ def test_cli_explains_an_empty_history(tmp_path, monkeypatch, capsys):
     code, captured = _main(["report"], capsys)
     assert code == 1 and "nothing saved yet" in captured.err
     assert "xping monitor --save" in captured.err
+
+
+def test_percentile_and_compare_with_the_period_before(tmp_path):
+    from xping.models.report import ReportPoint, ReportSeries
+
+    series = ReportSeries("ping", "h", points=[ReportPoint(i, True, float(v))
+                                              for i, v in enumerate([10, 20, 30, 40, 100])])
+    assert series.p95 == 100.0 and series.percentile(50) == 30.0
+    base = tmp_path / "hist"
+    with patch("xping.diagnostics.history.time.time") as clock:
+        for day, rtt in [(1, 50.0), (2, 60.0), (8, 20.0), (9, 30.0)]:
+            clock.return_value = day * 86400.0
+            history.record("ping", "h", PingResult("h", "1.1.1.1", 1, [rtt]), True, base=base)
+    report = build(since=5 * 86400, base=base, now=10 * 86400.0, compare=True)
+    ping = report.series[0]
+    assert [p.value for p in ping.points] == [20.0, 30.0]
+    assert [p.value for p in ping.previous.points] == [50.0, 60.0]
+    assert ping.better == "lower" and report.compared
+    page = to_html(report)
+    assert "compared with the 5d before" in page
+    assert 'class="delta good"' in page and "−30.0 ms vs before" in page  # median 25 vs 55
+    with pytest.raises(ValueError, match="--since"):
+        build(base=base, compare=True)

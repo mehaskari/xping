@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+- `xping report` shows the 95th percentile, and `--since 7d --compare`
+  compares each target with the week before: uptime, median and p95 with
+  the change marked green (better) or red (worse).
+
 ### Changed
 - `xping monitor` change lines (in a log or pipe) line up: the check
   name and type columns are padded to the widest name, so the details

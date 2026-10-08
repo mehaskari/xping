@@ -141,6 +141,22 @@ def _anchor(series: ReportSeries) -> str:
     return "s-" + "".join(ch if ch.isalnum() else "-" for ch in raw)[:80]
 
 
+def _delta(now_value: float | None, before: float | None, unit: str, better: str) -> str:
+    """'(+12.0 ms vs before)', coloured by whether it is an improvement."""
+    if now_value is None or before is None:
+        return ""
+    change = now_value - before
+    if abs(change) < 1e-9:
+        return ' <span class="delta">(same as before)</span>'
+    improved = (change < 0) == (better == "lower")
+    if better not in ("lower", "higher"):
+        css = "delta"
+    else:
+        css = "delta good" if improved else "delta bad"
+    text = _value(abs(change), unit)
+    return f' <span class="{css}">({"+" if change > 0 else "−"}{_e(text)} vs before)</span>'
+
+
 def _section(series: ReportSeries, now: float) -> str:
     up = f"{series.up_pct:.2f}%" if series.up_pct is not None else "–"
     total_down = sum(
@@ -154,8 +170,22 @@ def _section(series: ReportSeries, now: float) -> str:
         ("Downtime", _e(_duration(total_down) if series.outages else "–")),
         (f"Latest {series.metric or ''}".strip(), _e(_value(series.latest, series.unit))),
         ("Median", _e(_value(series.median, series.unit))),
+        ("95th percentile", _e(_value(series.p95, series.unit))),
         ("Last run", _e(_when(series.points[-1].ts))),
     ]
+    before = series.previous
+    if before is not None:
+        stats[1] = ("Uptime", _e(up) + _delta(series.up_pct, before.up_pct, "%", "higher"))
+        stats[6] = (
+            "Median",
+            _e(_value(series.median, series.unit))
+            + _delta(series.median, before.median, series.unit, series.better),
+        )
+        stats[7] = (
+            "95th percentile",
+            _e(_value(series.p95, series.unit))
+            + _delta(series.p95, before.p95, series.unit, series.better),
+        )
     stat_html = "".join(
         f'<div class="stat"><div class="k">{k}</div><div class="v">{v}</div></div>'
         for k, v in stats
@@ -201,7 +231,8 @@ border-radius:10px;padding:18px;margin:18px 0}
 .chart{margin-top:14px}svg{width:100%;height:auto;display:block}.scroll{overflow-x:auto}
 .axis{stroke:var(--line)}.line{fill:none;stroke:var(--accent);stroke-width:1.8;
 stroke-linejoin:round}.dot{fill:var(--accent)}.fail{stroke:var(--down);stroke-width:2}
-.outage{fill:var(--down-bg)}.tick{fill:var(--muted);font-size:11px}
+.outage{fill:var(--down-bg)}.delta{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.delta.good{color:var(--up)}.delta.bad{color:var(--down)}.tick{fill:var(--muted);font-size:11px}
 table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;
 padding:6px 8px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600}
 .overview td:first-child a{color:var(--fg);word-break:break-all}
@@ -215,6 +246,8 @@ footer{color:var(--muted);font-size:13px;margin-top:24px}
 def to_html(result: ReportResult, title: str = "xping report") -> str:
     now = result.generated
     period = f"since {_when(result.since)}" if result.since else "all saved runs"
+    if result.compared and result.since is not None:
+        period += f", compared with the {_duration(now - result.since)} before"
     overview_rows = "".join(
         f'<tr><td><a href="#{_anchor(s)}">{_e(s.command)} {_e(s.target)}</a></td>'
         f"<td>{_state(s.last_ok)}</td>"

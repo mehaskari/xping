@@ -685,7 +685,10 @@ def cmd_report(args: argparse.Namespace) -> object:
         since = history.parse_since(args.since) if args.since else None
     except ValueError as exc:
         raise UsageError(f"--since: {exc}") from exc
-    result = build(command, target, since=since, last=args.last)
+    try:
+        result = build(command, target, since=since, last=args.last, compare=args.compare)
+    except ValueError as exc:
+        raise UsageError(str(exc)) from exc
     if result.error:
         if not output_suppressed(args):
             if result.error == "nothing saved yet":

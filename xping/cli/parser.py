@@ -1117,6 +1117,12 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     p_report.add_argument(
         "--title", default="xping report", metavar="TEXT", help="Page title [default: xping report]"
     )
+    p_report.add_argument(
+        "--compare",
+        action="store_true",
+        help="With --since: compare with the same length of time just before (e.g. this week "
+        "vs last week)",
+    )
 
     # --save on every command whose results history can follow
     for name in SAVE_COMMANDS:

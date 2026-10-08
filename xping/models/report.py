@@ -34,6 +34,8 @@ class ReportSeries:
     unit: str = ""
     points: list[ReportPoint] = field(default_factory=list)
     outages: list[ReportOutage] = field(default_factory=list)
+    previous: ReportSeries | None = None  # the same length of time just before (--compare)
+    better: str = "lower"  # which direction of the metric is an improvement: lower | higher
 
     @property
     def runs(self) -> int:
@@ -65,6 +67,18 @@ class ReportSeries:
         middle = len(values) // 2
         return values[middle] if len(values) % 2 else (values[middle - 1] + values[middle]) / 2
 
+    def percentile(self, pct: float) -> float | None:
+        """Nearest-rank percentile of the values (p95 = percentile(95))."""
+        values = sorted(self.values)
+        if not values:
+            return None
+        rank = max(1, -(-len(values) * pct // 100))  # ceil without math
+        return values[int(rank) - 1]
+
+    @property
+    def p95(self) -> float | None:
+        return self.percentile(95)
+
     def to_dict(self, *, include_computed: bool = True) -> dict:
         return model_to_dict(self, include_computed=include_computed)
 
@@ -74,6 +88,7 @@ class ReportResult:
     generated: float
     path: str | None = None  # where the HTML was written
     since: float | None = None  # only runs newer than this (unix time)
+    compared: bool = False  # each series carries the period before as .previous
     series: list[ReportSeries] = field(default_factory=list)
     error: str | None = None
 
