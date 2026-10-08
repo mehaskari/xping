@@ -1153,6 +1153,19 @@ passing runs (defaults 1; per check:
 .BR \-\-notify ", " \-\-webhook " \fIURL\fR"
 Alert on every DOWN / UP change of any check (see
 .BR "WATCH MODE" ).
+.TP
+.B \-\-install\-service
+Run this monitor (same checks and options) in the background from now on,
+also after a restart: a LaunchAgent on macOS, a systemd user unit on
+Linux, with output in
+.IR ~/.xping/monitor.log .
+No root needed; installing again replaces it.
+.TP
+.B \-\-uninstall\-service
+Stop and remove the background monitor.
+.TP
+.B \-\-service\-status
+Show whether it runs, its command and its log; exit 1 when it does not run.
 .SS diff
 .TP
 .BI \-\-max\-regression " PCT"
@@ -1815,6 +1828,15 @@ and
 .B monitor
 (created by
 .BR "xping check \-\-init" ).
+.TP
+.I ~/.xping/monitor.log
+Output of the background monitor
+.RB ( "xping monitor \-\-install\-service" ).
+.TP
+.I ~/Library/LaunchAgents/io.github.mehaskari.xping.monitor.plist
+.TQ
+.I ~/.config/systemd/user/xping\-monitor.service
+The background monitor service on macOS and Linux.
 .TP
 .I ~/.xping/config.toml
 Personal defaults (see

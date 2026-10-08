@@ -1409,16 +1409,16 @@ characters), and as a last resort the Detail column is left out.
 | `--rounds N` | — | Stop after every check ran N times, instead of running until Ctrl-C |
 | `--fail-after N` | 1 | A check counts as DOWN (and alerts) only after N failed runs in a row; a check can set its own `fail_after` |
 | `--recover-after N` | 1 | …and as UP again only after N passing runs in a row (`recover_after` per check) |
+| `--install-service` | — | Run this monitor in the background from now on, also after a restart (see below) |
+| `--uninstall-service` | — | Stop and remove the background monitor |
+| `--service-status` | — | Show whether it runs, its command and its log (exit 1 when it does not run) |
 | `--save` | — | Keep every result in the [history](#xping-history), under the same command and target as the single command (`xping history ping 1.1.1.1`) |
 | `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) on every DOWN/UP change of any check |
 
 - **Not a terminal** (cron, systemd, `| tee log`): instead of the table,
   one timestamped line per state change, with how long an outage lasted
   when the check comes back. Each line is written at once, so
-  `tail -f` on the log follows it live. To keep monitor running after
-  the terminal closes, start it from a normal shell with
-  `nohup xping monitor --save >> ~/.xping/monitor.log 2>&1 &` (stop it
-  with `pkill -f "xping monitor"`), or run it as a service.
+  `tail -f` on the log follows it live.
 - **Ctrl-C** ends the run with a summary: uptime, runs, outages and the
   longest outage per check, and the average of its metric. The exit code
   is 0 when every check was up at the end, 1 otherwise.
@@ -1433,6 +1433,30 @@ xping monitor checks.toml --every 60 --notify --save
 xping monitor checks.toml --webhook https://hooks.slack.com/services/T000/B000/XXXX >> monitor.log
 xping monitor checks.toml --rounds 1 --json      # one pass, summary as JSON
 ```
+
+**Running all the time.** Add `--install-service` to any monitor command
+and it keeps running in the background, also after a restart or a crash,
+with no terminal open:
+
+```bash
+xping monitor --save --fail-after 3 --install-service
+xping monitor --service-status
+tail -f ~/.xping/monitor.log
+xping monitor --uninstall-service
+```
+
+- **macOS:** a LaunchAgent, `~/Library/LaunchAgents/io.github.mehaskari.xping.monitor.plist`,
+  started by `launchd` at login and restarted if it stops.
+- **Linux:** a systemd user unit, `~/.config/systemd/user/xping-monitor.service`
+  (`systemctl --user status xping-monitor`). It starts at login; to keep it
+  running while you are logged out, run `loginctl enable-linger $USER` once.
+- No root is needed and nothing outside your home directory changes.
+- The checks are validated first, so a typo fails now rather than in the
+  background. A check file is stored with its full path. Installing again
+  replaces the running service with the new command.
+- The service starts `xping` from your PATH (e.g. `/opt/homebrew/bin/xping`),
+  so it keeps working after `brew upgrade` or `pipx upgrade`.
+- Not available on Windows.
 
 #### `xping diff`
 
@@ -1778,7 +1802,7 @@ underlying result.
 **A weekly uptime page**
 
 ```bash
-xping monitor checks.toml --save --fail-after 3      # all week
+xping monitor checks.toml --save --fail-after 3 --install-service  # all the time
 xping report --since 7d -o /var/www/html/uptime.html # e.g. from cron
 ```
 
@@ -1915,6 +1939,8 @@ xping doctor --json > doctor.json
 | `~/.xping/completions/` | Completion scripts written by `completion --install` |
 | `~/.xping/config.toml` | Your defaults (you write it; xping only reads it) |
 | `~/.xping/checks.toml` | The default check file of `xping check` and `xping monitor` (create it with `xping check --init`) |
+| `~/.xping/monitor.log` | Output of the background monitor (`xping monitor --install-service`) |
+| `~/Library/LaunchAgents/io.github.mehaskari.xping.monitor.plist`, `~/.config/systemd/user/xping-monitor.service` | The background monitor service (macOS, Linux) |
 | `~/.xping/history/` | Results saved with `--save` (newest 500 runs per command and target) |
 
 `completion --install` also adds a marked block to your shell's rc file

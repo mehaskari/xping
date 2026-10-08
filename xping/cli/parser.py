@@ -671,6 +671,19 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     )
     _add_debounce(p_monitor)
     _add_notify(p_monitor)
+    service = p_monitor.add_mutually_exclusive_group()
+    service.add_argument(
+        "--install-service",
+        action="store_true",
+        help="Run this monitor in the background from now on, also after a restart "
+        "(launchd on macOS, systemd --user on Linux); log: ~/.xping/monitor.log",
+    )
+    service.add_argument(
+        "--uninstall-service", action="store_true", help="Stop and remove the background monitor"
+    )
+    service.add_argument(
+        "--service-status", action="store_true", help="Show whether the background monitor runs"
+    )
 
     p_diff = sub.add_parser(
         "diff",
