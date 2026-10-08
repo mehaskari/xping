@@ -167,3 +167,72 @@ def test_view_hides_link_local_only_interfaces(capsys):
     out = capsys.readouterr().out
     assert "192.168.1.2/24" in out and "utun0" not in out and "1 interface(s)" in out
     assert out.index("192.168.1.2/24") < out.index("fe80::1/64")  # IPv4 listed first
+
+
+# ── VPN detection ─────────────────────────────────────────────────────────────
+
+_MAC_ROUTE_GET = """   route to: one.one.one.one
+destination: default
+       mask: 128.0.0.0
+    gateway: 172.12.0.1
+  interface: utun4
+      flags: <UP,GATEWAY,DONE,STATIC,PRCLONING>
+"""
+
+
+def test_route_get_interface_macos_and_linux():
+    assert net_diag.parse_route_get_interface(_MAC_ROUTE_GET) == "utun4"
+    linux = "1.1.1.1 via 10.8.0.1 dev wg0 src 10.8.0.2 uid 1000 \n    cache \n"
+    assert net_diag.parse_route_get_interface(linux) == "wg0"
+    assert net_diag.parse_route_get_interface("") is None
+
+
+def test_vpn_interfaces_need_a_routable_address():
+    interfaces = [
+        NetInterface("utun0", "up", addresses=["fe80::1/64"]),  # macOS system tunnel
+        NetInterface("utun4", "up", addresses=["172.12.0.51/22"]),
+        NetInterface("wg0", "up", addresses=["10.8.0.2/24"]),
+        NetInterface("tun0", "down", addresses=["10.9.0.2/24"]),
+        NetInterface("en0", "up", addresses=["192.168.1.5/24"]),
+    ]
+    assert net_diag.vpn_interfaces(interfaces) == ["utun4", "wg0"]
+
+
+def test_via_vpn_and_view_text():
+    from xping.render.views.net import vpn_text
+
+    full = NetResult(hostname="h", internet_interface="utun4", vpn_interfaces=["utun4"])
+    split = NetResult(hostname="h", internet_interface="en0", vpn_interfaces=["utun4"])
+    none = NetResult(hostname="h", internet_interface="en0")
+    assert full.via_vpn and not split.via_vpn and not none.via_vpn
+    assert "goes through the VPN" in vpn_text(full)
+    assert "split tunnel" in vpn_text(split) and vpn_text(none) is None
+    assert full.to_dict()["via_vpn"] is True
+
+
+def test_doctor_explains_vpn_latency():
+    from xping.diagnostics import doctor
+
+    info = NetResult(
+        hostname="h",
+        local_ipv4="172.12.0.51",
+        gateway_ipv4="192.168.10.1",
+        gateway_interface="en0",
+        internet_interface="utun4",
+        vpn_interfaces=["utun4"],
+        interfaces=[
+            NetInterface("en0", "up", addresses=["192.168.10.145/24"]),
+            NetInterface("utun4", "up", addresses=["172.12.0.51/22"]),
+        ],
+    )
+    step = doctor._interface_step(info)
+    assert step.detail == "en0 192.168.10.145  ·  internet through VPN utun4 (172.12.0.51)"
+    with patch.object(doctor, "ping_ip", return_value=[150.0] * 5):
+        ok = doctor._quality_step("utun4")
+    assert ok.status == "ok" and "through VPN utun4" in ok.detail and "VPN tunnel" in ok.hint
+    with patch.object(doctor, "ping_ip", return_value=[650.0] * 5):
+        slow = doctor._quality_step("utun4")
+    assert slow.status == "warn" and "VPN (utun4)" in slow.hint
+    with patch.object(doctor, "ping_ip", return_value=[150.0] * 5):
+        plain = doctor._quality_step()
+    assert plain.hint == "" or plain.hint is None

@@ -1,6 +1,16 @@
 """Local network overview render view (xping net)."""
 
-from ..ansi import BOLD, BRAND_INDIGO, BRAND_MINT, BRAND_ROSE, BRAND_TEAL, BWHITE, DIM, c
+from ..ansi import (
+    BOLD,
+    BRAND_AMBER,
+    BRAND_INDIGO,
+    BRAND_MINT,
+    BRAND_ROSE,
+    BRAND_TEAL,
+    BWHITE,
+    DIM,
+    c,
+)
 from ..layout import kv
 from ..tables import print_table
 
@@ -27,6 +37,9 @@ def print_result(result, public: bool = True, show_all: bool = False) -> None:
     print(kv("Gateway (IPv4)", _val(gateway)))
     print(kv("Gateway (IPv6)", _val(result.gateway_ipv6)))
     print(kv("DNS servers", _val(", ".join(result.dns_servers))))
+    vpn = vpn_text(result)
+    if vpn:
+        print(kv("VPN", c(vpn, BRAND_AMBER)))
     if public:
         where = ", ".join(p for p in (result.location, result.colo and f"via {result.colo}") if p)
         v4 = result.public_ipv4 + (f"  ({where})" if where else "") if result.public_ipv4 else None
@@ -69,3 +82,13 @@ def print_result(result, public: bool = True, show_all: bool = False) -> None:
     if result.error:
         print(c(f"  {result.error}", BRAND_ROSE))
         print()
+
+
+def vpn_text(result) -> str | None:
+    """One line about VPN tunnels, or None when there is none."""
+    if not result.vpn_interfaces:
+        return None
+    names = ", ".join(result.vpn_interfaces)
+    if result.via_vpn:
+        return f"{result.internet_interface}: internet traffic goes through the VPN"
+    return f"{names} up, but internet traffic does not use it (split tunnel)"
