@@ -638,6 +638,7 @@ xping monitor 1.1.1.1 router.local db:5432        # no file: ping, ping, TCP con
 xping monitor checks.toml                         # any check file, Ctrl-C for a summary
 xping monitor checks.toml --notify --save         # desktop alerts + history for every check
 xping monitor checks.toml --webhook URL >> log    # not a terminal: one line per change
+xping monitor --save --fail-after 3 --install-service   # in the background, also after a restart
 ```
 
 The exit code after Ctrl-C (or `--rounds N`) is 0 when every check was up

@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+- **`xping monitor --install-service`: keep monitoring in the background.**
+  The same monitor command runs as a per-user service, a LaunchAgent on
+  macOS or a systemd user unit on Linux, started at login and restarted
+  if it stops, with its output in `~/.xping/monitor.log`. The checks are
+  validated before anything is installed. `--service-status` shows
+  whether it runs; `--uninstall-service` removes it. No root needed.
+
 ### Changed
 - `xping monitor` change lines (in a log or pipe) line up: the check
   name and type columns are padded to the widest name, so the details
