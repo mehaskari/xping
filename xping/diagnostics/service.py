@@ -49,6 +49,13 @@ class ServiceStatus:
     log: Path
 
 
+def _gui_domain() -> str:
+    """launchd's per-user domain, gui/<uid> (os.getuid does not exist on
+    Windows, where only the tests get this far)."""
+    getuid = getattr(os, "getuid", None)
+    return f"gui/{getuid() if getuid else 0}"
+
+
 def platform_kind() -> str:
     if sys.platform == "darwin":
         return "launchd"
@@ -170,7 +177,7 @@ def install(
     path.parent.mkdir(parents=True, exist_ok=True)
     log.parent.mkdir(parents=True, exist_ok=True)
     if kind == "launchd":
-        domain = f"gui/{os.getuid()}"
+        domain = _gui_domain()
         if path.exists():  # replace a running one
             run(["launchctl", "bootout", f"{domain}/{LABEL}"])
         path.write_bytes(launchd_plist(command, log))
@@ -190,7 +197,7 @@ def uninstall(home: Path | None = None, kind: str | None = None, run: Runner = _
     if not path.exists():
         return False
     if kind == "launchd":
-        run(["launchctl", "bootout", f"gui/{os.getuid()}/{LABEL}"])
+        run(["launchctl", "bootout", f"{_gui_domain()}/{LABEL}"])
         path.unlink()
     else:
         run(["systemctl", "--user", "disable", "--now", UNIT])
@@ -227,7 +234,7 @@ def status(home: Path | None = None, kind: str | None = None, run: Runner = _run
     if not result.installed:
         return result
     if kind == "launchd":
-        proc = run(["launchctl", "print", f"gui/{os.getuid()}/{LABEL}"])
+        proc = run(["launchctl", "print", f"{_gui_domain()}/{LABEL}"])
         # only the service's own top-level lines (one tab); nested sections
         # such as endpoints have "state = active" lines of their own
         for line in proc.stdout.splitlines():
