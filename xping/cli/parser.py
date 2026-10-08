@@ -1091,6 +1091,12 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         action="store_true",
         help="Delete saved runs (all, one command, or one command + target)",
     )
+    p_history.add_argument(
+        "--older-than",
+        default=None,
+        metavar="AGE",
+        help="With --clear: delete only runs older than AGE, e.g. 30d (keeps the rest)",
+    )
 
     p_report = sub.add_parser(
         "report",

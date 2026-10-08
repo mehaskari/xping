@@ -74,7 +74,8 @@ print('OK', list(v.values())[0])
 "
 ```
 The CI `version-check` job runs this automatically on every push.
-Releases themselves are described in [RELEASE.md](RELEASE.md).
+Releases are one command, `python3 scripts/release.py X.Y.Z`; see
+[RELEASE.md](RELEASE.md).
 
 ## A lesson this project learned the hard way
 

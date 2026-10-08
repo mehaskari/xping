@@ -735,6 +735,18 @@ def cmd_history(args: argparse.Namespace) -> object:
         raise UsageError("name the command first, e.g. xping history ping example.net")
     if command and command not in history.TARGETS:
         raise UsageError(f"'{command}' results are not saved; one of: {', '.join(history.TARGETS)}")
+    if args.older_than and not args.clear:
+        raise UsageError(
+            "--older-than goes with --clear, e.g. xping history --clear --older-than 30d"
+        )
+    if args.clear and args.older_than:
+        try:
+            age = history.parse_since(args.older_than)
+        except ValueError as exc:
+            raise UsageError(f"--older-than: {exc}") from exc
+        dropped = history.prune(age, command, target)
+        print(c(f"  ✔ removed {dropped} saved run(s) older than {args.older_than}", BRAND_TEAL))
+        return HistoryResult(command=command, target=target, cleared=dropped)
     if args.clear:
         removed = history.clear(command, target)
         print(c(f"  ✔ removed {removed} saved history file(s)", BRAND_TEAL))
