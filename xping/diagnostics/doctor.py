@@ -181,12 +181,26 @@ def _interface_step(info: NetResult) -> DoctorStep:
         step.detail = "no interface has a usable IP address"
         step.hint = "Connect to Wi-Fi or plug in the cable, and check airplane mode / VPN apps."
         return step
+    if info.via_vpn:
+        # the local address is the tunnel's; show the physical link with its own
+        lan = info.gateway_interface
+        lan_ip = _ipv4_of(info, lan) if lan else None
+        local = " ".join(p for p in (lan, lan_ip) if p)
+        step.detail = f"{local}  ·  internet through VPN {info.internet_interface} ({v4})".lstrip()
+        return step
     iface = info.gateway_interface or next(
         (i.name for i in info.interfaces if v4 and any(a.split("/")[0] == v4 for a in i.addresses)),
         None,
     )
     step.detail = " ".join(p for p in (iface, v4 or info.local_ipv6) if p)
     return step
+
+
+def _ipv4_of(info: NetResult, name: str) -> str | None:
+    iface = next((i for i in info.interfaces if i.name == name), None)
+    if iface is None:
+        return None
+    return next((a.split("/")[0] for a in iface.addresses if ":" not in a), None)
 
 
 def _gateway_step(info: NetResult) -> DoctorStep:
@@ -249,7 +263,10 @@ def _dns_step(info: NetResult) -> DoctorStep:
     return step
 
 
-def _quality_step() -> DoctorStep:
+def _quality_step(vpn: str | None = None) -> DoctorStep:
+    """Loss and latency to an anycast address. With *vpn* (the tunnel the
+    internet traffic takes) the latency is explained rather than blamed on
+    the local network."""
     step = DoctorStep("quality", "Connection quality", OK)
     rtts = ping_ip(ANYCAST_V4[0], count=5, timeout=1.5)
     avg = _ms(rtts)
@@ -261,9 +278,21 @@ def _quality_step() -> DoctorStep:
         return step
     step.detail = f"{loss:.0f}% loss, {avg:.1f} ms average to {ANYCAST_V4[0]}"
     step.elapsed_ms = avg
+    if vpn:
+        step.detail += f" (through VPN {vpn})"
     if loss >= 20 or avg > 300:
         step.status = WARN
         step.hint = "The connection is unstable or slow; weak Wi-Fi signal or a busy link are common causes."
+        if vpn:
+            step.hint = (
+                f"Internet traffic goes through the VPN ({vpn}): its server adds latency and can "
+                "lose packets. Compare with the VPN off, or pick a nearer VPN server."
+            )
+    elif vpn and avg > 80:
+        step.hint = (
+            f"{avg:.0f} ms is mostly the VPN tunnel ({vpn}), not your network; "
+            "a nearer VPN server would lower it."
+        )
     return step
 
 
@@ -479,7 +508,8 @@ def doctor(
         dns_ok = first["dns"].status != FAIL
         jobs: dict = {}
         if online:
-            jobs["quality"] = _quality_step
+            vpn = info.internet_interface if info.via_vpn else None
+            jobs["quality"] = lambda: _quality_step(vpn)
         if online and dns_ok:
             jobs["captive"] = _captive_step
             jobs["https"] = lambda: _https_step(clock())
