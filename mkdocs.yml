@@ -17,6 +17,7 @@ nav:
 
 theme:
   name: material
+  custom_dir: overrides  # home.html: the landing page at the site root
   features:
     - navigation.instant
     - navigation.top

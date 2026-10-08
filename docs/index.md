@@ -1,3 +1,8 @@
+---
+template: home.html
+title: xping
+---
+
 # xping
 
 **Network diagnostics for the terminal**: ping, traceroute, DNS, TLS,
