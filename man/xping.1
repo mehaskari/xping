@@ -1193,6 +1193,15 @@ e.g.
 .B \-\-clear
 Delete saved runs: all, one command, or one command and target.
 .TP
+.BI \-\-older\-than " AGE"
+With
+.BR \-\-clear ,
+delete only runs older than
+.I AGE
+(e.g.
+.BR 30d )
+and keep the newer ones.
+.TP
 .B \-\-save
 (on the measurement commands) Keep the result in
 .IR ~/.xping/history .

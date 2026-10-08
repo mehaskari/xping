@@ -586,7 +586,8 @@ xping history ping example.net --since 7d       # runs, trend, latest vs. the me
 
 `--save` works on ping, trace, mtr, health, tls, tcp, udp, http, smtp,
 dnscheck, blocklist, ntp, speedtest, wifi, doctor and check. The newest 500 runs
-per command and target are kept; `--clear` deletes them.
+per command and target are kept; `--clear` deletes them, and
+`--clear --older-than 30d` only the runs older than that.
 
 `xping report` turns that history into one HTML page (no scripts, nothing
 loaded from the network): uptime, outages, and a chart per target.
