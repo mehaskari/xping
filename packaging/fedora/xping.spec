@@ -19,7 +19,7 @@ Suggests:       bind-utils
 
 %description
 xping turns ping, traceroute, MTR, DNS, TLS, HTTP, mail server, Wi-Fi
-and port checks into live, colour-coded terminal output, over IPv4 and
+and port checks into live, color-coded terminal output, over IPv4 and
 IPv6. Ping and traceroute work without root through unprivileged ICMP
 sockets.
 

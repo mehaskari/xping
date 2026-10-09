@@ -1,0 +1,2 @@
+# Technical terms the rpmlint dictionary does not know
+addFilter(r"spelling-error .*('traceroute'|'webhook'|'cron')")

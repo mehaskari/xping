@@ -40,7 +40,12 @@ class _Throttled(http.server.BaseHTTPRequestHandler):
 
 
 @pytest.fixture
-def local_down_url():
+def local_down_url(monkeypatch):
+    # talk to the local test server directly, even where a proxy is set
+    # (Debian builds point http_proxy at a dead address to block the network)
+    monkeypatch.setenv("no_proxy", "127.0.0.1,localhost")
+    monkeypatch.setenv("NO_PROXY", "127.0.0.1,localhost")
+
     class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
         daemon_threads = True
 
