@@ -1,0 +1,13 @@
+# Quick checks of the installed command (no network needed)
+Test-Command: xping --version
+ && xping --help >/dev/null
+ && xping check --example >/dev/null
+ && xping completion bash >/dev/null
+ && man -w xping >/dev/null
+Depends: @, man-db
+Restrictions: superficial
+
+# The upstream test suite against the installed package
+Tests: upstream
+Depends: @, python3-pytest
+Restrictions: allow-stderr

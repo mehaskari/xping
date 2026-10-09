@@ -83,6 +83,8 @@ debian/tmp/
 debian/*/
 !debian/source/
 !debian/upstream/
+!debian/tests/
+debian/.home/
 debian/*.substvars
 debian/*.debhelper
 debian/*.log
