@@ -9,5 +9,5 @@ Restrictions: superficial
 
 # The upstream test suite against the installed package
 Tests: upstream
-Depends: @, python3-pytest
+Depends: @, python3-all, python3-pytest
 Restrictions: allow-stderr

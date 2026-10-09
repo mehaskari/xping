@@ -44,4 +44,6 @@ jobs:
           dnf -y install $(find out -name '*.noarch.rpm')
           xping --version
           xping check --example > /dev/null
-          ls /usr/share/man/man1/xping.1* /usr/share/bash-completion/completions/xping
+          # the container skips docs when installing (tsflags=nodocs): check the package itself
+          rpm -ql xping | grep -E 'man1/xping\.1|bash-completion/completions/xping$|_xping$|xping\.fish$'
+          ls /usr/share/bash-completion/completions/xping

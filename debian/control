@@ -15,7 +15,6 @@ Standards-Version: 4.7.0
 Homepage: https://mehaskari.github.io/xping/
 Vcs-Browser: https://github.com/mehaskari/xping
 Vcs-Git: https://github.com/mehaskari/xping.git
-Testsuite: autopkgtest
 
 Package: xping
 Architecture: all
