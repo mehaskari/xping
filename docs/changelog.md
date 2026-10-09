@@ -23,6 +23,10 @@
   `internet_interface`, `vpn_interfaces` and `via_vpn`.
 
 ### Changed
+- Packaging held to the distributions' own tools: the Debian package
+  builds in Debian unstable with the tests running and no network, is
+  lintian-clean and passes autopkgtest; a Fedora spec (also used by COPR)
+  builds with `%check`, passes rpmlint and installs. Both run in CI.
 - `xping monitor` change lines (in a log or pipe) line up: the check
   name and type columns are padded to the widest name, so the details
   start in the same column on every line.
