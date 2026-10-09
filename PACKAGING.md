@@ -192,6 +192,67 @@ Snapcraft.io → your account → xping → **Builds** tab.
 
 ---
 
+## Debian (towards the official archive)
+
+`debian/` is kept to Debian's standard, not just "builds on the PPA":
+
+- the test suite runs during the build, with no network (Debian builds
+  point `http_proxy` at a dead address; tests that start a local server
+  set `no_proxy`) and with `HOME` inside the build tree;
+- `pybuild-plugin-pyproject`, Standards-Version current, `debian/watch`,
+  `debian/upstream/metadata`, `Vcs-*`;
+- autopkgtest (`debian/tests/`): smoke tests of the installed command and
+  the upstream suite run against the installed package.
+
+The **Debian package** workflow (`.github/workflows/debian.yml`) builds it
+in `debian:unstable` on every change, with the changelog switched to
+`unstable` as a Debian upload would be, and fails on any lintian error or
+warning or any autopkgtest failure. `debian/changelog` itself stays on
+`noble` for the PPA.
+
+Path into Debian (needs your own account and a sponsor; Ubuntu then syncs
+the package from Debian by itself):
+
+1. File an ITP (Intent To Package) bug against `wnpp`.
+2. Upload the source package to <https://mentors.debian.net> with the
+   changelog entry set to `unstable` and `Closes: #<ITP number>`.
+3. Ask the Debian Python Team for a sponsor (`debian-python@lists.debian.org`).
+
+## Fedora COPR (and towards official Fedora)
+
+`packaging/fedora/xping.spec` follows the Fedora Python guidelines
+(pyproject macros, `%check` runs the suite, man page, completions for
+bash, zsh and fish). `.copr/Makefile` lets COPR build a source RPM from a
+checkout, taking the version from `pyproject.toml`. The **Fedora package**
+workflow builds it in `fedora:latest` the same way, runs rpmlint (with
+`xping.rpmlintrc` for technical words) and installs it.
+
+One-time COPR setup (needs a Fedora account):
+
+1. Sign in at <https://copr.fedorainfracloud.org> with a Fedora account
+   (create one at <https://accounts.fedoraproject.org>).
+2. New project `xping`; chroots: the current Fedora releases (and EPEL
+   if wanted), architecture noarch builds on any.
+3. Packages → New package → **SCM**: clone URL
+   `https://github.com/mehaskari/xping.git`, committish `main` (or leave
+   empty), spec file `packaging/fedora/xping.spec`, SRPM build method
+   **make_srpm**.
+4. Settings → Integrations: copy the GitHub webhook URL and add it in the
+   GitHub repository (Settings → Webhooks, content type
+   `application/json`, "Just the push event" plus tags) so every tag
+   rebuilds the package. Or press **Rebuild** after each release.
+
+Users then install with:
+
+```bash
+sudo dnf copr enable mehaskari/xping
+sudo dnf install xping
+```
+
+For the official Fedora repositories: a package review request in
+Bugzilla with the spec and SRPM, and a sponsor to join the packager
+group.
+
 ## Pre-release checklist
 
 ```

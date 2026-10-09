@@ -8,6 +8,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+if not (ROOT / "scripts" / "release.py").exists():  # not shipped in the PyPI sdist
+    pytest.skip("scripts/release.py is not in this source tree", allow_module_level=True)
 spec = importlib.util.spec_from_file_location("release", ROOT / "scripts" / "release.py")
 release = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release)

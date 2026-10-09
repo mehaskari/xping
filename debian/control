@@ -6,31 +6,39 @@ Rules-Requires-Root: no
 Build-Depends:
  debhelper-compat (= 13),
  dh-python,
+ pybuild-plugin-pyproject,
  python3-all,
  python3-setuptools,
- python3-certifi
-Standards-Version: 4.6.2
-Homepage: https://github.com/mehaskari/xping
+ python3-certifi <!nocheck>,
+ python3-pytest <!nocheck>,
+Standards-Version: 4.7.4
+Homepage: https://mehaskari.github.io/xping/
+Vcs-Browser: https://github.com/mehaskari/xping
+Vcs-Git: https://github.com/mehaskari/xping.git
 
 Package: xping
 Architecture: all
 Depends:
  ${misc:Depends},
  ${python3:Depends},
- python3-certifi
+ python3-certifi,
 Recommends:
  iputils-ping,
  traceroute,
- iproute2
+ iproute2,
 Suggests:
- dnsutils
-Description: Beautiful CLI network diagnostics
- xping provides live, colour-coded output for ping, traceroute, MTR,
- DNS (including propagation checks), TLS, HTTP, WHOIS, port scanning,
- health scoring, speed testing, and more, over IPv4 and IPv6. Ping and
- traceroute work without root on Linux via unprivileged ICMP sockets.
+ dnsutils,
+Description: network diagnostics for the terminal
+ xping turns ping, traceroute, MTR, DNS, TLS, HTTP, mail server, Wi-Fi
+ and port checks into live, colour-coded terminal output, over IPv4 and
+ IPv6. Ping and traceroute work without root through unprivileged ICMP
+ sockets.
  .
- Every command returns a meaningful exit code and accepts thresholds,
- so it can be used from scripts and monitoring; batch checks run from a
- TOML/JSON file. Includes bash/zsh/fish completion and JSON/CSV/Markdown
- export on every command.
+ "xping doctor" explains in plain words why a connection does not work.
+ "xping monitor" follows many checks over time as a live dashboard or a
+ background service, with desktop and webhook alerts, a saved history
+ and an HTML report.
+ .
+ Every command returns a meaningful exit code, accepts thresholds and
+ exports JSON, CSV or Markdown, so it fits scripts, cron jobs and
+ monitoring.
