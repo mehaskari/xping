@@ -1,8 +1,10 @@
 #!/bin/sh
 # Run the upstream test suite against the installed xping (not the source
 # tree): copy only the tests and the files they read into a scratch dir.
+# (scripts/ is left out: the release script edits the source tree, which is
+# not what is tested here, so its tests skip themselves.)
 set -eu
-cp -r tests docs man scripts README.md pyproject.toml "$AUTOPKGTEST_TMP"
+cp -r tests docs man README.md pyproject.toml "$AUTOPKGTEST_TMP"
 cd "$AUTOPKGTEST_TMP"
 export HOME="$AUTOPKGTEST_TMP/home"
 mkdir -p "$HOME"
