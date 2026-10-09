@@ -11,7 +11,7 @@ Build-Depends:
  python3-setuptools,
  python3-certifi <!nocheck>,
  python3-pytest <!nocheck>,
-Standards-Version: 4.7.0
+Standards-Version: 4.7.4
 Homepage: https://mehaskari.github.io/xping/
 Vcs-Browser: https://github.com/mehaskari/xping
 Vcs-Git: https://github.com/mehaskari/xping.git

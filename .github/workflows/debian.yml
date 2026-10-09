@@ -36,6 +36,10 @@ jobs:
       - name: Build (source + binary, tests run inside the build)
         run: |
           git config --global --add safe.directory "$PWD"
+          # debian/changelog targets the Ubuntu PPA (noble); an upload to Debian
+          # targets unstable, so build it the way it would be uploaded there
+          sed -i '1s/) [a-z-]*;/) unstable;/' debian/changelog
+          head -1 debian/changelog
           VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//')
           tar --exclude='.git' --exclude='debian' --exclude='dist' --exclude='build' \
               --exclude='*.egg-info' --exclude='__pycache__' \
