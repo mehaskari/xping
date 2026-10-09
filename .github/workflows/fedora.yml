@@ -1,0 +1,47 @@
+name: Fedora package
+
+# Builds the RPM inside Fedora exactly as COPR does (.copr/Makefile makes the
+# source RPM from this checkout), with the test suite running in %check and
+# no network, then rpmlint, then installs it and runs it.
+on:
+  pull_request:
+    paths: ["packaging/fedora/**", ".copr/**", "xping/**", "tests/**", "pyproject.toml", "man/**", ".github/workflows/fedora.yml"]
+  push:
+    branches: [main]
+    paths: ["packaging/fedora/**", ".copr/**", "xping/**", "tests/**", "pyproject.toml", "man/**", ".github/workflows/fedora.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rpm:
+    name: Build, rpmlint, install
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:latest
+    steps:
+      - name: Install the build tools
+        run: |
+          dnf -y install git make rpm-build rpmlint python3-devel pyproject-rpm-macros \
+            python3-build python3-setuptools python3-wheel python3-pip python3-pytest python3-certifi \
+            bash-completion
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Source RPM (the COPR way)
+        run: make -f .copr/Makefile srpm outdir="$PWD/out" spec=packaging/fedora/xping.spec
+
+      - name: Binary RPM (tests run in %check)
+        run: |
+          rpmbuild --rebuild out/*.src.rpm --define "_rpmdir $PWD/out"
+          find out -name '*.rpm'
+
+      - name: rpmlint
+        run: rpmlint packaging/fedora/xping.spec out/*.src.rpm $(find out -name '*.noarch.rpm')
+
+      - name: Install and run
+        run: |
+          dnf -y install $(find out -name '*.noarch.rpm')
+          xping --version
+          xping check --example > /dev/null
+          ls /usr/share/man/man1/xping.1* /usr/share/bash-completion/completions/xping

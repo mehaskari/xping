@@ -2,9 +2,14 @@
 
 from pathlib import Path
 
+import pytest
+
 from xping.cli.completion import model
 
-GUIDE = (Path(__file__).resolve().parent.parent / "docs" / "guide.md").read_text(encoding="utf-8")
+_GUIDE_PATH = Path(__file__).resolve().parent.parent / "docs" / "guide.md"
+if not _GUIDE_PATH.exists():  # e.g. tests run from the PyPI sdist, which has no docs/
+    pytest.skip("docs/guide.md is not in this source tree", allow_module_level=True)
+GUIDE = _GUIDE_PATH.read_text(encoding="utf-8")
 EXPORT_FLAGS = {"--json", "--csv", "--markdown", "--quiet"}  # documented once, in §3.3
 FAMILY_FLAGS = {"--ipv4", "--ipv6"}  # documented once, in §3.2 (sections list -4 / -6)
 
