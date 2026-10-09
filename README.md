@@ -105,6 +105,15 @@ brew install mehaskari/tap/xping
 Installs the man page and tab completion for bash, zsh and fish. The
 formula follows PyPI releases automatically ([mehaskari/homebrew-tap](https://github.com/mehaskari/homebrew-tap)).
 
+### Fedora / EPEL 10 — COPR
+
+```bash
+sudo dnf copr enable mehaskari/xping
+sudo dnf install xping
+```
+
+Built for the current Fedora releases and EPEL 10 (x86_64, aarch64), with the man page and completion for bash, zsh and fish.
+
 ### PyPI (all platforms)
 
 ```bash

@@ -627,7 +627,7 @@
       <div class="section-head">
         <span class="eyebrow">Get it running</span>
         <h2>Pick your platform</h2>
-        <p>Pure Python plus <code class="mono">certifi</code> for TLS — no compiled extensions. Every channel ships the man page; Homebrew and the PPA also set up tab completion.</p>
+        <p>Pure Python plus <code class="mono">certifi</code> for TLS — no compiled extensions. Every channel ships the man page; Homebrew, the PPA and COPR also set up tab completion.</p>
       </div>
 
       <div class="install-grid">
@@ -635,6 +635,7 @@
           <div class="install-tabs" id="installTabs">
             <button class="itab active" data-i="brew">macOS (Homebrew)</button>
             <button class="itab" data-i="ppa">Ubuntu 24.04</button>
+            <button class="itab" data-i="copr">Fedora</button>
             <button class="itab" data-i="pypi">PyPI</button>
             <button class="itab" data-i="snap">Snap</button>
             <button class="itab" data-i="windows">Windows</button>
@@ -651,6 +652,12 @@
 sudo apt update
 sudo apt install xping</div>
             <p class="install-note">Built for Ubuntu 24.04 LTS (noble) and distributions based on it: Linux Mint 22, Pop!_OS 24.04. Tab completion for bash, zsh and fish is set up for you.</p>
+          </div>
+
+          <div class="install-panel" data-p="copr">
+            <div class="code-block">sudo dnf copr enable mehaskari/xping
+sudo dnf install xping</div>
+            <p class="install-note">Current Fedora releases and EPEL 10 (RHEL, AlmaLinux, Rocky 10), x86_64 and aarch64. Man page and completion for bash, zsh and fish included.</p>
           </div>
 
           <div class="install-panel" data-p="pypi">
@@ -729,7 +736,7 @@ xping deps</div>
       <span class="strip-item"><b>MIT</b> licensed</span>
       <span class="strip-item">Python <b>stdlib + certifi</b> · no root needed</span>
       <span class="strip-item">CI on <b>Ubuntu, macOS, Windows</b> · Python 3.10–3.14</span>
-      <span class="strip-item">PyPI · Homebrew · PPA · Snap</span>
+      <span class="strip-item">PyPI · Homebrew · PPA · COPR · Snap</span>
     </div>
   </div>
 

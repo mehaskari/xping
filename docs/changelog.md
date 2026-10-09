@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- Fedora and EPEL 10: `sudo dnf copr enable mehaskari/xping && sudo dnf
+  install xping`, built automatically for every release.
 - `xping report` shows the 95th percentile, and `--since 7d --compare`
   compares each target with the week before: uptime, median and p95 with
   the change marked green (better) or red (worse).
