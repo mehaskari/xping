@@ -1,0 +1,54 @@
+name: Debian package
+
+# Builds the Debian package the way a Debian/Ubuntu builder would (tests
+# run during the build, no network), then holds it to Debian's own tools:
+# lintian must report no errors or warnings, and the autopkgtest suite
+# (smoke tests + the upstream tests against the installed package) must
+# pass. Runs when the packaging or the code changes.
+on:
+  pull_request:
+    paths: ["debian/**", "xping/**", "tests/**", "pyproject.toml", "man/**", ".github/workflows/debian.yml"]
+  push:
+    branches: [main]
+    paths: ["debian/**", "xping/**", "tests/**", "pyproject.toml", "man/**", ".github/workflows/debian.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Build, lintian, autopkgtest
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install the Debian toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential devscripts debhelper dh-python pybuild-plugin-pyproject \
+            python3-all python3-setuptools python3-certifi python3-pytest \
+            lintian autopkgtest man-db fakeroot
+
+      - name: Build (source + binary, tests run inside the build)
+        run: |
+          VERSION=$(dpkg-parsechangelog -S Version | sed 's/-[^-]*$//')
+          tar --exclude='.git' --exclude='debian' --exclude='dist' --exclude='build' \
+              --exclude='*.egg-info' --exclude='__pycache__' \
+              -czf "../xping_${VERSION}.orig.tar.gz" .
+          dpkg-buildpackage -us -uc
+          ls -l ../xping_*
+
+      - name: lintian (no errors, no warnings)
+        run: lintian --fail-on error,warning --info --display-info --no-tag-display-limit ../xping_*.changes
+
+      - name: autopkgtest (on this runner)
+        run: sudo autopkgtest ../xping_*_all.deb . -- null
+
+      - name: Install and run
+        run: |
+          sudo apt-get install -y ../xping_*_all.deb
+          xping --version
+          man -w xping
+          ls /usr/share/bash-completion/completions/xping /usr/share/zsh/vendor-completions/_xping

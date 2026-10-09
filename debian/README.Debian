@@ -17,11 +17,22 @@ ICMP without root
   binaries (package Recommends: iputils-ping, traceroute). "xping deps"
   shows which mode is in use.
 
-Files
+Files (all in your home directory, none are created until used)
+  ~/.xping/checks.toml          default checks of "xping check" and
+                                "xping monitor" (xping check --init)
+  ~/.xping/config.toml          personal defaults (xping config)
+  ~/.xping/history/             results kept with --save
+  ~/.xping/monitor.log          output of the background monitor
   ~/.xping/profiles.json        saved profiles (xping profile add ...)
-  ~/.xping/health_history.json  xping health score history
+
+Background monitor
+  "xping monitor --install-service" runs the monitor as a systemd user
+  unit (~/.config/systemd/user/xping-monitor.service). It starts at
+  login; to keep it running while you are logged out:
+    loginctl enable-linger $USER
+  Remove it with "xping monitor --uninstall-service".
 
 Documentation
-  man xping, and https://github.com/mehaskari/xping
+  man xping, and https://mehaskari.github.io/xping/guide/
 
  -- Mehdi Askari <iorganamis@gmail.com>  Sat, 26 Sep 2026 09:00:00 +0000
