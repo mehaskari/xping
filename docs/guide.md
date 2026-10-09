@@ -72,13 +72,14 @@ xping runs on Linux, macOS and Windows with Python 3.10 or newer.
 | Ubuntu 24.04, Linux Mint 22, Pop!_OS 24.04 | `sudo add-apt-repository ppa:mehdiaskari/xping && sudo apt update && sudo apt install xping` |
 | Any Linux with snapd | `sudo snap install xping` (newest builds: `--edge`) |
 | macOS (Homebrew) | `brew install mehaskari/tap/xping` |
+| Fedora, EPEL 10 (RHEL, Alma, Rocky 10) | `sudo dnf copr enable mehaskari/xping && sudo dnf install xping` |
 | macOS, Windows, any Linux | `pipx install xping` (or `pip install xping`) |
 | From source | `git clone https://github.com/mehaskari/xping && cd xping && pip install .` |
 
-**Upgrading:** `sudo apt upgrade`, `sudo snap refresh xping`,
-`brew upgrade xping`, or `pipx upgrade xping`.
+**Upgrading:** `sudo apt upgrade`, `sudo dnf upgrade xping`,
+`sudo snap refresh xping`, `brew upgrade xping`, or `pipx upgrade xping`.
 
-**Tab completion.** The PPA package and the Homebrew formula install
+**Tab completion.** The PPA, COPR and Homebrew packages install
 completion for bash, zsh and fish. With pip, pipx or a source install, run this once, and again
 after each upgrade:
 
