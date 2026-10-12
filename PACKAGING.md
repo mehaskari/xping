@@ -169,8 +169,12 @@ own `action-build`/`action-publish` documentation with a real
 
 ### Channels
 
-Snapcraft.io builds from `main` land in the **edge** channel. After each
-release tag, `.github/workflows/snap-stable.yml` releases the edge builds
+Snapcraft.io builds from `main` land in the **edge** channel. Only the
+release commit (the merge of `release/X.Y.Z`, or a commit tagged
+`vX.Y.Z`) builds as exactly `X.Y.Z`; every other commit builds as
+`X.Y.Z+gitN.HASH` (`override-pull` in `snap/snapcraft.yaml`), so edge shows
+what each build is and unreleased code never carries a release number.
+After each release tag, `.github/workflows/snap-stable.yml` releases the edge builds
 of that version to **stable**, architecture by architecture;
 `sudo snap install xping` installs stable.
 

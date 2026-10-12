@@ -89,7 +89,7 @@ does not apply to them), but the PR route runs the full CI first.
 | Fedora COPR | tag `vX.Y.Z` (GitHub webhook, "create" events only) | COPR `mehaskari/xping` builds the tagged commit with `.copr/Makefile` for Fedora and EPEL 10 |
 | Homebrew tap | daily, in [mehaskari/homebrew-tap](https://github.com/mehaskari/homebrew-tap) | its own workflow follows PyPI: points the formula at the new sdist, builds and tests it on macOS, commits. Run it at once with `gh workflow run update.yml -R mehaskari/homebrew-tap`. |
 | Snap Store (edge) | any push to `main` | built by Snapcraft.io's GitHub integration into the **edge** channel — not a GitHub Actions workflow |
-| `snap-stable.yml` | tag `vX.Y.Z` | waits (up to 3 h) until edge has that version for each architecture, then releases those revisions to **stable**; a late or failed architecture keeps its previous stable revision. Uses the `SNAPCRAFT_STORE_CREDENTIALS` secret |
+| `snap-stable.yml` | tag `vX.Y.Z` | waits (up to 3 h) until edge has exactly that version (only the release commit builds as `X.Y.Z`; other commits are `X.Y.Z+gitN.HASH`) for each architecture, then releases those revisions to **stable**; a late or failed architecture keeps its previous stable revision. Uses the `SNAPCRAFT_STORE_CREDENTIALS` secret |
 
 ## Versioning
 

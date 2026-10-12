@@ -1,26 +1,31 @@
 name: xping
 title: xping
 base: core22
+# The released version. Only the release commit itself builds as exactly
+# this version; every other commit on main builds as VERSION+gitN.HASH (see
+# override-pull), so the automatic stable release can never pick up
+# unreleased code that happens to carry the same version string.
 version: '1.5.2'
+adopt-info: xping
 summary: Beautiful CLI network diagnostics
 description: |
-  xping is a command-line network diagnostics tool with live,
-  colour-coded, animated output.
+  xping turns ping, traceroute, MTR, DNS, TLS, HTTP, mail server, Wi-Fi
+  and port checks into live, colour-coded terminal output, over IPv4 and
+  IPv6. No root needed.
 
-  Quick start: xping 8.8.8.8
-  Commands: ping, trace, mtr, lookup, dnscheck, propagation, rdns,
-  tcp, tls, http, whois, portscan, ipscan, sweep, mtu, health,
-  speedtest, net, listen, osdetect, check, profile, all, completion
+  "xping doctor" explains in plain words why a connection does not work.
+  "xping monitor" follows many checks over time as a live dashboard, with
+  alerts, a saved history and an HTML report ("xping report").
 
-  IPv4 and IPv6; meaningful exit codes and thresholds for scripts;
-  --watch / --until-up; batch checks from a TOML/JSON file.
+  Every command has a meaningful exit code, thresholds, and JSON / CSV /
+  Markdown export, so it fits scripts, cron jobs and monitoring.
 
-  Bash tab completion is included (other shells: xping completion --install).
-  Every diagnostic command supports --json --csv --markdown --quiet
+  Quick start: xping 8.8.8.8 · xping doctor · xping --help
+  Documentation: https://mehaskari.github.io/xping/guide/
 
 license: MIT
 contact: iorganamis@gmail.com
-website: https://github.com/mehaskari/xping
+website: https://mehaskari.github.io/xping/
 source-code: https://github.com/mehaskari/xping
 issues: https://github.com/mehaskari/xping/issues
 
@@ -48,6 +53,16 @@ parts:
       - iputils-ping
       - traceroute
       - iproute2
+    override-pull: |
+      craftctl default
+      base="$(sed -n "s/^version: '\(.*\)'$/\1/p" snap/snapcraft.yaml)"
+      subject="$(git log -1 --format=%s 2>/dev/null || true)"
+      if git describe --tags --exact-match --match "v$base" >/dev/null 2>&1 \
+         || printf '%s' "$subject" | grep -Eq "(release/|release v)${base}([^0-9]|$)"; then
+        craftctl set version="$base"
+      else
+        craftctl set version="$base+git$(git rev-list --count HEAD 2>/dev/null || echo 0).$(git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)"
+      fi
     override-build: |
       craftctl default
       PYTHONPATH="$CRAFT_PART_SRC" python3 -m xping completion bash \
