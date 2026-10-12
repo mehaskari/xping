@@ -51,7 +51,7 @@ jobs:
           # hours. Wait up to 3 h for every architecture, then go with what is there.
           deadline=$(( $(date +%s) + 3 * 3600 ))
           while :; do
-            snapcraft list-revisions xping > revisions.txt
+            snapcraft revisions xping > revisions.txt
             missing=""
             for arch in $ARCHES; do
               awk -v v="$VERSION" -v a="$arch" \
