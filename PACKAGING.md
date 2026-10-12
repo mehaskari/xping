@@ -169,9 +169,24 @@ own `action-build`/`action-publish` documentation with a real
 
 ### Channels
 
-Snapcraft.io builds from `main` land in the **edge** channel. Promote a
-tested build to **stable** in snapcraft.io → xping → Releases (drag the
-revision to `stable`); `sudo snap install xping` installs stable.
+Snapcraft.io builds from `main` land in the **edge** channel. After each
+release tag, `.github/workflows/snap-stable.yml` releases the edge builds
+of that version to **stable**, architecture by architecture;
+`sudo snap install xping` installs stable.
+
+It needs the `SNAPCRAFT_STORE_CREDENTIALS` repository secret: a token
+that may only release `xping` to stable, made once with
+
+```bash
+snapcraft export-login --snaps=xping --channels=stable \
+  --acls=package_access,package_release --expires=YYYY-MM-DD token.txt
+gh secret set SNAPCRAFT_STORE_CREDENTIALS -R mehaskari/xping < token.txt
+rm -f token.txt
+```
+
+Renew it before it expires (the current one: 2027-10-09). To test or to
+promote by hand: Actions → Snap stable → Run workflow (version, and
+`dry_run` to only list what would be released).
 
 ### Shell completion in the snap
 

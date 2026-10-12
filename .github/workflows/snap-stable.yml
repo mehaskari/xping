@@ -1,0 +1,84 @@
+name: Snap stable
+
+# Snapcraft.io builds every push to main into latest/edge (one revision per
+# architecture). After a release tag this workflow waits until edge carries
+# that version and releases those revisions to latest/stable, architecture
+# by architecture: an architecture whose build failed or is late keeps its
+# previous stable revision instead of blocking the others.
+#
+# Needs the SNAPCRAFT_STORE_CREDENTIALS secret, made with
+#   snapcraft export-login --snaps=xping --channels=stable \
+#     --acls=package_access,package_release --expires=YYYY-MM-DD FILE
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release to stable, e.g. 1.5.2"
+        required: true
+      dry_run:
+        description: "Only show what would be released"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snap-stable
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Release the edge build of this version to stable
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+      VERSION: ${{ inputs.version || github.ref_name }}
+      DRY_RUN: ${{ inputs.dry_run || 'false' }}
+      ARCHES: "amd64 arm64 armhf ppc64el riscv64 s390x"
+    steps:
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Wait for the edge builds of this version
+        run: |
+          VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          # Snapcraft.io builds on its own schedule; arm/riscv builders can take
+          # hours. Wait up to 3 h for every architecture, then go with what is there.
+          deadline=$(( $(date +%s) + 3 * 3600 ))
+          while :; do
+            snapcraft list-revisions xping > revisions.txt
+            missing=""
+            for arch in $ARCHES; do
+              awk -v v="$VERSION" -v a="$arch" \
+                'NR > 1 && $3 ~ "(^|,)" a "(,|$)" && $4 == v { found = 1 } END { exit !found }' \
+                revisions.txt || missing="$missing $arch"
+            done
+            [ -z "$missing" ] && { echo "all architectures have $VERSION"; break; }
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::warning::no $VERSION build for:$missing — they keep their current stable revision"
+              break
+            fi
+            echo "waiting for:$missing"; sleep 300
+          done
+          cat revisions.txt | head -20
+
+      - name: Release to stable
+        run: |
+          # newest revision of this version per architecture
+          awk -v v="$VERSION" 'NR > 1 && $4 == v { print $1, $3 }' revisions.txt \
+            | sort -k1,1nr | awk '!seen[$2]++' > to_release.txt
+          if [ ! -s to_release.txt ]; then
+            echo "::error::no revision of xping $VERSION in the store"; exit 1
+          fi
+          while read -r rev arches; do
+            echo "revision $rev ($arches) -> latest/stable"
+            if [ "$DRY_RUN" != "true" ]; then
+              snapcraft release xping "$rev" latest/stable
+            fi
+          done < to_release.txt
+          snapcraft status xping | head -20
