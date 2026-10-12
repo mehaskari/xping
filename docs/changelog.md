@@ -27,6 +27,8 @@
 ### Changed
 - Releases reach the Snap Store's stable channel automatically (each
   architecture as soon as its build of the release is ready).
+- Snap builds of unreleased commits are versioned `X.Y.Z+gitN.HASH`;
+  only the release commit itself is `X.Y.Z`.
 - Packaging held to the distributions' own tools: the Debian package
   builds in Debian unstable with the tests running and no network, is
   lintian-clean and passes autopkgtest; a Fedora spec (also used by COPR)
