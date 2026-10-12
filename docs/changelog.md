@@ -25,6 +25,8 @@
   `internet_interface`, `vpn_interfaces` and `via_vpn`.
 
 ### Changed
+- Releases reach the Snap Store's stable channel automatically (each
+  architecture as soon as its build of the release is ready).
 - Packaging held to the distributions' own tools: the Debian package
   builds in Debian unstable with the tests running and no network, is
   lintian-clean and passes autopkgtest; a Fedora spec (also used by COPR)
