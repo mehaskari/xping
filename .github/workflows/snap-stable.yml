@@ -76,9 +76,9 @@ jobs:
             echo "::error::no revision of xping $VERSION in the store"; exit 1
           fi
           while read -r rev arches; do
-            echo "revision $rev ($arches) -> latest/stable"
+            echo "revision $rev ($arches) -> stable"
             if [ "$DRY_RUN" != "true" ]; then
-              snapcraft release xping "$rev" latest/stable
+              snapcraft release xping "$rev" stable  # the token is limited to the channel "stable"
             fi
           done < to_release.txt
           snapcraft status xping | head -20
