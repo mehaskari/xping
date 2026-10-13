@@ -1,3 +1,41 @@
+xping (1.6.0-1) noble; urgency=medium
+
+  * Fedora and EPEL 10: sudo dnf copr enable mehaskari/xping && sudo dnf
+    install xping, built automatically for every release.
+  * xping report shows the 95th percentile, and --since 7d --compare
+    compares each target with the week before: uptime, median and p95
+    with the change marked green (better) or red (worse).
+  * xping monitor --install-service: keep monitoring in the background.
+    The same monitor command runs as a per-user service, a LaunchAgent
+    on macOS or a systemd user unit on Linux, started at login and
+    restarted if it stops, with its output in ~/.xping/monitor.log. The
+    checks are validated before anything is installed. --service-status
+    shows whether it runs; --uninstall-service removes it. No root
+    needed.
+  * xping history --clear --older-than 30d deletes only runs older than
+    that and keeps the rest (files left empty are removed), so a monitor
+    saving all day does not grow without bound.
+  * VPN awareness. xping net shows a VPN tunnel and whether internet
+    traffic goes through it (found by asking the routing table how
+    1.1.1.1 is reached, since many VPNs leave the default route alone).
+    xping doctor names the VPN next to the network interface and puts
+    high latency down to the tunnel rather than to your network. --json
+    has internet_interface, vpn_interfaces and via_vpn.
+  * Releases reach the Snap Store's stable channel automatically (each
+    architecture as soon as its build of the release is ready).
+  * Snap builds of unreleased commits are versioned X.Y.Z+gitN.HASH;
+    only the release commit itself is X.Y.Z.
+  * Packaging held to the distributions' own tools: the Debian package
+    builds in Debian unstable with the tests running and no network, is
+    lintian-clean and passes autopkgtest; a Fedora spec (also used by
+    COPR) builds with %check, passes rpmlint and installs. Both run in
+    CI.
+  * xping monitor change lines (in a log or pipe) line up: the check
+    name and type columns are padded to the widest name, so the details
+    start in the same column on every line.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Tue, 13 Oct 2026 14:48:39 +0000
+
 xping (1.5.2-1) noble; urgency=medium
 
   * xping monitor and watch mode write each line at once to a file or

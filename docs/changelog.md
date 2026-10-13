@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.6.0] - 2026-10-13
 
 ### Added
 - Fedora and EPEL 10: `sudo dnf copr enable mehaskari/xping && sudo dnf
