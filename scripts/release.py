@@ -9,6 +9,7 @@ Does what RELEASE.md describes, in order, and stops at the first problem:
    changelog, and writes a ``debian/changelog`` entry from the changelog
 3. runs the local checks (pytest, ruff, mypy) unless ``--skip-checks``
 4. opens the release pull request with auto-merge and waits until it merges
+   (only once CodeQL found no new alert on it)
 5. tags the merge commit ``vX.Y.Z`` and pushes the tag (PyPI, GitHub
    Release, Launchpad PPA), then asks the Homebrew tap to follow at once
 
@@ -196,6 +197,46 @@ def run_checks() -> None:
     sh(sys.executable, "-m", "mypy", capture=False)
 
 
+def codeql_gate(pr: str, timeout: float = 45 * 60) -> None:
+    """Wait for the CodeQL analysis of *pr*; refuse to merge if it found any
+    alert that is not already open on main (notes included)."""
+    say(f"waiting for CodeQL on {pr}")
+    number = pr.rstrip("/").rsplit("/", 1)[-1]
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        state = sh(
+            "gh",
+            "pr",
+            "view",
+            pr,
+            "--json",
+            "statusCheckRollup",
+            "-q",
+            '[.statusCheckRollup[] | select(.name == "analyze")'
+            ' | if (.conclusion // "") == "" then .status else .conclusion end] | join(",")',
+        )
+        if state and not any(s in state for s in ("IN_PROGRESS", "QUEUED", "PENDING")):
+            break
+        time.sleep(20)
+    else:
+        raise ReleaseError(f"CodeQL did not finish on {pr} within {timeout / 60:.0f} minutes")
+    if "SUCCESS" not in state:
+        raise ReleaseError(f"CodeQL failed on {pr}: {state}")
+    alerts = "repos/" + REPO + "/code-scanning/alerts?state=open"
+    on_main = set(sh("gh", "api", alerts, "-q", ".[].number").split())
+    on_pr = sh(
+        "gh",
+        "api",
+        f"{alerts}&ref=refs/pull/{number}/merge",
+        "-q",
+        r'.[] | "\(.number) \(.rule.id) \(.most_recent_instance.location.path)"',
+    )
+    new = [line for line in on_pr.splitlines() if line.split()[0] not in on_main]
+    if new:
+        raise ReleaseError(f"new CodeQL alerts on {pr}; fix them first:\n" + "\n".join(new))
+    say("CodeQL: no new alerts")
+
+
 def wait_for_merge(pr: str, timeout: float = 45 * 60) -> str:
     say(f"waiting for {pr} to pass CI and merge (auto-merge)")
     deadline = time.time() + timeout
@@ -259,6 +300,7 @@ def main(argv: list[str] | None = None) -> int:
             "--body",
             f"Release {version}. See docs/changelog.md.\n\nOpened by scripts/release.py.",
         )
+        codeql_gate(pr)  # never merge blind: new CodeQL alerts stop the release
         sh("gh", "pr", "merge", "--auto", "--merge", pr)
         merge = wait_for_merge(pr)
         sh("git", "checkout", "-q", "main")
