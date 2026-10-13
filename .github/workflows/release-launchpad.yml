@@ -15,7 +15,7 @@ permissions:
 jobs:
   upload-ppa:
     name: Build & upload to Launchpad PPA
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -24,7 +24,8 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends \
             devscripts debhelper dh-python python3-all \
-            python3-setuptools python3-certifi gnupg dput
+            python3-setuptools python3-certifi gnupg dput \
+            pybuild-plugin-pyproject python3-pytest
 
       # GPG in a CI runner has no controlling terminal at all, so any
       # attempt by gpg/gpg-agent to open one for a pinentry prompt fails
