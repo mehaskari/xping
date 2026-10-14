@@ -52,3 +52,10 @@ def test_errors():
 
 def test_versions_compare_numerically():
     assert release._key("1.10.0") > release._key("1.9.9")
+
+
+def test_tls_context_verifies_certificates():
+    import ssl
+
+    ctx = release.tls_context()
+    assert ctx.verify_mode == ssl.CERT_REQUIRED and ctx.check_hostname

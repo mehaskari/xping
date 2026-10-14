@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import email.utils
 import re
+import ssl
 import subprocess
 import sys
 import time
@@ -135,6 +136,17 @@ def say(text: str) -> None:
     print(f"==> {text}", flush=True)
 
 
+def tls_context() -> ssl.SSLContext:
+    """Certificates from certifi when it is installed (xping depends on it),
+    so the PyPI check also works with a Python that has no CA bundle of its
+    own, such as the python.org installer on macOS."""
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 def preflight(version: str, strict: bool = True) -> str:
     """Refuse to release from anything but a clean, current main (a dry run
     only warns)."""
@@ -156,12 +168,15 @@ def preflight(version: str, strict: bool = True) -> str:
     sh("git", "fetch", "-q", "origin", "main")
     if sh("git", "rev-parse", "HEAD") != sh("git", "rev-parse", "origin/main"):
         problem("HEAD is not origin/main (git pull)")
+    url = f"https://pypi.org/pypi/xping/{version}/json"
     try:
-        urllib.request.urlopen(f"https://pypi.org/pypi/xping/{version}/json", timeout=15)
+        urllib.request.urlopen(url, timeout=15, context=tls_context())
         raise ReleaseError(f"{version} already exists on PyPI")
     except urllib.error.HTTPError as exc:
         if exc.code != 404:
             raise ReleaseError(f"PyPI check failed: HTTP {exc.code}") from exc
+    except urllib.error.URLError as exc:
+        raise ReleaseError(f"PyPI check failed: {exc.reason}") from exc
     unreleased_notes((ROOT / "docs/changelog.md").read_text())
     return old
 

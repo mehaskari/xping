@@ -6,6 +6,10 @@
 - The Launchpad PPA release job installs the package's build dependencies
   (`build-essential`, `pybuild-plugin-pyproject`, `python3-pytest`), which
   the 1.6.0 upload lacked.
+- `scripts/release.py` checks PyPI with certifi's certificates when
+  available, so it also runs with the python.org Python on macOS (which
+  has no CA bundle until "Install Certificates" is run); a network error
+  there is reported in one line instead of a traceback.
 
 ## [1.6.0] - 2026-10-13
 
