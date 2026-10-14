@@ -4,8 +4,8 @@
 
 ### Fixed
 - The Launchpad PPA release job installs the package's build dependencies
-  (`pybuild-plugin-pyproject`, `python3-pytest`), which the 1.6.0 upload
-  lacked.
+  (`build-essential`, `pybuild-plugin-pyproject`, `python3-pytest`), which
+  the 1.6.0 upload lacked.
 
 ## [1.6.0] - 2026-10-13
 

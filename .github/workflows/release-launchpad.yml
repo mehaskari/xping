@@ -23,7 +23,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends \
-            devscripts debhelper dh-python python3-all \
+            build-essential devscripts debhelper dh-python python3-all \
             python3-setuptools python3-certifi gnupg dput \
             pybuild-plugin-pyproject python3-pytest
 
