@@ -46,7 +46,9 @@ def section_header(title: str, icon: str = "◈") -> str:
     w = terminal_width()
     left = c(f" {icon} ", BRAND_TEAL, BOLD)
     text = c(title.upper(), BWHITE, BOLD)
-    pad = w - len(icon) + 1 - len(title) - 4
+    # " icon " + title + two spaces + the rule fills the line but the last
+    # column: a line exactly as wide as the terminal wraps on some terminals
+    pad = w - 1 - (len(icon) + 2) - len(title) - 2
     line = c("─" * max(pad, 2), DIM)
     return f"\n{left}{text}  {line}"
 
