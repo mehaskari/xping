@@ -156,8 +156,9 @@ def emulate(data: str, cols: int) -> list[list[tuple[str, Style]]]:
     return lines
 
 
-def run(args: list[str], cols: int, rows: int, timeout: float) -> str:
-    """Run xping (this checkout) in a pty *cols* x *rows*; its output."""
+def run(args: list[str], cols: int, rows: int, timeout: float) -> tuple[str, int | None]:
+    """Run xping (this checkout) in a pty *cols* x *rows*: its output and
+    exit status (None when the timeout stopped it)."""
     import fcntl  # Unix only, like pty
     import pty
     import struct
@@ -189,9 +190,12 @@ def run(args: list[str], cols: int, rows: int, timeout: float) -> str:
             break
     else:
         proc.terminate()
+        proc.wait()
+        os.close(master)
+        return out.decode("utf-8", "replace"), None
     proc.wait()
     os.close(master)
-    return out.decode("utf-8", "replace")
+    return out.decode("utf-8", "replace"), proc.returncode
 
 
 def svg(lines: list[list[tuple[str, Style]]], cols: int, title: str) -> str:
@@ -247,25 +251,36 @@ def svg(lines: list[list[tuple[str, Style]]], cols: int, title: str) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    argv = sys.argv[1:] if argv is None else argv
+    # everything after "--" is xping's; split by hand, as argparse.REMAINDER
+    # also swallows our own options on some Python versions
+    if "--" not in argv:
+        argv, command = argv, []
+    else:
+        cut = argv.index("--")
+        argv, command = argv[:cut], argv[cut + 1 :]
+    parser = argparse.ArgumentParser(
+        description=__doc__.split("\n\n")[0], usage="%(prog)s OUTPUT [options] -- XPING-ARGS..."
+    )
     parser.add_argument("output", type=Path)
     parser.add_argument("--cols", type=int, default=96)
     parser.add_argument("--rows", type=int, default=60)
     parser.add_argument("--timeout", type=float, default=90)
     parser.add_argument("--title", help="window title (default: the command)")
-    parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
-    command = [a for a in args.command if a != "--"]
     if not command:
         parser.error("give the xping arguments after --")
-    data = run(command, args.cols, args.rows, args.timeout)
+    data, status = run(command, args.cols, args.rows, args.timeout)
+    if status == 2:  # argparse: xping did not understand the command
+        sys.stderr.write(data)
+        print(f"xping {' '.join(command)}: usage error, no screenshot written", file=sys.stderr)
+        return 2
     lines = emulate(data, args.cols)
     title = args.title or "xping " + " ".join(command)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(svg(lines, args.cols, title), encoding="utf-8")
     print(f"{args.output}: {len(lines)} lines")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

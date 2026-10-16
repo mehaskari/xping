@@ -44,3 +44,25 @@ def test_svg_escapes_text_and_names_the_window():
     svg = screenshot.svg(screenshot.emulate("<a & b>\n", 20), 20, "xping <x>")
     assert "&lt;a &amp; b&gt;" in svg and "<title>xping &lt;x&gt;</title>" in svg
     assert svg.startswith("<svg") and svg.rstrip().endswith("</svg>")
+
+
+def test_options_before_the_separator_stay_ours(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_run(command, cols, rows, timeout):
+        seen.update(command=command, cols=cols, timeout=timeout)
+        return "hello\n", 0
+
+    monkeypatch.setattr(screenshot, "run", fake_run)
+    out = tmp_path / "x.svg"
+    argv = [str(out), "--cols", "92", "--timeout", "5", "--", "http", "--cols", "x"]
+    assert screenshot.main(argv) == 0
+    assert seen == {"command": ["http", "--cols", "x"], "cols": 92, "timeout": 5.0}
+    assert "hello" in out.read_text()
+
+
+def test_a_usage_error_writes_no_screenshot(monkeypatch, tmp_path):
+    monkeypatch.setattr(screenshot, "run", lambda *a: ("usage: xping …\n", 2))
+    out = tmp_path / "x.svg"
+    assert screenshot.main([str(out), "--", "nonsense"]) == 2
+    assert not out.exists()
