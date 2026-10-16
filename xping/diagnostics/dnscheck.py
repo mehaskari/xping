@@ -205,7 +205,10 @@ def dnscheck(domain: str, quiet: bool = False) -> DnsCheckResult:
         total = sum(weights[c.status] for c in scored)
         result.score = round(total / (len(scored) * 10) * 100)
     else:
-        result.score = 100
+        # every query failed: nothing was checked, so there is no score to
+        # give (100 here once read "EXCELLENT" for a domain never reached)
+        reasons = ", ".join(sorted(set(failed.values()))) or "no answer"
+        result.error = f"no DNS answer for {domain} ({reasons}) — nothing could be checked"
 
     if not quiet:
         dnscheck_view.print_result(result)

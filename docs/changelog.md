@@ -8,6 +8,9 @@
   and refreshed by the manual Screenshots workflow.
 
 ### Fixed
+- `xping dnscheck` scored a domain it could not query at all (every DNS
+  query timed out) **100/100 EXCELLENT**. It now reports an error, exits
+  1, and `--min-score` / check files fail.
 - Section headers were one column wider than the terminal, so their rule
   wrapped a `─` onto the next line in terminals that wrap at the edge.
 - The Launchpad PPA release job installs the package's build dependencies

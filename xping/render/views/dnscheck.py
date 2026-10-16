@@ -35,11 +35,14 @@ def print_result(result) -> None:
     color = _GRADE_COLOR.get(result.grade, BWHITE)
     print(c("  " + "─" * 60, DIM))
     print()
-    print(
-        f"  {c(str(result.score), color, BOLD)}{c('/100', DIM)}   "
-        f"{c(result.grade.upper(), color, BOLD)}"
-    )
-    print(f"  {_score_bar(result.score, result.grade)}")
+    if result.error:
+        print(c(f"  ✘ {result.error}", BRAND_ROSE, BOLD))
+    else:
+        print(
+            f"  {c(str(result.score), color, BOLD)}{c('/100', DIM)}   "
+            f"{c(result.grade.upper(), color, BOLD)}"
+        )
+        print(f"  {_score_bar(result.score, result.grade)}")
     print()
     for item in result.checks:
         icon = _STATUS_ICON.get(item.status, " ? ")

@@ -152,6 +152,7 @@ an unsigned one is informational.
 Reports a 0-100 score with pass/warn/fail per check.
 Checks whose DNS query failed (e.g. SERVFAIL or timeout) are marked
 as not verified and excluded from the score.
+When none could be verified, there is no score: it is an error (exit 1).
 .TP
 .BR blocklist " \fIIP\fR|\fIDOMAIN\fR [\fIOPTIONS\fR]"
 Check an IP address, or a domain and the addresses of its mail (MX) and
