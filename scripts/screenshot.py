@@ -36,14 +36,14 @@ PALETTE = {
     90: "#6b7189", 91: "#ff8496", 92: "#9af0bf", 93: "#ffd88a",
     94: "#8fa0ff", 95: "#e2a8ff", 96: "#7ae6ee", 97: "#ffffff",
 }
-CHAR_W = 8.4  # px per column at 14px monospace
-LINE_H = 18
+CHAR_W = 9.0  # px per column at 15px monospace
+LINE_H = 19
 PAD = 18
 TITLE_H = 34
 
 STYLE = (
     "<style>text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"
-    "'DejaVu Sans Mono',monospace;font-size:14px;white-space:pre}"
+    "'DejaVu Sans Mono',monospace;font-size:15px;white-space:pre}"
     ".b{font-weight:700}.d{opacity:.55}</style>"
 )
 SEQ = re.compile(r"\x1b\[([0-9;?]*)([A-Za-z])")
@@ -153,6 +153,18 @@ def emulate(data: str, cols: int) -> list[list[tuple[str, Style]]]:
         lines.pop()
     while lines and not "".join(c for c, _ in lines[0]).strip():
         lines.pop(0)
+    return lines
+
+
+def trim(lines: list[list[tuple[str, Style]]], stop_at: str) -> list[list[tuple[str, Style]]]:
+    """The lines before the first one containing *stop_at*, without the
+    blank lines that then end them."""
+    for n, line in enumerate(lines):
+        if stop_at in "".join(ch for ch, _ in line):
+            lines = lines[:n]
+            break
+    while lines and not "".join(ch for ch, _ in lines[-1]).strip():
+        lines.pop()
     return lines
 
 
@@ -267,6 +279,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rows", type=int, default=60)
     parser.add_argument("--timeout", type=float, default=90)
     parser.add_argument("--title", help="window title (default: the command)")
+    parser.add_argument(
+        "--stop-at", metavar="TEXT", help="leave out the first line containing TEXT and all after it"
+    )
     args = parser.parse_args(argv)
     if not command:
         parser.error("give the xping arguments after --")
@@ -276,6 +291,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"xping {' '.join(command)}: usage error, no screenshot written", file=sys.stderr)
         return 2
     lines = emulate(data, args.cols)
+    if args.stop_at:
+        lines = trim(lines, args.stop_at)
     title = args.title or "xping " + " ".join(command)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(svg(lines, args.cols, title), encoding="utf-8")
