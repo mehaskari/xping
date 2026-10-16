@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Fixed
+- Section headers were one column wider than the terminal, so their rule
+  wrapped a `─` onto the next line in terminals that wrap at the edge.
 - The Launchpad PPA release job installs the package's build dependencies
   (`build-essential`, `pybuild-plugin-pyproject`, `python3-pytest`), which
   the 1.6.0 upload lacked.

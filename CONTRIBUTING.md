@@ -77,6 +77,24 @@ The CI `version-check` job runs this automatically on every push.
 Releases are one command, `python3 scripts/release.py X.Y.Z`; see
 [RELEASE.md](RELEASE.md).
 
+## Screenshots
+
+The README's screenshots (`docs/assets/*.svg`) are real xping runs drawn
+by `scripts/screenshot.py`, which runs a command in a pseudo-terminal and
+writes what is left on screen as an SVG:
+
+```bash
+python3 scripts/screenshot.py docs/assets/tls.svg -- tls github.com
+```
+
+To refresh all of them from a clean network, run the **Screenshots**
+workflow and commit the files it produces:
+
+```bash
+gh workflow run screenshots.yml
+gh run download --name screenshots --dir docs/assets
+```
+
 ## A lesson this project learned the hard way
 
 Several recurring bugs in this codebase (a systemic export bug, two
