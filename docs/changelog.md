@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+- Screenshots in the README: real runs of `monitor`, `dnscheck`, `http`,
+  `tls` and `propagation`, rendered as SVG by `scripts/screenshot.py`
+  and refreshed by the manual Screenshots workflow.
+
 ### Fixed
 - Section headers were one column wider than the terminal, so their rule
   wrapped a `─` onto the next line in terminals that wrap at the edge.

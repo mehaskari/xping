@@ -19,6 +19,26 @@ Created by **[Mehdi Askari](https://github.com/mehaskari)** — see [LICENSE](LI
 
 📖 **[Documentation site](https://mehaskari.github.io/xping/)** (searchable; source: [docs/guide.md](docs/guide.md)): every command and option explained, with background, check-file reference, recipes and FAQ. The same reference is in `man xping`.
 
+## Screenshots
+
+Real runs, recorded on a GitHub runner by
+[`scripts/screenshot.py`](scripts/screenshot.py).
+
+**`xping monitor`**: many checks as a live table with trend, uptime and alerts
+
+![xping monitor: five checks, all up, with latency trends](https://raw.githubusercontent.com/mehaskari/xping/main/docs/assets/monitor.svg)
+
+<table>
+<tr>
+<td width="50%"><b><code>xping dnscheck</code></b>: SPF, DMARC, DKIM, DNSSEC, NS and MX in one score<br><img src="https://raw.githubusercontent.com/mehaskari/xping/main/docs/assets/dnscheck.svg" alt="xping dnscheck github.com"></td>
+<td width="50%"><b><code>xping http</code></b>: timing waterfall, TLS, HTTP/2 and security headers<br><img src="https://raw.githubusercontent.com/mehaskari/xping/main/docs/assets/http.svg" alt="xping http https://github.com"></td>
+</tr>
+<tr>
+<td width="50%"><b><code>xping tls</code></b>: certificate, chain and how much of its lifetime is used<br><img src="https://raw.githubusercontent.com/mehaskari/xping/main/docs/assets/tls.svg" alt="xping tls github.com"></td>
+<td width="50%"><b><code>xping propagation</code></b>: one record across seven public resolvers<br><img src="https://raw.githubusercontent.com/mehaskari/xping/main/docs/assets/propagation.svg" alt="xping propagation github.com"></td>
+</tr>
+</table>
+
 ---
 
 ## Features
