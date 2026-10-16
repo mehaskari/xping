@@ -815,6 +815,8 @@ DNSSEC is checked with three queries to a validating resolver
 The DKIM selectors tried are `default`, `google`, `selector1`, `selector2`,
 `k1`, `k2`, `dkim`, `mail`, `s1` and `s2`. Checks whose DNS query failed
 (SERVFAIL, timeout) are marked "not verified" and left out of the score.
+When no check could be verified at all (the domain did not answer), there
+is no score: xping reports an error and exits 1.
 Grades: Excellent ≥ 90, Good ≥ 70, Fair ≥ 50, Poor ≥ 25, Critical below.
 
 | Option | Description |

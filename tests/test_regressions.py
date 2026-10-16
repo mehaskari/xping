@@ -155,6 +155,17 @@ class TestDnsCheck:
         # remaining scored checks: A, NS, MX — all ok
         assert result.score == 100
 
+    def test_nothing_verified_is_an_error_not_a_perfect_score(self):
+        dns = DnsResult(host="example.com")
+        dns.query_errors = {t: "TIMEOUT" for t in ("A", "AAAA", "NS", "MX", "TXT")}
+        result = _run_dnscheck(
+            dns,
+            {"_dmarc.example.com": ([], "TIMEOUT")},
+        )
+        assert result.fail_count == 0 and result.ok_count == 0
+        assert result.score == 0
+        assert result.error and "TIMEOUT" in result.error
+
 
 # ── raw DNS parsing ───────────────────────────────────────────────────────────
 
