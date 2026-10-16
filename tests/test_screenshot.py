@@ -66,3 +66,9 @@ def test_a_usage_error_writes_no_screenshot(monkeypatch, tmp_path):
     out = tmp_path / "x.svg"
     assert screenshot.main([str(out), "--", "nonsense"]) == 2
     assert not out.exists()
+
+
+def test_stop_at_drops_that_line_and_the_rest():
+    lines = screenshot.emulate("a\nb\n\n── Response headers ──\nx: 1\n", 40)
+    assert text(screenshot.trim(lines, "Response headers")) == ["a", "b"]
+    assert text(screenshot.trim(lines, "not there")) == text(lines)

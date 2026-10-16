@@ -28,9 +28,11 @@ jobs:
 
       - name: Render
         run: |
-          shot() { python scripts/screenshot.py "out/$1.svg" --cols 92 -- "${@:2}"; }
+          shot() { python scripts/screenshot.py "out/$1.svg" --cols 104 -- "${@:2}"; }
           shot dnscheck dnscheck github.com
-          shot http http https://github.com
+          # the full response headers would make it twice as tall
+          python scripts/screenshot.py out/http.svg --cols 104 --stop-at "Response headers" -- \
+            http https://github.com
           shot tls tls github.com
           shot propagation propagation github.com
           cat > checks.toml << 'TOML'
@@ -62,7 +64,7 @@ jobs:
           port = 22
           TOML
           # monitor runs until stopped: the timeout ends it, the live table stays
-          python scripts/screenshot.py out/monitor.svg --cols 92 --timeout 45 -- \
+          python scripts/screenshot.py out/monitor.svg --cols 104 --timeout 45 -- \
             monitor checks.toml --every 3
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
