@@ -41,6 +41,11 @@ LINE_H = 18
 PAD = 18
 TITLE_H = 34
 
+STYLE = (
+    "<style>text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"
+    "'DejaVu Sans Mono',monospace;font-size:14px;white-space:pre}"
+    ".b{font-weight:700}.d{opacity:.55}</style>"
+)
 SEQ = re.compile(r"\x1b\[([0-9;?]*)([A-Za-z])")
 
 
@@ -193,18 +198,20 @@ def svg(lines: list[list[tuple[str, Style]]], cols: int, title: str) -> str:
     width = round(cols * CHAR_W + 2 * PAD)
     height = round(TITLE_H + len(lines) * LINE_H + 2 * PAD - 4)
     out = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}" role="img" aria-label="{html.escape(title)}">',
+        (
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+            f'viewBox="0 0 {width} {height}" role="img" aria-label="{html.escape(title)}">'
+        ),
         f"<title>{html.escape(title)}</title>",
-        "<style>text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"
-        "'DejaVu Sans Mono',monospace;font-size:14px;white-space:pre}"
-        ".b{font-weight:700}.d{opacity:.55}</style>",
+        STYLE,
         f'<rect width="{width}" height="{height}" rx="10" fill="{BACKGROUND}"/>',
         '<circle cx="20" cy="17" r="6" fill="#ff5f57"/>',
         '<circle cx="40" cy="17" r="6" fill="#febc2e"/>',
         '<circle cx="60" cy="17" r="6" fill="#28c840"/>',
-        f'<text x="{width / 2:.0f}" y="22" fill="#6b7189" text-anchor="middle" '
-        f'style="font-size:12px">{html.escape(title)}</text>',
+        (
+            f'<text x="{width / 2:.0f}" y="22" fill="#6b7189" text-anchor="middle" '
+            f'style="font-size:12px">{html.escape(title)}</text>'
+        ),
     ]
     for n, line in enumerate(lines):
         y = TITLE_H + PAD + n * LINE_H
