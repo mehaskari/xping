@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.6.1] - 2026-10-20
 
 ### Added
 - Screenshots in the README: real runs of `monitor`, `dnscheck`, `http`,

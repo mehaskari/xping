@@ -1,3 +1,24 @@
+xping (1.6.1-1) noble; urgency=medium
+
+  * Screenshots in the README: real runs of monitor, dnscheck, http, tls
+    and propagation, rendered as SVG by scripts/screenshot.py and
+    refreshed by the manual Screenshots workflow.
+  * xping dnscheck scored a domain it could not query at all (every DNS
+    query timed out) 100/100 EXCELLENT. It now reports an error, exits
+    1, and --min-score / check files fail.
+  * Section headers were one column wider than the terminal, so their
+    rule wrapped a ─ onto the next line in terminals that wrap at the
+    edge.
+  * The Launchpad PPA release job installs the package's build
+    dependencies (build-essential, pybuild-plugin-pyproject,
+    python3-pytest), which the 1.6.0 upload lacked.
+  * scripts/release.py checks PyPI with certifi's certificates when
+    available, so it also runs with the python.org Python on macOS
+    (which has no CA bundle until "Install Certificates" is run); a
+    network error there is reported in one line instead of a traceback.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Tue, 20 Oct 2026 20:08:17 +0000
+
 xping (1.6.0-1) noble; urgency=medium
 
   * Fedora and EPEL 10: sudo dnf copr enable mehaskari/xping && sudo dnf

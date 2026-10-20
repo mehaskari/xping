@@ -5,7 +5,7 @@ base: core22
 # this version; every other commit on main builds as VERSION+gitN.HASH (see
 # override-pull), so the automatic stable release can never pick up
 # unreleased code that happens to carry the same version string.
-version: '1.6.0'
+version: '1.6.1'
 adopt-info: xping
 summary: Beautiful CLI network diagnostics
 description: |
