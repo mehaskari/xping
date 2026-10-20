@@ -95,6 +95,11 @@ gh workflow run screenshots.yml
 gh run download --name screenshots --dir docs/assets
 ```
 
+The repository's social preview (the image shown when a link to it is
+shared) is `docs/assets/social-preview.png`, rendered from
+`scripts/social-preview.html` with headless Chrome (the command is at the
+top of that file) and uploaded under Settings → Social preview.
+
 ## A lesson this project learned the hard way
 
 Several recurring bugs in this codebase (a systemic export bug, two

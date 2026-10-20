@@ -1,0 +1,75 @@
+<!doctype html>
+<!--
+  GitHub's social preview for the repository (Settings → Social preview),
+  the image shown when a link to it is shared. 1280×640. Render with:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
+      --hide-scrollbars --window-size=1280,640 \
+      --screenshot=docs/assets/social-preview.png scripts/social-preview.html
+
+  It embeds docs/assets/monitor.svg, so refresh the screenshots first.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>xping social preview</title>
+<style>
+  :root {
+    --bg: #0a0e12;
+    --ink: #eaf1f6;
+    --dim: #b7c2ce;
+    --muted: #7c8896;
+    --teal: #00d2be;
+    --indigo: #6478ff;
+    --magenta: #ff6bd5;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1280px; height: 640px; overflow: hidden; background: var(--bg); }
+  body {
+    padding: 44px 64px 0;
+    color: var(--ink);
+    font-family: var(--sans);
+    background:
+      radial-gradient(900px 420px at 85% -10%, rgba(100, 120, 255, .16), transparent 70%),
+      radial-gradient(700px 380px at 0% 0%, rgba(0, 210, 190, .12), transparent 70%),
+      var(--bg);
+  }
+  .top { display: flex; align-items: center; gap: 56px; height: 196px; }
+  pre {
+    font: 700 19px/1.08 var(--mono);
+    letter-spacing: -0.5px;
+  }
+  .t { color: var(--teal); } .i { color: var(--indigo); } .m { color: var(--magenta); }
+  h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+  h1 span { color: var(--teal); }
+  .what { margin-top: 14px; font-size: 21px; color: var(--dim); line-height: 1.45; }
+  .install { margin-top: 16px; font: 500 17px var(--mono); color: var(--muted); }
+  .install b { color: var(--ink); font-weight: 600; }
+  .shot {
+    display: block;
+    margin: 26px auto 0;
+    width: 1120px;
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .06);
+  }
+</style>
+</head>
+<body>
+  <div class="top">
+<pre><span class="t">██╗  ██╗██████╗ ██╗███╗   ██╗ ██████╗
+╚██╗██╔╝██╔══██╗██║████╗  ██║██╔════╝</span>
+<span class="i"> ╚███╔╝ ██████╔╝██║██╔██╗ ██║██║  ███╗
+ ██╔██╗ ██╔═══╝ ██║██║╚██╗██║██║   ██║</span>
+<span class="m">██╔╝ ██╗██║     ██║██║ ╚████║╚██████╔╝
+╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝</span></pre>
+    <div>
+      <h1>Network diagnostics,<br><span>beautiful by default</span></h1>
+      <p class="what">ping · traceroute · MTR · DNS · TLS · HTTP<br>a live monitor and a connectivity doctor</p>
+      <p class="install"><b>pipx install xping</b> · brew · snap · apt · dnf</p>
+    </div>
+  </div>
+  <img class="shot" src="../docs/assets/monitor.svg" alt="">
+</body>
+</html>
