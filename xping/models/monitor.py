@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from xping.statefilter import outages as confirmed_outages
+from xping.statefilter import StateFilter
 
 from ._export import model_to_dict
 
@@ -17,6 +17,12 @@ class MonitorSample:
 
     def to_dict(self, *, include_computed: bool = True) -> dict:
         return model_to_dict(self, include_computed=include_computed)
+
+
+# Runs kept per check for the trend column and exports. Totals (runs,
+# failures, uptime, average, outages) count every run since the start, so a
+# monitor that runs for months does not grow in memory.
+KEEP_SAMPLES = 1000
 
 
 @dataclass
@@ -32,11 +38,53 @@ class MonitoredCheck:
     recover_after: int = 1  # passing runs in a row before it counts as UP again
     up: bool | None = None  # the confirmed state (None until first confirmed)
     since: float | None = None  # when the confirmed state began
-    samples: list[MonitorSample] = field(default_factory=list)
+    samples: list[MonitorSample] = field(default_factory=list)  # the latest KEEP_SAMPLES runs
+
+    def __post_init__(self) -> None:
+        # running totals: plain attributes, not fields, so exports show the
+        # computed properties below instead
+        self._runs = 0
+        self._failures = 0
+        self._value_total = 0.0
+        self._value_count = 0
+        self._spans: list[tuple[float, float | None]] = []  # confirmed outages
+        self._filter = StateFilter(self.fail_after, self.recover_after)
+        self._streak_start = 0.0
+        self._previous: bool | None = None
+        initial, self.samples = self.samples, []
+        for sample in initial:
+            self.record(sample)
+
+    def record(self, sample: MonitorSample) -> None:
+        """Add one run: totals, outages and the recent samples."""
+        self._runs += 1
+        self._failures += not sample.ok
+        if sample.value is not None:
+            self._value_total += sample.value
+            self._value_count += 1
+        # outages exactly like statefilter.outages(): from the first failure
+        # of the streak that confirmed DOWN to the first success of the
+        # streak that confirmed UP
+        if sample.ok != self._previous:
+            self._streak_start = sample.ts
+        self._previous = sample.ok
+        if self._filter.update(sample.ok):
+            if not sample.ok:
+                self._spans.append((self._streak_start, None))
+            elif self._spans and self._spans[-1][1] is None:
+                self._spans[-1] = (self._spans[-1][0], self._streak_start)
+        self.samples.append(sample)
+        keep = max(KEEP_SAMPLES, self.fail_after, self.recover_after)
+        if len(self.samples) > keep:
+            del self.samples[: len(self.samples) - keep]
 
     @property
     def checks(self) -> int:
-        return len(self.samples)
+        return self._runs
+
+    @property
+    def failures(self) -> int:
+        return self._failures
 
     @property
     def last_ok(self) -> bool | None:
@@ -48,21 +96,14 @@ class MonitoredCheck:
 
     @property
     def up_pct(self) -> float | None:
-        if not self.samples:
+        if not self._runs:
             return None
-        return sum(s.ok for s in self.samples) / len(self.samples) * 100
-
-    def _outages(self) -> list[tuple[float, float | None]]:
-        return confirmed_outages(
-            [(s.ts, s.ok) for s in self.samples],
-            self.fail_after,
-            self.recover_after,
-        )
+        return (self._runs - self._failures) / self._runs * 100
 
     @property
     def outages(self) -> int:
         """Confirmed outages (fail_after failures in a row each)."""
-        return len(self._outages())
+        return len(self._spans)
 
     @property
     def longest_outage_s(self) -> float:
@@ -70,14 +111,13 @@ class MonitoredCheck:
         good run of the recovery (or the last run while still down)."""
         end_of_data = self.samples[-1].ts if self.samples else 0.0
         return max(
-            ((end if end is not None else end_of_data) - start for start, end in self._outages()),
+            ((end if end is not None else end_of_data) - start for start, end in self._spans),
             default=0.0,
         )
 
     @property
     def average(self) -> float | None:
-        values = [s.value for s in self.samples if s.value is not None]
-        return sum(values) / len(values) if values else None
+        return self._value_total / self._value_count if self._value_count else None
 
     def to_dict(self, *, include_computed: bool = True) -> dict:
         return model_to_dict(self, include_computed=include_computed)

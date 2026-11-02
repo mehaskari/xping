@@ -105,7 +105,7 @@ def render(result) -> str:
             if check.unit == "ms":
                 add("xping_check_latency_seconds", check.latest / 1000)
         add("xping_check_runs_total", check.checks)
-        add("xping_check_failures_total", sum(1 for s in check.samples if not s.ok))
+        add("xping_check_failures_total", check.failures)
         add("xping_check_outages_total", check.outages)
         if check.samples:
             add("xping_check_last_run_timestamp_seconds", check.samples[-1].ts)

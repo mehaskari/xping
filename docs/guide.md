@@ -1429,6 +1429,10 @@ characters), and as a last resort the Detail column is left out.
 - `--json`, `--csv` and `--markdown` export that summary (combine with
   `--rounds`, or stop with Ctrl-C); `-q` prints nothing and only sets the
   exit code.
+- Memory stays flat however long it runs: uptime, runs, failures,
+  outages and averages count every run since the start, while only the
+  latest 1,000 runs per check are kept (for the trend and the `samples`
+  of `--json`).
 
 ```bash
 xping monitor                                    # ~/.xping/checks.toml

@@ -15,6 +15,12 @@
   (`contrib/prometheus/`), tested end to end in CI against a real monitor,
   Prometheus and Grafana.
 
+### Fixed
+- `xping monitor` kept every run of every check in memory, so a monitor
+  running for months (`--install-service`, `--metrics`) grew without
+  bound and every scrape walked the whole history. Totals are now kept as
+  running counts and only the latest 1,000 runs per check are stored.
+
 ## [1.6.1] - 2026-10-20
 
 ### Added

@@ -90,7 +90,7 @@ class _Tracker:
         value = None
         if outcome.result is not None and check.metric:
             _metric, value = history.headline(check.type, outcome.result)
-        check.samples.append(MonitorSample(ts=ts, ok=outcome.ok, value=value))
+        check.record(MonitorSample(ts=ts, ok=outcome.ok, value=value))
         check.detail = outcome.detail
         previous, previous_since = check.up, check.since
         if self.state.update(outcome.ok):
