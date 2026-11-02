@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-02
+
 ### Added
 - **`xping monitor --metrics [HOST:]PORT`: Prometheus metrics.** Monitor
   serves its checks at `/metrics` in the Prometheus text format (state,
