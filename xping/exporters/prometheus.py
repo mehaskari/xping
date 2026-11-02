@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import math
 import socket
+import sys
 import threading
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -150,6 +151,15 @@ class _Handler(BaseHTTPRequestHandler):
 class _Server(ThreadingHTTPServer):
     daemon_threads = True
     produce: Callable[[], str]
+    # SO_REUSEADDR on Windows lets a second server bind a port that is in
+    # use, so two monitors would share one --metrics port; ask for the port
+    # exclusively there instead (elsewhere it only allows a quick restart)
+    allow_reuse_address = sys.platform != "win32"
+
+    def server_bind(self) -> None:
+        if sys.platform == "win32":
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 class _Server6(_Server):
