@@ -9,6 +9,11 @@
   so Prometheus, VictoriaMetrics or the Grafana agent can keep the history
   and alert. Standard library only; listens on 127.0.0.1 unless a host is
   given; kept by `--install-service`.
+- A Grafana dashboard (`contrib/grafana/xping-dashboard.json`: checks up
+  and down, uptime, an UP/DOWN timeline, latency, certificate days left,
+  failures and outages) and a Prometheus scrape config with alert rules
+  (`contrib/prometheus/`), tested end to end in CI against a real monitor,
+  Prometheus and Grafana.
 
 ## [1.6.1] - 2026-10-20
 

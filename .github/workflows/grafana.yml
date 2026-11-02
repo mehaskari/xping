@@ -1,0 +1,113 @@
+name: Grafana dashboard
+
+# The Prometheus integration end to end: a real `xping monitor --metrics`,
+# Prometheus scraping it with contrib/prometheus (config and alert rules
+# checked by promtool), and Grafana importing contrib/grafana. Every panel
+# of the dashboard must get data from Prometheus.
+on:
+  pull_request:
+    paths: ["contrib/**", "xping/exporters/prometheus.py", "xping/diagnostics/monitor.py", "scripts/check_dashboard.py", ".github/workflows/grafana.yml"]
+  push:
+    branches: [main]
+    paths: ["contrib/**", "xping/exporters/prometheus.py", "xping/diagnostics/monitor.py", "scripts/check_dashboard.py", ".github/workflows/grafana.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PROMETHEUS: prom/prometheus:v3.4.0
+  GRAFANA: grafana/grafana:11.6.0
+
+jobs:
+  stack:
+    name: Monitor, Prometheus, Grafana
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install xping
+        run: python -m pip install .
+
+      - name: promtool checks the config and the alert rules
+        run: |
+          docker run --rm -v "$PWD/contrib/prometheus:/cfg:ro" --entrypoint promtool "$PROMETHEUS" \
+            check config /cfg/prometheus.yml
+          docker run --rm -v "$PWD/contrib/prometheus:/cfg:ro" --entrypoint promtool "$PROMETHEUS" \
+            check rules /cfg/xping-alerts.yml
+
+      - name: Start xping monitor --metrics
+        run: |
+          cat > checks.toml << 'TOML'
+          [[check]]
+          name = "GitHub"
+          type = "http"
+          url = "https://github.com"
+
+          [[check]]
+          name = "GitHub SSH"
+          type = "tcp"
+          host = "github.com"
+          port = 22
+
+          [[check]]
+          name = "GitHub certificate"
+          type = "tls"
+          host = "github.com"
+
+          [[check]]
+          name = "Unreachable"
+          type = "tcp"
+          host = "127.0.0.1"
+          port = 9
+          TOML
+          nohup xping monitor checks.toml --every 5 --metrics :9101 > monitor.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs localhost:9101/metrics > /dev/null && break; sleep 1; done
+          curl -fs localhost:9101/metrics | head -20
+
+      - name: Start Prometheus and Grafana
+        run: |
+          docker run -d --name prometheus --network host \
+            -v "$PWD/contrib/prometheus:/etc/prometheus:ro" "$PROMETHEUS" \
+            --config.file=/etc/prometheus/prometheus.yml --web.listen-address=:9090
+          docker run -d --name grafana --network host -e GF_SECURITY_ADMIN_PASSWORD=admin "$GRAFANA"
+          for i in $(seq 1 60); do curl -fs localhost:9090/-/ready > /dev/null && curl -fs localhost:3000/api/health > /dev/null && break; sleep 2; done
+
+      - name: Grafana imports the dashboard
+        run: |
+          curl -fsS -u admin:admin -H 'Content-Type: application/json' localhost:3000/api/datasources \
+            -d '{"name":"Prometheus","type":"prometheus","url":"http://localhost:9090","access":"proxy","isDefault":true}'
+          echo
+          python - << 'PY'
+          import json, urllib.request, base64
+          dashboard = json.load(open("contrib/grafana/xping-dashboard.json"))
+          body = json.dumps({"dashboard": dashboard, "overwrite": True}).encode()
+          req = urllib.request.Request("http://localhost:3000/api/dashboards/db", body, method="POST")
+          req.add_header("Content-Type", "application/json")
+          req.add_header("Authorization", "Basic " + base64.b64encode(b"admin:admin").decode())
+          print(json.load(urllib.request.urlopen(req)))
+          PY
+          curl -fsS -u admin:admin localhost:3000/api/dashboards/uid/xping-monitor \
+            | python -c "import json,sys; d=json.load(sys.stdin)['dashboard']; print(d['title'], len(d['panels']), 'panels')"
+
+      - name: Every panel gets data
+        run: |
+          # a few scrapes, and runs that failed (Unreachable) for the counters
+          for i in $(seq 1 30); do
+            python scripts/check_dashboard.py http://localhost:9090 > result.txt && break
+            sleep 5
+          done
+          cat result.txt
+          python scripts/check_dashboard.py http://localhost:9090
+
+      - name: Logs
+        if: always()
+        run: |
+          cat monitor.log | tail -30 || true
+          docker logs prometheus 2>&1 | tail -20 || true
+          docker logs grafana 2>&1 | grep -iE "error|warn" | tail -20 || true

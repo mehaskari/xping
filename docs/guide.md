@@ -1512,6 +1512,24 @@ certificate has less than two weeks left:
 The endpoint has no authentication: keep it on 127.0.0.1 (the default) or
 on a network you trust.
 
+Ready to use, in the repository's
+[`contrib/`](https://github.com/mehaskari/xping/tree/main/contrib) folder:
+
+- [`contrib/grafana/xping-dashboard.json`](https://github.com/mehaskari/xping/blob/main/contrib/grafana/xping-dashboard.json):
+  a Grafana dashboard (Dashboards → New → Import). It shows how many
+  checks are up and down, uptime per check over the selected range, an
+  UP/DOWN timeline, latency, days left on certificates, and failed runs
+  and outages over time; a *Check* drop-down narrows it to some checks.
+- [`contrib/prometheus/prometheus.yml`](https://github.com/mehaskari/xping/blob/main/contrib/prometheus/prometheus.yml)
+  and [`xping-alerts.yml`](https://github.com/mehaskari/xping/blob/main/contrib/prometheus/xping-alerts.yml):
+  the scrape config and four alert rules: a check down for 5 minutes, a
+  certificate with less than 14 days left, a monitor that stopped
+  answering, and a check that stopped running.
+
+Both are tested on every change: a workflow runs a real monitor,
+Prometheus with these files (checked by `promtool`) and Grafana with the
+dashboard, and every panel must get data.
+
 #### `xping diff`
 
 ```
