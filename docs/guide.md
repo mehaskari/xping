@@ -1367,7 +1367,7 @@ xping check checks.toml --markdown > status.md
 #### `xping monitor`
 
 ```
-xping monitor [FILE | TARGET...] [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL]
+xping monitor [FILE | TARGET...] [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL] [--metrics [HOST:]PORT]
 ```
 
 A live dashboard for a [check file](#5-batch-check-files): every check runs
@@ -1417,6 +1417,7 @@ characters), and as a last resort the Detail column is left out.
 | `--service-status` | — | Show whether it runs, its command and its log (exit 1 when it does not run) |
 | `--save` | — | Keep every result in the [history](#xping-history), under the same command and target as the single command (`xping history ping 1.1.1.1`) |
 | `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) on every DOWN/UP change of any check |
+| `--metrics [HOST:]PORT` | — | Serve the checks to Prometheus at `http://HOST:PORT/metrics` (see below). Without a host only this machine can scrape: `:9101` listens on 127.0.0.1; `0.0.0.0:9101` (or `[::]:9101`) on every interface |
 
 - **Not a terminal** (cron, systemd, `| tee log`): instead of the table,
   one timestamped line per state change, with how long an outage lasted
@@ -1460,6 +1461,56 @@ xping monitor --uninstall-service
 - The service starts `xping` from your PATH (e.g. `/opt/homebrew/bin/xping`),
   so it keeps working after `brew upgrade` or `pipx upgrade`.
 - Not available on Windows.
+
+**Prometheus and Grafana.** With `--metrics`, monitor also serves its
+checks at `/metrics` in the Prometheus text format, so Prometheus (or
+VictoriaMetrics, or the Grafana agent) can keep the long-term history,
+draw it in Grafana and alert through Alertmanager. It works the same in
+the background:
+
+```bash
+xping monitor checks.toml --metrics :9101 --install-service
+curl -s localhost:9101/metrics
+```
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: xping
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["localhost:9101"]
+```
+
+Every series has the labels `check` (its name), `type` and `target`:
+
+| Metric | Type | Meaning |
+|--------|------|---------|
+| `xping_check_up` | gauge | Confirmed state: 1 UP, 0 DOWN (after `--fail-after` / `--recover-after`); absent until the first confirmation |
+| `xping_check_last_run_ok` | gauge | The latest run: 1 passed, 0 failed |
+| `xping_check_value` | gauge | The latest value of the headline metric (the Now column), with `metric` and `unit` labels, e.g. `metric="Days left",unit="days"` |
+| `xping_check_latency_seconds` | gauge | The same value in seconds, for checks that measure a time (ping, tcp, http, …) |
+| `xping_check_runs_total` | counter | Runs since monitor started |
+| `xping_check_failures_total` | counter | Failed runs since monitor started |
+| `xping_check_outages_total` | counter | Confirmed outages since monitor started |
+| `xping_check_last_run_timestamp_seconds` | gauge | When the latest run finished (Unix time) |
+| `xping_check_state_change_timestamp_seconds` | gauge | When the confirmed state began |
+| `xping_check_interval_seconds` | gauge | Seconds between runs of the check |
+| `xping_monitor_start_time_seconds`, `xping_build_info{version}` | gauge | When monitor started; the xping version |
+
+For example, alert when a check has been down for five minutes, or when a
+certificate has less than two weeks left:
+
+```yaml
+- alert: XpingCheckDown
+  expr: xping_check_up == 0
+  for: 5m
+- alert: CertificateExpiring
+  expr: xping_check_value{type="tls"} < 14
+```
+
+The endpoint has no authentication: keep it on 127.0.0.1 (the default) or
+on a network you trust.
 
 #### `xping diff`
 

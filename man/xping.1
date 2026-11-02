@@ -1155,6 +1155,24 @@ passing runs (defaults 1; per check:
 Alert on every DOWN / UP change of any check (see
 .BR "WATCH MODE" ).
 .TP
+.BI \-\-metrics " \fR[\fPHOST\fR:]\fPPORT"
+Serve the checks to Prometheus at
+.BI http:// HOST : PORT /metrics
+in the text exposition format:
+.BR xping_check_up ,
+.BR xping_check_value ,
+.BR xping_check_latency_seconds ,
+.B xping_check_runs_total
+and more, labelled with the check's name, type and target.
+Without a host only this machine can scrape
+.RB ( :9101
+listens on 127.0.0.1);
+.B 0.0.0.0:9101
+or
+.B [::]:9101
+listens on every interface.
+The endpoint has no authentication.
+.TP
 .B \-\-install\-service
 Run this monitor (same checks and options) in the background from now on,
 also after a restart: a LaunchAgent on macOS, a systemd user unit on

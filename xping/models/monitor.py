@@ -89,6 +89,7 @@ class MonitorResult:
     started: float
     ended: float | None = None
     checks: list[MonitoredCheck] = field(default_factory=list)
+    metrics_url: str | None = None  # where --metrics served them
 
     @property
     def down(self) -> list[str]:

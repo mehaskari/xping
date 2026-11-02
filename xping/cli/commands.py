@@ -367,6 +367,7 @@ def _monitor_service(args: argparse.Namespace) -> object:
 def cmd_monitor(args: argparse.Namespace) -> object:
     from xping.diagnostics import check as check_diag
     from xping.diagnostics.monitor import monitor
+    from xping.exporters.prometheus import ListenError
 
     if args.install_service or args.uninstall_service or args.service_status:
         return _monitor_service(args)
@@ -393,8 +394,9 @@ def cmd_monitor(args: argparse.Namespace) -> object:
             fail_after=args.fail_after,
             recover_after=args.recover_after,
             quiet=output_suppressed(args),
+            metrics=args.metrics,
         )
-    except ConfigError as exc:
+    except (ConfigError, ListenError) as exc:
         raise UsageError(str(exc)) from exc
     emit_export(result, args)
     return result
