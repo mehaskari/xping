@@ -158,9 +158,14 @@ def test_service_keeps_the_metrics_option():
     assert "--metrics" not in service.monitor_arguments(plain)
 
 
+# straight to 127.0.0.1, whatever http_proxy says (Debian builds set a
+# dead one)
+_DIRECT = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 def _get(url: str) -> tuple[int, str, str]:
     try:
-        with urllib.request.urlopen(url, timeout=5) as resp:
+        with _DIRECT.open(url, timeout=5) as resp:
             return resp.status, resp.headers["Content-Type"], resp.read().decode()
     except urllib.error.HTTPError as exc:
         return exc.code, exc.headers["Content-Type"], exc.read().decode()
@@ -225,4 +230,4 @@ def test_monitor_serves_its_checks_while_running(tmp_path):
     assert 'xping_check_latency_seconds{check="gw",type="ping",target="h"} 0.012' in scraped[-1]
     # the server is gone once monitor returns
     with pytest.raises(urllib.error.URLError):
-        urllib.request.urlopen(url, timeout=2)
+        _DIRECT.open(url, timeout=2)
