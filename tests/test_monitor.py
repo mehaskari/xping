@@ -215,7 +215,8 @@ def test_view_helpers():
     assert monitor_view.value_text(60, "days") == "60 days"
     assert monitor_view.value_text(None, "ms") == "–"
     check = MonitoredCheck("x", "ping", "h", 10, "Average RTT", "ms")
-    check.samples = [MonitorSample(1, True, 10), MonitorSample(2, False), MonitorSample(3, True, 20)]
+    for sample in (MonitorSample(1, True, 10), MonitorSample(2, False), MonitorSample(3, True, 20)):
+        check.record(sample)
     assert ANSI_RE.sub("", monitor_view.trend(check)) == "▁×█"
 
 
@@ -224,7 +225,8 @@ def test_live_lines_never_wrap(width):
     result = MonitorResult(source="checks.toml", started=0)
     for name in ("a very long check name that goes on", "db"):
         check = MonitoredCheck(name, "tcp", "a-really-long-hostname.example.com:5432", 10, "Average connect", "ms")
-        check.samples = [MonitorSample(i, i % 3 != 0, 10.0 + i) for i in range(30)]
+        for i in range(30):
+            check.record(MonitorSample(i, i % 3 != 0, 10.0 + i))
         check.since, check.detail = 25, "connected in 39.0 ms, and a long detail as well"
         result.checks.append(check)
     for line in monitor_view.live_lines(result, now=60, width=width):
@@ -238,7 +240,8 @@ def test_narrow_terminal_shortens_names_then_hides_the_detail():
         ("Local DB (closed port)", False, None, "127.0.0.1:1 refused or timed out on every attempt"),
     ]:
         check = MonitoredCheck(name, "tcp", "h:1", 5, "Average connect", "ms")
-        check.samples, check.since, check.detail = [MonitorSample(1, ok, value)], 0, detail
+        check.record(MonitorSample(1, ok, value))
+        check.since, check.detail = 0, detail
         result.checks.append(check)
     at_56 = [ANSI_RE.sub("", ln) for ln in monitor_view.live_lines(result, now=10, width=56)]
     assert at_56[0].rstrip().endswith("Detail")
@@ -291,3 +294,38 @@ def test_change_lines_line_up(tmp_path, capsys, colour):
     assert len(changes) == 2
     # the type column (and so the detail after it) starts at the same place
     assert len({ln.index(" tcp ") if " tcp " in ln else ln.index(" ping ") for ln in changes}) == 1
+
+
+def test_totals_match_the_full_history_and_memory_stays_bounded():
+    import random
+
+    from xping.models import monitor as monitor_model
+    from xping.statefilter import outages as confirmed_outages
+
+    rng = random.Random(7)
+    runs = monitor_model.KEEP_SAMPLES * 3 + 17
+    oks = [rng.random() > 0.3 for _ in range(runs)]
+    samples = [MonitorSample(float(i), ok, 10.0 + i % 5 if ok else None) for i, ok in enumerate(oks)]
+    check = MonitoredCheck("x", "ping", "h", 1, "Average RTT", "ms", fail_after=2, recover_after=3)
+    for sample in samples:
+        check.record(sample)
+    assert len(check.samples) == monitor_model.KEEP_SAMPLES
+    assert check.samples[-1] is samples[-1]
+    assert check.checks == runs and check.failures == oks.count(False)
+    assert check.up_pct == pytest.approx(oks.count(True) / runs * 100)
+    values = [s.value for s in samples if s.value is not None]
+    assert check.average == pytest.approx(sum(values) / len(values))
+    expected = confirmed_outages([(s.ts, s.ok) for s in samples], 2, 3)
+    assert check.outages == len(expected) > 0
+    longest = max((end if end is not None else samples[-1].ts) - start for start, end in expected)
+    assert check.longest_outage_s == pytest.approx(longest)
+
+
+def test_samples_given_at_construction_are_recorded():
+    check = MonitoredCheck(
+        "x", "tcp", "h:1", 5, samples=[MonitorSample(1, True, 3.0), MonitorSample(2, False)]
+    )
+    assert (check.checks, check.failures, check.up_pct, check.average) == (2, 1, 50.0, 3.0)
+    data = check.to_dict()
+    assert data["checks"] == 2 and data["failures"] == 1 and len(data["samples"]) == 2
+    assert not any(key.startswith("_") for key in data)

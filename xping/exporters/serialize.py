@@ -92,6 +92,7 @@ _COMPUTED: dict[str, tuple[str, ...]] = {
     "MonitorSample": (),
     "MonitoredCheck": (
         "checks",
+        "failures",
         "last_ok",
         "latest",
         "up_pct",
