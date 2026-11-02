@@ -77,7 +77,7 @@ Real runs, recorded on a GitHub runner by
 - **History** — `--save` keeps a result in `~/.xping/history`; `xping history ping example.net` shows the runs, a trend line and how the latest compares with the usual
 - **Batch checks** — `xping check checks.toml` runs many checks in parallel with one exit code
 - **Live monitor** — `xping monitor checks.toml`: the same checks continuously, as a live table with trend, uptime and time in state; alerts on every change, results kept in the history
-- **Prometheus metrics** — `xping monitor checks.toml --metrics :9101` serves every check at `/metrics` for Prometheus and Grafana: state, latest value, latency, runs, failures and outages
+- **Prometheus metrics** — `xping monitor checks.toml --metrics :9101` serves every check at `/metrics` for Prometheus and Grafana: state, latest value, latency, runs, failures and outages; a ready [Grafana dashboard](contrib/grafana/xping-dashboard.json) and [alert rules](contrib/prometheus/xping-alerts.yml) are in `contrib/`
 - **Prometheus metrics** — `xping monitor checks.toml --metrics :9101` serves every check at `/metrics` for Prometheus and Grafana: state, latest value, latency, runs, failures and outages
 - **Speed test** — Multi-connection download/upload via Cloudflare
 - **All-in-one** — Run lookup, ping, trace, and TCP checks in a single command

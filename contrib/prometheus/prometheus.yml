@@ -1,0 +1,13 @@
+# Scrape xping monitor --metrics. Start the monitor with e.g.
+#   xping monitor checks.toml --metrics :9101 --install-service
+# (from another machine, listen on 0.0.0.0:9101 and change the target).
+global:
+  scrape_interval: 30s
+
+rule_files:
+  - xping-alerts.yml
+
+scrape_configs:
+  - job_name: xping
+    static_configs:
+      - targets: ["localhost:9101"]

@@ -1,0 +1,36 @@
+# Alerting rules for xping monitor --metrics (load with rule_files in
+# prometheus.yml; Alertmanager sends them on).
+groups:
+  - name: xping
+    rules:
+      - alert: XpingCheckDown
+        expr: xping_check_up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.check }} ({{ $labels.type }} {{ $labels.target }}) is down"
+
+      - alert: XpingCertificateExpiring
+        expr: xping_check_value{type="tls"} < 14
+        labels:
+          severity: warning
+        annotations:
+          summary: "Certificate of {{ $labels.target }} expires in {{ $value }} days"
+
+      - alert: XpingMonitorNotScraped
+        expr: up{job="xping"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "xping monitor at {{ $labels.instance }} does not answer"
+
+      - alert: XpingCheckStale
+        # a check that stopped running (e.g. stuck) for 3 of its intervals
+        expr: time() - xping_check_last_run_timestamp_seconds > 3 * xping_check_interval_seconds
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.check }} has not run for {{ $value | humanizeDuration }}"
