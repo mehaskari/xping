@@ -77,6 +77,8 @@ Real runs, recorded on a GitHub runner by
 - **History** — `--save` keeps a result in `~/.xping/history`; `xping history ping example.net` shows the runs, a trend line and how the latest compares with the usual
 - **Batch checks** — `xping check checks.toml` runs many checks in parallel with one exit code
 - **Live monitor** — `xping monitor checks.toml`: the same checks continuously, as a live table with trend, uptime and time in state; alerts on every change, results kept in the history
+- **Prometheus metrics** — `xping monitor checks.toml --metrics :9101` serves every check at `/metrics` for Prometheus and Grafana: state, latest value, latency, runs, failures and outages
+- **Prometheus metrics** — `xping monitor checks.toml --metrics :9101` serves every check at `/metrics` for Prometheus and Grafana: state, latest value, latency, runs, failures and outages
 - **Speed test** — Multi-connection download/upload via Cloudflare
 - **All-in-one** — Run lookup, ping, trace, and TCP checks in a single command
 - **Listening ports** — `xping listen`: local TCP/UDP listeners with process names (Linux)
@@ -669,6 +671,7 @@ xping monitor checks.toml                         # any check file, Ctrl-C for a
 xping monitor checks.toml --notify --save         # desktop alerts + history for every check
 xping monitor checks.toml --webhook URL >> log    # not a terminal: one line per change
 xping monitor --save --fail-after 3 --install-service   # in the background, also after a restart
+xping monitor checks.toml --metrics :9101        # also serve /metrics to Prometheus / Grafana
 ```
 
 The exit code after Ctrl-C (or `--rounds N`) is 0 when every check was up

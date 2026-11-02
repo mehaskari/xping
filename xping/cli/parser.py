@@ -108,6 +108,15 @@ def _positive_float(value: str) -> float:
     return number
 
 
+def _listen_address(value: str) -> tuple[str, int]:
+    from xping.exporters.prometheus import ListenError, parse_listen
+
+    try:
+        return parse_listen(value)
+    except ListenError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
+
+
 def _webhook_url(value: str) -> str:
     from xping.diagnostics.notify import valid_webhook
 
@@ -668,6 +677,14 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         "--save",
         action="store_true",
         help="Keep every result in ~/.xping/history (see: xping history)",
+    )
+    p_monitor.add_argument(
+        "--metrics",
+        type=_listen_address,
+        default=None,
+        metavar="[HOST:]PORT",
+        help="Serve the checks to Prometheus at http://HOST:PORT/metrics "
+        "(e.g. :9101; only this machine can scrape unless HOST is given, e.g. 0.0.0.0:9101)",
     )
     _add_debounce(p_monitor)
     _add_notify(p_monitor)

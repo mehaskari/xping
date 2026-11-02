@@ -11,13 +11,15 @@ whether every check was up at the end.
 
 Alerts (``--notify`` / ``--webhook``) fire on every down/up change and
 ``--save`` keeps each result in the history, exactly like the single
-commands do.
+commands do. ``--metrics`` serves the checks to Prometheus at /metrics
+(see xping.exporters.prometheus).
 """
 
 from __future__ import annotations
 
 import functools
 import sys
+import threading
 import time
 from collections.abc import Callable
 from types import SimpleNamespace
@@ -126,9 +128,11 @@ def monitor(
     sleep: Callable[[float], None] = time.sleep,
     run: Callable[[list[dict], int], list[CheckOutcome]] = run_entries,
     entries: list[dict] | None = None,
+    metrics: tuple[str, int] | None = None,
 ) -> MonitorResult:
     """Run the checks in *path* (or the ready-made *entries*, e.g. built from
-    command-line targets) until Ctrl-C, or *rounds* runs of each."""
+    command-line targets) until Ctrl-C, or *rounds* runs of each. With
+    *metrics* (host, port), Prometheus can scrape the checks meanwhile."""
     if entries is None:
         if path is None:
             raise ConfigError("no checks to monitor")
@@ -137,7 +141,7 @@ def monitor(
     result = MonitorResult(source=source, started=clock())
     trackers = []
     for index, entry in enumerate(entries, 1):
-        metrics = history.followed_metrics(entry["type"])
+        followed = history.followed_metrics(entry["type"])
         check = MonitoredCheck(
             name=str(entry["name"]),
             type=entry["type"],
@@ -145,8 +149,8 @@ def monitor(
             every=_every(entry, every, index),
             fail_after=_count(entry, "fail_after", fail_after, index),
             recover_after=_count(entry, "recover_after", recover_after, index),
-            metric=metrics[0].label if metrics else None,
-            unit=metrics[0].unit if metrics else "",
+            metric=followed[0].label if followed else None,
+            unit=followed[0].unit if followed else "",
         )
         result.checks.append(check)
         notifier = (
@@ -155,6 +159,19 @@ def monitor(
             else None
         )
         trackers.append(_Tracker(entry, check, notifier, save))
+
+    # a scrape (another thread) must not see a run half applied
+    lock = threading.Lock()
+    server = None
+    if metrics is not None:
+        from xping.exporters import prometheus
+
+        def produce() -> str:
+            with lock:
+                return prometheus.render(result)
+
+        server = prometheus.MetricsServer(*metrics, produce).start()
+        result.metrics_url = f"http://{prometheus.format_listen(*server.address)}/metrics"
 
     if live is None:
         live = sys.stdout.isatty()
@@ -181,13 +198,15 @@ def monitor(
             if ready:
                 outcomes = run([entries[i] for i in ready], workers)
                 finished = clock()
-                for i, outcome in zip(ready, outcomes, strict=True):
-                    trackers[i].apply(outcome, finished, report)
-                    # the next run is due one interval after this one was;
-                    # after a slow run, start from now instead of catching up
-                    due[i] = max(due[i] + trackers[i].check.every, finished)
+                with lock:
+                    for i, outcome in zip(ready, outcomes, strict=True):
+                        trackers[i].apply(outcome, finished, report)
+                        # the next run is due one interval after this one was;
+                        # after a slow run, start from now instead of catching up
+                        due[i] = max(due[i] + trackers[i].check.every, finished)
             if live:
-                printed = monitor_view.redraw(result, clock(), printed)
+                with lock:
+                    printed = monitor_view.redraw(result, clock(), printed)
             waiting = [due[i] for i in range(len(entries)) if pending(i)]
             if not waiting:
                 break
@@ -200,6 +219,8 @@ def monitor(
         if not quiet:
             print()
     finally:
+        if server is not None:
+            server.stop()
         for tracker in trackers:
             if tracker.notifier is not None:
                 tracker.notifier.flush()

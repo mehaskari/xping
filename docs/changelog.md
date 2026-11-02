@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **`xping monitor --metrics [HOST:]PORT`: Prometheus metrics.** Monitor
+  serves its checks at `/metrics` in the Prometheus text format (state,
+  latest value, latency in seconds, runs, failures, outages, timestamps),
+  so Prometheus, VictoriaMetrics or the Grafana agent can keep the history
+  and alert. Standard library only; listens on 127.0.0.1 unless a host is
+  given; kept by `--install-service`.
+
 ## [1.6.1] - 2026-10-20
 
 ### Added
