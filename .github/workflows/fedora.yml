@@ -4,8 +4,9 @@ name: Fedora package
 # source RPM from this checkout), with the test suite running in %check and
 # no network, then rpmlint, then installs it and runs it.
 on:
+  # every pull request (no paths filter): the job is a required check, and a
+  # required check that never starts would block the merge
   pull_request:
-    paths: ["packaging/fedora/**", ".copr/**", "xping/**", "tests/**", "pyproject.toml", "man/**", ".github/workflows/fedora.yml"]
   push:
     branches: [main]
     paths: ["packaging/fedora/**", ".copr/**", "xping/**", "tests/**", "pyproject.toml", "man/**", ".github/workflows/fedora.yml"]

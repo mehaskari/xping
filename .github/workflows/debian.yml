@@ -7,8 +7,9 @@ name: Debian package
 # (smoke tests + the upstream tests against the installed package) must
 # pass. Runs when the packaging or the code changes.
 on:
+  # every pull request (no paths filter): the job is a required check, and a
+  # required check that never starts would block the merge
   pull_request:
-    paths: ["debian/**", "xping/**", "tests/**", "pyproject.toml", "man/**", ".github/workflows/debian.yml"]
   push:
     branches: [main]
     paths: ["debian/**", "xping/**", "tests/**", "pyproject.toml", "man/**", ".github/workflows/debian.yml"]
