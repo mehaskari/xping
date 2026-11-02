@@ -32,7 +32,11 @@ def test_changelog_notes_dating_and_debian_entry():
     )
     notes = release.unreleased_notes(changelog)
     assert notes == ["xping thing: does it. More text.", "a bug"]
-    assert "## [1.1.0] - 2030-01-02" in release.date_changelog(changelog, "1.1.0", "2030-01-02")
+    dated = release.date_changelog(changelog, "1.1.0", "2030-01-02")
+    assert "## [Unreleased]\n\n## [1.1.0] - 2030-01-02\n" in dated
+    assert dated.count("## [Unreleased]") == 1
+    with pytest.raises(release.ReleaseError, match="empty"):  # notes for the next one first
+        release.unreleased_notes(dated)
     entry = release.debian_entry("1.1.0", ["word " * 30], "Tue, 01 Jan 2030 00:00:00 +0000")
     lines = entry.splitlines()
     assert lines[0] == "xping (1.1.0-1) noble; urgency=medium"

@@ -104,7 +104,10 @@ def unreleased_notes(changelog: str) -> list[str]:
 
 
 def date_changelog(changelog: str, version: str, day: str) -> str:
-    return changelog.replace("## [Unreleased]", f"## [{version}] - {day}", 1)
+    """The [Unreleased] notes become *version*'s, under a new, empty
+    [Unreleased] heading for what comes next (the next release refuses to
+    start without one)."""
+    return changelog.replace("## [Unreleased]", f"## [Unreleased]\n\n## [{version}] - {day}", 1)
 
 
 def debian_entry(version: str, notes: list[str], when: str) -> str:

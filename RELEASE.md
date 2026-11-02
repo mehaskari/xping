@@ -16,7 +16,8 @@ python3 scripts/release.py 1.5.3
 first problem: it checks that `main` is clean and current, that the
 version is new (also on PyPI) and that `docs/changelog.md` has an
 `[Unreleased]` section; bumps all versioned files, dates the man page and
-the changelog and writes the `debian/changelog` entry from the changelog;
+the changelog (leaving a new, empty `[Unreleased]` heading above it) and
+writes the `debian/changelog` entry from the changelog;
 runs pytest, ruff and mypy (`--skip-checks` to skip); opens the release
 PR, waits for CodeQL and stops if it found any new alert, then enables
 auto-merge and waits for it; tags the merge commit and pushes the
@@ -56,7 +57,8 @@ $SED "s/\"xping $OLD\"/\"xping $NEW\"/" man/xping.1
 $SED "s/^version = $OLD$/version = $NEW/" setup.cfg
 $SED "s/^version: '$OLD'$/version: '$NEW'/" snap/snapcraft.yaml
 # update the .TH date in man/xping.1, turn "## [Unreleased]" entries in
-# docs/changelog.md into "## [$NEW] - YYYY-MM-DD", and add a
+# docs/changelog.md into "## [$NEW] - YYYY-MM-DD" under a new, empty
+# "## [Unreleased]", and add a
 # debian/changelog entry for noble (dch -v "$NEW-1" "..."; dch -r "")
 
 # 2. Verify version consistency (script in CONTRIBUTING.md) and run the
