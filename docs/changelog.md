@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+- `scripts/release.py` tries a GitHub query again (up to 4 times) after a
+  network error instead of stopping the release half way; commands that
+  change something are never repeated.
+
 ## [1.7.0] - 2026-11-02
 
 ### Added

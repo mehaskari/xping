@@ -13,7 +13,8 @@ python3 scripts/release.py 1.5.3
 ```
 
 `scripts/release.py` does every step below in order and stops at the
-first problem: it checks that `main` is clean and current, that the
+first problem (a GitHub query that hits a network error is tried again
+first; nothing that changes state is repeated): it checks that `main` is clean and current, that the
 version is new (also on PyPI) and that `docs/changelog.md` has an
 `[Unreleased]` section; bumps all versioned files, dates the man page and
 the changelog (leaving a new, empty `[Unreleased]` heading above it) and
