@@ -127,8 +127,32 @@ def debian_entry(version: str, notes: list[str], when: str) -> str:
 # ── steps ────────────────────────────────────────────────────────────────────
 
 
+# gh's messages for a network hiccup (1.7.0's release stopped on one while
+# it waited for the merge)
+TRANSIENT = re.compile(
+    r"TLS handshake timeout|error connecting to|connection reset|i/o timeout|"
+    r"unexpected EOF|EOF occurred|temporary failure in name resolution|HTTP 50[234]",
+    re.IGNORECASE,
+)
+RETRIES = 5
+
+
+def _read_only(cmd: tuple[str, ...]) -> bool:
+    """Safe to run again: a gh query, never a command that changes something."""
+    if cmd[:3] == ("gh", "pr", "view"):
+        return True
+    return cmd[:2] == ("gh", "api") and not {"-X", "--method", "-f", "-F", "--input"} & set(cmd)
+
+
 def sh(*cmd: str, capture: bool = True, check: bool = True) -> str:
-    proc = subprocess.run(cmd, cwd=ROOT, capture_output=capture, text=True, check=False)
+    for attempt in range(1, RETRIES + 1):
+        proc = subprocess.run(cmd, cwd=ROOT, capture_output=capture, text=True, check=False)
+        if proc.returncode == 0 or not capture or not _read_only(cmd) or attempt == RETRIES:
+            break
+        if not TRANSIENT.search(proc.stderr or ""):
+            break
+        say(f"network error, trying again ({attempt}/{RETRIES - 1})")
+        time.sleep(5 * attempt)
     if check and proc.returncode != 0:
         detail = (proc.stderr or proc.stdout or "").strip() if capture else ""
         raise ReleaseError(f"{' '.join(cmd)} failed" + (f":\n{detail}" if detail else ""))

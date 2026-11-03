@@ -63,3 +63,59 @@ def test_tls_context_verifies_certificates():
 
     ctx = release.tls_context()
     assert ctx.verify_mode == ssl.CERT_REQUIRED and ctx.check_hostname
+
+
+def test_read_only_gh_queries_retry_network_errors(monkeypatch):
+    import subprocess
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if len(calls) < 3:
+            return subprocess.CompletedProcess(cmd, 1, "", "net/http: TLS handshake timeout")
+        return subprocess.CompletedProcess(cmd, 0, "MERGED abc\n", "")
+
+    monkeypatch.setattr(release.subprocess, "run", fake_run)
+    monkeypatch.setattr(release.time, "sleep", lambda s: None)
+    assert release.sh("gh", "pr", "view", "1", "--json", "state") == "MERGED abc"
+    assert len(calls) == 3
+
+
+def test_commands_that_change_things_never_retry(monkeypatch):
+    import subprocess
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 1, "", "TLS handshake timeout")
+
+    monkeypatch.setattr(release.subprocess, "run", fake_run)
+    monkeypatch.setattr(release.time, "sleep", lambda s: None)
+    for cmd in (
+        ("gh", "pr", "create", "--fill"),
+        ("gh", "api", "-X", "PATCH", "x"),
+        ("git", "push"),
+    ):
+        calls.clear()
+        with pytest.raises(release.ReleaseError):
+            release.sh(*cmd)
+        assert len(calls) == 1, cmd
+
+
+def test_real_errors_are_not_retried(monkeypatch):
+    import subprocess
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(
+            cmd, 1, "", "GraphQL: Could not resolve to a PullRequest"
+        )
+
+    monkeypatch.setattr(release.subprocess, "run", fake_run)
+    with pytest.raises(release.ReleaseError, match="Could not resolve"):
+        release.sh("gh", "pr", "view", "999")
+    assert len(calls) == 1
