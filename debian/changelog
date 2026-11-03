@@ -1,3 +1,23 @@
+xping (1.7.0-1) noble; urgency=medium
+
+  * xping monitor --metrics [HOST:]PORT: Prometheus metrics. Monitor
+    serves its checks at /metrics in the Prometheus text format (state,
+    latest value, latency in seconds, runs, failures, outages,
+    timestamps), so Prometheus, VictoriaMetrics or the Grafana agent can
+    keep the history and alert. Standard library only; listens on
+    127.0.0.1 unless a host is given; kept by --install-service.
+  * A Grafana dashboard (contrib/grafana/xping-dashboard.json: checks up
+    and down, uptime, an UP/DOWN timeline, latency, certificate days
+    left, failures and outages) and a Prometheus scrape config with
+    alert rules (contrib/prometheus/), tested end to end in CI against a
+    real monitor, Prometheus and Grafana.
+  * xping monitor kept every run of every check in memory, so a monitor
+    running for months (--install-service, --metrics) grew without bound
+    and every scrape walked the whole history. Totals are now kept as
+    running counts and only the latest 1,000 runs per check are stored.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Mon, 02 Nov 2026 20:14:05 +0000
+
 xping (1.6.1-1) noble; urgency=medium
 
   * Screenshots in the README: real runs of monitor, dnscheck, http, tls
