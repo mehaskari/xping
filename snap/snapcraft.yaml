@@ -1,10 +1,13 @@
 name: xping
 title: xping
 base: core22
-# The released version. Only the release commit itself builds as exactly
-# this version; every other commit on main builds as VERSION+gitN.HASH (see
-# override-pull), so the automatic stable release can never pick up
-# unreleased code that happens to carry the same version string.
+# The released version. A build is exactly this version only when it ships
+# exactly the released code: the release commit itself, or a later commit
+# whose xping files (xping/, man/, pyproject.toml, setup.cfg, setup.py) are
+# unchanged since the vVERSION tag (CI, docs and scripts may differ).
+# Anything else builds as VERSION+gitN.HASH (see override-pull), so the
+# automatic stable release can never pick up unreleased code that happens
+# to carry the same version string.
 version: '1.7.0'
 adopt-info: xping
 summary: Beautiful CLI network diagnostics
@@ -58,7 +61,9 @@ parts:
       base="$(sed -n "s/^version: '\(.*\)'$/\1/p" snap/snapcraft.yaml)"
       subject="$(git log -1 --format=%s 2>/dev/null || true)"
       if git describe --tags --exact-match --match "v$base" >/dev/null 2>&1 \
-         || printf '%s' "$subject" | grep -Eq "(release/|release v)${base}([^0-9]|$)"; then
+         || printf '%s' "$subject" | grep -Eq "(release/|release v)${base}([^0-9]|$)" \
+         || { git rev-parse -q --verify "refs/tags/v$base" >/dev/null 2>&1 \
+              && git diff --quiet "v$base" HEAD -- xping man pyproject.toml setup.cfg setup.py; }; then
         craftctl set version="$base"
       else
         craftctl set version="$base+git$(git rev-list --count HEAD 2>/dev/null || echo 0).$(git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)"
