@@ -1,14 +1,20 @@
 name: Snap stable
 
-# Snapcraft.io builds every push to main into latest/edge (one revision per
-# architecture). After a release tag this workflow waits until edge carries
-# that version and releases those revisions to latest/stable, architecture
-# by architecture: an architecture whose build failed or is late keeps its
-# previous stable revision instead of blocking the others.
+# After a release tag: build the snap for amd64 and arm64 here and upload
+# it to the store, then release every revision of that version to
+# latest/stable, architecture by architecture. Snapcraft.io also builds
+# every push to main (all six architectures, edge); the other four come
+# only from there and are waited for (up to 3 h). An architecture whose
+# build failed or is late keeps its previous stable revision instead of
+# blocking the others. The builds here make amd64 and arm64 independent of
+# Snapcraft.io's build service, which sometimes starts builds hours late.
 #
 # Needs the SNAPCRAFT_STORE_CREDENTIALS secret, made with
 #   snapcraft export-login --snaps=xping --channels=stable \
-#     --acls=package_access,package_release --expires=YYYY-MM-DD FILE
+#     --acls=package_access,package_push,package_update,package_release \
+#     --expires=YYYY-MM-DD FILE
+# A token without package_push only skips the upload (a warning); the
+# release to stable then uses the Snapcraft.io builds alone.
 on:
   push:
     tags: ["v*.*.*"]
@@ -30,8 +36,56 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    env:
+      VERSION: ${{ inputs.version || github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0  # override-pull needs the tags to name the version
+
+      - name: Check out the release
+        run: |
+          VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          git checkout --detach "v$VERSION"
+
+      - uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
+        id: snap
+
+      - name: The snap is exactly this version
+        env:
+          SNAP_FILE: ${{ steps.snap.outputs.snap }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          echo "$SNAP_FILE"
+          if [ "$(basename "$SNAP_FILE")" != "xping_${VERSION}_${ARCH}.snap" ]; then
+            echo "::error::expected xping_${VERSION}_${ARCH}.snap"; exit 1
+          fi
+          mkdir -p dist && cp "$SNAP_FILE" dist/
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: snap-${{ matrix.arch }}
+          path: dist/*.snap
+          if-no-files-found: error
+
   promote:
-    name: Release the edge build of this version to stable
+    name: Release this version to stable
+    needs: build
+    # a failed build here leaves that architecture to Snapcraft.io
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 240
     env:
@@ -43,12 +97,30 @@ jobs:
       - name: Install snapcraft
         run: sudo snap install snapcraft --classic
 
-      - name: Wait for the edge builds of this version
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: snap-*
+          merge-multiple: true
+          path: dist
+
+      - name: Upload the snaps built here
         run: |
           VERSION="${VERSION#v}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          for snap in dist/*.snap; do
+            [ -e "$snap" ] || { echo "::warning::no snap was built here"; break; }
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "would upload $snap"
+            elif ! snapcraft upload "$snap"; then  # a new revision only; released below
+              echo "::warning::could not upload $snap (does the token have package_push?) — the Snapcraft.io build is used instead"
+            fi
+          done
+
+      - name: Wait for the builds of this version
+        run: |
           # Snapcraft.io builds on its own schedule; arm/riscv builders can take
-          # hours. Wait up to 3 h for every architecture, then go with what is there.
+          # hours. Wait up to 3 h for every architecture (a dry run looks once),
+          # then go with what is there.
           deadline=$(( $(date +%s) + 3 * 3600 ))
           while :; do
             snapcraft revisions xping > revisions.txt
@@ -59,7 +131,7 @@ jobs:
                 revisions.txt || missing="$missing $arch"
             done
             [ -z "$missing" ] && { echo "all architectures have $VERSION"; break; }
-            if [ "$(date +%s)" -ge "$deadline" ]; then
+            if [ "$(date +%s)" -ge "$deadline" ] || [ "$DRY_RUN" = "true" ]; then
               echo "::warning::no $VERSION build for:$missing — they keep their current stable revision"
               break
             fi

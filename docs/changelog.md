@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed
+- The snap for amd64 and arm64 is now built on GitHub Actions from each
+  release tag and uploaded to the Snap Store, so a release reaches stable
+  on those architectures within the hour even when Snapcraft.io's build
+  service starts late (1.7.0 waited 15 hours). armhf, ppc64el, riscv64 and
+  s390x still come from Snapcraft.io.
+
 ### Fixed
 - `scripts/release.py` tries a GitHub query again (up to 4 times) after a
   network error instead of stopping the release half way; commands that

@@ -147,25 +147,21 @@ distributions based on it (Linux Mint 22, Pop!_OS 24.04).
 
 ## Snap Store
 
-**This project publishes to the Snap Store exclusively through
-Snapcraft.io's native GitHub integration** (Snapcraft.io → your snap →
-Builds → "Log in with GitHub" → authorize `build-snapcraft-io` →
-select the `xping` repository). Every push to `main` triggers a build
-there automatically, using `snap/snapcraft.yaml`, with zero GitHub
-Actions involvement and zero secrets to manage.
+The snap comes from two builders:
 
-**There is deliberately no `release-snap.yml` GitHub Actions
-workflow.** An earlier version of one existed, using
-`snapcore/action-publish` with a `SNAPCRAFT_TOKEN` secret — but since
-the native integration was already handling every build, that secret
-was never configured, and the workflow failed on every single run
-with `login_data is empty`. It was a redundant path to the same
-destination, manufacturing a permanent false failure signal for
-something that already worked. If you ever want the Actions-based
-path instead, you would need to disconnect the native GitHub
-integration first to avoid double-building, then follow snapcraft's
-own `action-build`/`action-publish` documentation with a real
-`SNAPCRAFT_TOKEN` from `snapcraft export-login`.
+- **Snapcraft.io's GitHub integration** (Snapcraft.io → your snap →
+  Builds → "Log in with GitHub" → the `xping` repository) builds every
+  push to `main` for all six architectures (amd64, arm64, armhf,
+  ppc64el, riscv64, s390x) into **edge**, using `snap/snapcraft.yaml`.
+- **`.github/workflows/snap-stable.yml`** builds each release tag for
+  amd64 and arm64 on GitHub's own runners (`snapcore/action-build`) and
+  uploads those revisions to the store. Snapcraft.io's build service
+  sometimes starts builds hours late (1.7.0 waited 15 hours), so the two
+  architectures nearly all users have do not depend on it. GitHub has no
+  runners for the other four, which stay with Snapcraft.io.
+
+Both build the same tagged code as the same version, so it does not
+matter which revision reaches stable.
 
 ### Channels
 
@@ -180,21 +176,28 @@ scripts should not keep a release off stable. Every other commit builds
 as `X.Y.Z+gitN.HASH` (`override-pull` in `snap/snapcraft.yaml`), so edge
 shows what each build is and unreleased code never carries a release
 number.
-After each release tag, `.github/workflows/snap-stable.yml` releases the edge builds
-of that version to **stable**, architecture by architecture;
+After each release tag, `.github/workflows/snap-stable.yml` uploads its
+own amd64 and arm64 builds, waits (up to 3 h) for Snapcraft.io's builds of
+that version on the other architectures, and releases the newest revision
+of the version to **stable**, architecture by architecture; a late or
+failed architecture keeps its previous stable revision.
 `sudo snap install xping` installs stable.
 
 It needs the `SNAPCRAFT_STORE_CREDENTIALS` repository secret: a token
-that may only release `xping` to stable, made once with
+that may only upload `xping` and release it to stable, made once with
 
 ```bash
 snapcraft export-login --snaps=xping --channels=stable \
-  --acls=package_access,package_release --expires=YYYY-MM-DD token.txt
+  --acls=package_access,package_push,package_update,package_release \
+  --expires=YYYY-MM-DD token.txt
 gh secret set SNAPCRAFT_STORE_CREDENTIALS -R mehaskari/xping < token.txt
 rm -f token.txt
 ```
 
-Renew it before it expires (the current one: 2027-10-09). To test or to
+A token without `package_push` (the one made before this setup) only
+skips the upload with a warning: stable then gets the Snapcraft.io
+builds alone, as before. Renew it before it expires (the current one:
+2027-10-09). To test or to
 promote by hand: Actions → Snap stable → Run workflow (version, and
 `dry_run` to only list what would be released).
 
