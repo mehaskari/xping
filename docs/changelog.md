@@ -10,6 +10,15 @@
   the Prometheus metrics at `/metrics`. Standard library only, no scripts
   and nothing fetched from the network; listens on 127.0.0.1 unless a host
   is given; kept by `--install-service`.
+- `--webhook` speaks Telegram and ntfy: a
+  `https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<CHAT>` URL, or
+  `https://ntfy.sh/<TOPIC>` (`ntfy://HOST/<TOPIC>` for a server of your
+  own), gets the body that service expects, so alerts reach a phone with
+  no adapter.
+
+### Security
+- The file `--install-service` writes can be read only by its owner, since
+  a `--webhook` URL in it can hold a secret.
 
 ### Changed
 - The snap for amd64 and arm64 is now built on GitHub Actions from each

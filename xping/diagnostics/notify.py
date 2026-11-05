@@ -11,9 +11,10 @@ arguments, never through a shell:
 
 Webhooks get one JSON POST per event. The body carries both ``text``
 (Slack, Mattermost, Rocket.Chat, Google Chat) and ``content`` (Discord)
-plus structured fields for anything else. Sending happens on a background
-thread so a slow endpoint never delays the next check; a failure is
-reported once and does not stop watching.
+plus structured fields for anything else; Telegram and ntfy want a body of
+their own, chosen from the URL (see ``_delivery``). Sending happens on a
+background thread so a slow endpoint never delays the next check; a failure
+is reported once and does not stop watching.
 """
 
 from __future__ import annotations
@@ -27,7 +28,7 @@ import threading
 import time
 import urllib.request
 from datetime import datetime, timezone
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit, urlunsplit
 
 from xping.diagnostics.sslctx import secure_context
 from xping.render.errors import warn
@@ -35,9 +36,47 @@ from xping.render.errors import warn
 WEBHOOK_TIMEOUT = 5.0
 
 
+TELEGRAM_HOST = "api.telegram.org"
+NTFY_HOST = "ntfy.sh"
+
+
+def _is_ntfy(parts) -> bool:
+    return parts.scheme == "ntfy" or parts.hostname == NTFY_HOST
+
+
 def valid_webhook(url: str) -> bool:
     parts = urlsplit(url)
-    return parts.scheme in ("http", "https") and bool(parts.hostname)
+    if parts.scheme not in ("http", "https", "ntfy") or not parts.hostname:
+        return False
+    if _is_ntfy(parts):
+        topic = parts.path.strip("/")
+        return bool(topic) and "/" not in topic
+    if parts.hostname == TELEGRAM_HOST:
+        return "chat_id" in parse_qs(parts.query)
+    return True
+
+
+def _delivery(url: str, payload: dict) -> tuple[str, dict]:
+    """Where to POST *payload* and in which shape: Telegram takes the chat
+    from the body, ntfy the topic (ntfy://HOST/TOPIC is a server of your
+    own, over https); everything else gets the event as it is."""
+    parts = urlsplit(url)
+    if _is_ntfy(parts):
+        scheme = "https" if parts.scheme == "ntfy" else parts.scheme
+        down = payload["event"] == "down"
+        return urlunsplit((scheme, parts.netloc, "/", "", "")), {
+            "topic": parts.path.strip("/"),
+            "title": f"{payload['target']} is {payload['event'].upper()}",
+            "message": payload["text"],
+            "priority": 4 if down else 3,
+        }
+    if parts.hostname == TELEGRAM_HOST:
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, "", "")), {
+            "chat_id": parse_qs(parts.query)["chat_id"][0],
+            "text": payload["text"],
+            "disable_web_page_preview": True,
+        }
+    return url, payload
 
 
 def desktop_notify(title: str, message: str) -> bool:
@@ -67,6 +106,7 @@ def desktop_notify(title: str, message: str) -> bool:
 
 def post_webhook(url: str, payload: dict) -> None:
     """POST *payload* as JSON; raises on network or HTTP errors."""
+    url, payload = _delivery(url, payload)
     data = json.dumps(payload).encode()
     req = urllib.request.Request(
         url,

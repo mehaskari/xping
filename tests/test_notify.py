@@ -1,5 +1,6 @@
 """--notify / --webhook: down/up events in watch mode."""
 
+import json
 from unittest.mock import patch
 
 import pytest
@@ -29,6 +30,9 @@ def _notifier(clock=None, **kw):
     n = Notifier("db:5432", "tcp", clock=clock or Clock(), **kw)
     n.desktop = n.desktop or not n.webhook  # enabled, but deliver nowhere by default
     return n
+
+
+_post_webhook = notify.post_webhook  # the real one, under the fixture below
 
 
 @pytest.fixture(autouse=True)
@@ -154,6 +158,83 @@ def test_ping_watch_needs_three_losses(monkeypatch):
     assert [e["event"] for e in n.sent] == ["down", "up"]  # 2 losses were not an outage
     assert result.count == 9 and result.received == 3  # the session, for exit code / --save
     assert "3 pings lost in a row" in n.sent[0]["text"]
+
+
+def _sent(url, event="down"):
+    payload = {"event": event, "target": "db", "text": "🔴 xping: db (tcp) is DOWN"}
+    seen = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self, size):
+            return b""
+
+    def urlopen(request, timeout, context):
+        seen.update(url=request.full_url, body=json.loads(request.data), context=context)
+        return Response()
+
+    with patch("urllib.request.urlopen", urlopen):
+        _post_webhook(url, payload)
+    return seen
+
+
+def test_other_webhooks_get_the_event_as_it_is():
+    seen = _sent("https://hooks.slack.com/services/T/B/X?a=1")
+    assert seen["url"] == "https://hooks.slack.com/services/T/B/X?a=1"
+    assert seen["body"]["target"] == "db"
+
+
+def test_telegram_gets_the_chat_in_the_body():
+    seen = _sent("https://api.telegram.org/bot123:abc/sendMessage?chat_id=-100200")
+    assert seen["url"] == "https://api.telegram.org/bot123:abc/sendMessage"
+    assert seen["body"] == {
+        "chat_id": "-100200",
+        "text": "🔴 xping: db (tcp) is DOWN",
+        "disable_web_page_preview": True,
+    }
+
+
+@pytest.mark.parametrize(
+    "url, posted",
+    [
+        ("https://ntfy.sh/my-alerts", "https://ntfy.sh/"),
+        ("ntfy://ntfy.example.net/my-alerts", "https://ntfy.example.net/"),
+        ("ntfy://ntfy.example.net:8443/my-alerts/", "https://ntfy.example.net:8443/"),
+    ],
+)
+def test_ntfy_gets_a_topic_title_and_priority(url, posted):
+    seen = _sent(url)
+    assert seen["url"] == posted
+    assert seen["context"] is not None  # verified https
+    assert seen["body"]["topic"] == "my-alerts"
+    assert seen["body"]["title"] == "db is DOWN"
+    assert seen["body"]["message"] == "🔴 xping: db (tcp) is DOWN"
+    assert seen["body"]["priority"] == 4
+    assert _sent(url, "up")["body"]["priority"] == 3
+
+
+@pytest.mark.parametrize(
+    "url, valid",
+    [
+        ("https://hooks.example.net/x", True),
+        ("http://10.0.0.1:8080/", True),
+        ("https://ntfy.sh/topic", True),
+        ("ntfy://ntfy.example.net/topic", True),
+        ("https://api.telegram.org/botT/sendMessage?chat_id=1", True),
+        ("https://api.telegram.org/botT/sendMessage", False),  # no chat
+        ("https://ntfy.sh/", False),  # no topic
+        ("ntfy://ntfy.example.net/a/b", False),
+        ("ntfy://", False),
+        ("ftp://example.net/", False),
+    ],
+)
+def test_valid_webhook(url, valid):
+    assert notify.valid_webhook(url) is valid
 
 
 def test_parser_and_usage():

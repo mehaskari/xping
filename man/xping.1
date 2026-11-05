@@ -1399,6 +1399,13 @@ and a ready-made message in both
 (Slack, Mattermost, Google Chat) and
 .B content
 (Discord).
+A Telegram URL
+.RI ( https://api.telegram.org/bot TOKEN /sendMessage?chat_id= CHAT )
+and an ntfy URL
+.RI ( https://ntfy.sh/ TOPIC ,
+or
+.BI ntfy:// HOST / TOPIC
+for a server of your own) get a body of their own, picked from the URL.
 Delivery happens in the background; a failure is reported once.
 .PP
 The first check only sets the baseline, except that

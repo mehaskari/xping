@@ -169,6 +169,13 @@ def _check(proc: subprocess.CompletedProcess, what: str) -> None:
         raise ServiceError(f"{what} failed" + (f": {detail[-1]}" if detail else ""))
 
 
+def _write_private(path: Path, data: bytes) -> None:
+    """Owner only: a --webhook URL in the command can hold a secret."""
+    path.touch(mode=0o600)
+    path.chmod(0o600)
+    path.write_bytes(data)
+
+
 def install(
     monitor_args: list[str],
     home: Path | None = None,
@@ -186,10 +193,10 @@ def install(
         domain = _gui_domain()
         if path.exists():  # replace a running one
             run(["launchctl", "bootout", f"{domain}/{LABEL}"])
-        path.write_bytes(launchd_plist(command, log))
+        _write_private(path, launchd_plist(command, log))
         _check(run(["launchctl", "bootstrap", domain, str(path)]), "launchctl bootstrap")
     else:
-        path.write_text(systemd_unit(command, log), encoding="utf-8")
+        _write_private(path, systemd_unit(command, log).encode())
         _check(run(["systemctl", "--user", "daemon-reload"]), "systemctl daemon-reload")
         _check(run(["systemctl", "--user", "enable", UNIT]), "systemctl enable")
         _check(run(["systemctl", "--user", "restart", UNIT]), "systemctl restart")
