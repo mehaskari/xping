@@ -1367,7 +1367,7 @@ xping check checks.toml --markdown > status.md
 #### `xping monitor`
 
 ```
-xping monitor [FILE | TARGET...] [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL] [--metrics [HOST:]PORT]
+xping monitor [FILE | TARGET...] [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL] [--metrics [HOST:]PORT] [--status-page [HOST:]PORT]
 ```
 
 A live dashboard for a [check file](#5-batch-check-files): every check runs
@@ -1418,6 +1418,7 @@ characters), and as a last resort the Detail column is left out.
 | `--save` | — | Keep every result in the [history](#xping-history), under the same command and target as the single command (`xping history ping 1.1.1.1`) |
 | `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) on every DOWN/UP change of any check |
 | `--metrics [HOST:]PORT` | — | Serve the checks to Prometheus at `http://HOST:PORT/metrics` (see below). Without a host only this machine can scrape: `:9101` listens on 127.0.0.1; `0.0.0.0:9101` (or `[::]:9101`) on every interface |
+| `--status-page [HOST:]PORT` | — | Serve a live web page of the checks at `http://HOST:PORT/` and the same as JSON at `/status.json` (see below). The address works like `--metrics`, and the two can share a port |
 
 - **Not a terminal** (cron, systemd, `| tee log`): instead of the table,
   one timestamped line per state change, with how long an outage lasted
@@ -1465,6 +1466,25 @@ xping monitor --uninstall-service
 - The service starts `xping` from your PATH (e.g. `/opt/homebrew/bin/xping`),
   so it keeps working after `brew upgrade` or `pipx upgrade`.
 - Not available on Windows.
+
+**Status page.** With `--status-page`, monitor also serves a web page of
+its checks, with nothing else to install: the overall state, then each
+check with its state, latest value, uptime, how long the state has lasted
+and its recent runs, then the recent outages. It reloads itself every 10
+seconds, follows the browser's light or dark theme, and works on a phone.
+A check shows `FAILING` after a failed run that does not yet count as DOWN
+(see `--fail-after`), and `WAITING` until its state is confirmed.
+
+```bash
+xping monitor checks.toml --status-page :8080 --install-service
+curl -s localhost:8080/status.json
+```
+
+The same port also serves `/metrics`. `:8080` listens on 127.0.0.1 only;
+`0.0.0.0:8080` shows the page to everyone who can reach this machine, with
+each check's name, target and latest result and no password, so put a
+reverse proxy with a login in front of it if that is too much. Like the
+`--metrics` numbers, the page starts from zero when monitor restarts.
 
 **Prometheus and Grafana.** With `--metrics`, monitor also serves its
 checks at `/metrics` in the Prometheus text format, so Prometheus (or

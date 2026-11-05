@@ -1173,6 +1173,20 @@ or
 listens on every interface.
 The endpoint has no authentication.
 .TP
+.BI \-\-status\-page " \fR[\fPHOST\fR:]\fPPORT"
+Serve a live web page of the checks at
+.BI http:// HOST : PORT /
+(state, latest value, uptime, recent runs and outages; it reloads itself),
+the same as JSON at
+.BR /status.json ,
+and the metrics at
+.BR /metrics .
+The address works like
+.B \-\-metrics
+and the two can share a port.
+The page has no authentication and shows each check's name, target and
+latest result.
+.TP
 .B \-\-install\-service
 Run this monitor (same checks and options) in the background from now on,
 also after a restart: a LaunchAgent on macOS, a systemd user unit on

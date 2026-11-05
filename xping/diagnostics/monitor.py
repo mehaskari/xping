@@ -12,7 +12,8 @@ whether every check was up at the end.
 Alerts (``--notify`` / ``--webhook``) fire on every down/up change and
 ``--save`` keeps each result in the history, exactly like the single
 commands do. ``--metrics`` serves the checks to Prometheus at /metrics
-(see xping.exporters.prometheus).
+(see xping.exporters.prometheus), ``--status-page`` as a live web page (see
+xping.exporters.status_page).
 """
 
 from __future__ import annotations
@@ -112,6 +113,49 @@ class _Tracker:
                 self.target = None  # warn once per check
 
 
+def _serve(
+    result: MonitorResult,
+    lock: threading.Lock,
+    metrics: tuple[str, int] | None,
+    status_page: tuple[str, int] | None,
+    clock: Callable[[], float],
+) -> list:
+    """Start the HTTP servers: one per address, so --metrics and
+    --status-page can share a port or use two."""
+    if metrics is None and status_page is None:
+        return []
+    from xping.exporters import prometheus
+    from xping.exporters import status_page as page
+
+    def locked(render: Callable[..., str], *args) -> Callable[[], str]:
+        def produce() -> str:
+            with lock:
+                return render(result, *(arg() for arg in args))
+
+        return produce
+
+    pages = {
+        "/": (page.HTML_TYPE, locked(page.render, clock)),
+        "/status.json": (page.JSON_TYPE, locked(page.to_json, clock)),
+    }
+    servers: list = []
+    try:
+        for address in dict.fromkeys(a for a in (metrics, status_page) if a is not None):
+            extra = pages if address == status_page else None
+            server = prometheus.MetricsServer(*address, locked(prometheus.render), extra)
+            servers.append(server.start())
+            url = f"http://{prometheus.format_listen(*server.address)}"
+            if address == metrics:
+                result.metrics_url = f"{url}/metrics"
+            if address == status_page:
+                result.status_url = f"{url}/"
+    except prometheus.ListenError:
+        for server in servers:
+            server.stop()
+        raise
+    return servers
+
+
 def monitor(
     path: str | None,
     every: float = 30.0,
@@ -129,10 +173,12 @@ def monitor(
     run: Callable[[list[dict], int], list[CheckOutcome]] = run_entries,
     entries: list[dict] | None = None,
     metrics: tuple[str, int] | None = None,
+    status_page: tuple[str, int] | None = None,
 ) -> MonitorResult:
     """Run the checks in *path* (or the ready-made *entries*, e.g. built from
     command-line targets) until Ctrl-C, or *rounds* runs of each. With
-    *metrics* (host, port), Prometheus can scrape the checks meanwhile."""
+    *metrics* (host, port), Prometheus can scrape the checks meanwhile; with
+    *status_page* (host, port), a browser can follow them."""
     if entries is None:
         if path is None:
             raise ConfigError("no checks to monitor")
@@ -162,16 +208,7 @@ def monitor(
 
     # a scrape (another thread) must not see a run half applied
     lock = threading.Lock()
-    server = None
-    if metrics is not None:
-        from xping.exporters import prometheus
-
-        def produce() -> str:
-            with lock:
-                return prometheus.render(result)
-
-        server = prometheus.MetricsServer(*metrics, produce).start()
-        result.metrics_url = f"http://{prometheus.format_listen(*server.address)}/metrics"
+    servers = _serve(result, lock, metrics, status_page, clock)
 
     if live is None:
         live = sys.stdout.isatty()
@@ -219,7 +256,7 @@ def monitor(
         if not quiet:
             print()
     finally:
-        if server is not None:
+        for server in servers:
             server.stop()
         for tracker in trackers:
             if tracker.notifier is not None:

@@ -686,6 +686,14 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         help="Serve the checks to Prometheus at http://HOST:PORT/metrics "
         "(e.g. :9101; only this machine can scrape unless HOST is given, e.g. 0.0.0.0:9101)",
     )
+    p_monitor.add_argument(
+        "--status-page",
+        type=_listen_address,
+        default=None,
+        metavar="[HOST:]PORT",
+        help="Serve a live status page at http://HOST:PORT/ and the same as JSON at "
+        "/status.json (e.g. :8080; only this machine can open it unless HOST is given)",
+    )
     _add_debounce(p_monitor)
     _add_notify(p_monitor)
     service = p_monitor.add_mutually_exclusive_group()

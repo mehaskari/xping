@@ -99,6 +99,8 @@ def print_header(result) -> None:
     print(kv("Every", _every_text(result)))
     if result.metrics_url:
         print(kv("Metrics", result.metrics_url))
+    if result.status_url:
+        print(kv("Status page", result.status_url))
     print(kv("Stop", "Ctrl-C"))
     print()
 
