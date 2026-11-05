@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+- **`xping monitor --status-page [HOST:]PORT`: a live status page.** Monitor
+  serves a web page that reloads itself: the overall state, each check with
+  its latest value, uptime and recent runs, and the recent outages, with no
+  Prometheus or Grafana to set up. The same state is at `/status.json`, and
+  the Prometheus metrics at `/metrics`. Standard library only, no scripts
+  and nothing fetched from the network; listens on 127.0.0.1 unless a host
+  is given; kept by `--install-service`.
+
 ### Changed
 - The snap for amd64 and arm64 is now built on GitHub Actions from each
   release tag and uploaded to the Snap Store, so a release reaches stable

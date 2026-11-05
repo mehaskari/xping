@@ -106,10 +106,12 @@ def monitor_arguments(args) -> list[str]:
         out.append("--notify")
     if args.webhook:
         out += ["--webhook", args.webhook]
-    if getattr(args, "metrics", None):
-        from xping.exporters.prometheus import format_listen
+    for option in ("metrics", "status_page"):
+        address = getattr(args, option, None)
+        if address:
+            from xping.exporters.prometheus import format_listen
 
-        out += ["--metrics", format_listen(*args.metrics)]
+            out += ["--" + option.replace("_", "-"), format_listen(*address)]
     return out
 
 

@@ -4,9 +4,10 @@ checks as Prometheus metrics.
 
 ``render()`` writes the text exposition format (version 0.0.4, which
 Prometheus, VictoriaMetrics, the Grafana agent and OpenMetrics scrapers all
-read); ``MetricsServer`` serves it at ``/metrics`` from a background thread
-with the standard library's HTTP server, so monitor keeps its own loop and
-no dependency is needed. It listens on 127.0.0.1 unless told otherwise.
+read); ``MetricsServer`` serves it at ``/metrics`` (and the status page's
+paths, see xping.exporters.status_page) from a background thread with the
+standard library's HTTP server, so monitor keeps its own loop and no
+dependency is needed. It listens on 127.0.0.1 unless told otherwise.
 """
 
 from __future__ import annotations
@@ -22,6 +23,11 @@ from xping import __version__
 
 CONTENT_TYPE = "text/plain; version=0.0.4; charset=utf-8"
 DEFAULT_HOST = "127.0.0.1"
+# the pages are ours: inline CSS only, and browsers must not guess types
+_SECURITY_HEADERS = (
+    ("X-Content-Type-Options", "nosniff"),
+    ("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'"),
+)
 
 
 class ListenError(ValueError):
@@ -129,10 +135,12 @@ def render(result) -> str:
 class _Handler(BaseHTTPRequestHandler):
     server: _Server
 
-    def do_GET(self) -> None:  # noqa: N802 (http.server's naming)
+    def _respond(self, *, head: bool) -> None:
         path = self.path.split("?", 1)[0]
-        if path == "/metrics":
-            body, status, kind = self.server.produce().encode(), 200, CONTENT_TYPE
+        page = self.server.pages.get(path)
+        if page is not None:
+            kind, produce = page
+            body, status = produce().encode(), 200
         elif path == "/":
             body = b'<html><body><a href="/metrics">xping metrics</a></body></html>\n'
             status, kind = 200, "text/html; charset=utf-8"
@@ -141,8 +149,17 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", kind)
         self.send_header("Content-Length", str(len(body)))
+        for name, value in _SECURITY_HEADERS:
+            self.send_header(name, value)
         self.end_headers()
-        self.wfile.write(body)
+        if not head:
+            self.wfile.write(body)
+
+    def do_GET(self) -> None:  # noqa: N802 (http.server's naming)
+        self._respond(head=False)
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        self._respond(head=True)
 
     def log_message(self, format: str, *args) -> None:  # noqa: A002
         pass  # scrapes every few seconds would flood the monitor's output
@@ -150,7 +167,7 @@ class _Handler(BaseHTTPRequestHandler):
 
 class _Server(ThreadingHTTPServer):
     daemon_threads = True
-    produce: Callable[[], str]
+    pages: dict[str, tuple[str, Callable[[], str]]]
     # SO_REUSEADDR on Windows lets a second server bind a port that is in
     # use, so two monitors would share one --metrics port; ask for the port
     # exclusively there instead (elsewhere it only allows a quick restart)
@@ -167,9 +184,16 @@ class _Server6(_Server):
 
 
 class MetricsServer:
-    """Serves ``produce()`` at /metrics until stop()."""
+    """Serves ``produce()`` at /metrics, and *pages* (path → content type,
+    function giving the body) next to it, until stop()."""
 
-    def __init__(self, host: str, port: int, produce: Callable[[], str]):
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        produce: Callable[[], str],
+        pages: dict[str, tuple[str, Callable[[], str]]] | None = None,
+    ):
         server_class = _Server6 if ":" in host else _Server
         try:
             self._server = server_class((host, port), _Handler)
@@ -177,7 +201,7 @@ class MetricsServer:
             raise ListenError(
                 f"cannot listen on {format_listen(host, port)}: {exc.strerror or exc}"
             ) from exc
-        self._server.produce = produce
+        self._server.pages = {"/metrics": (CONTENT_TYPE, produce), **(pages or {})}
         self._thread = threading.Thread(
             target=self._server.serve_forever, name="xping-metrics", daemon=True
         )

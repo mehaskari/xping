@@ -106,6 +106,11 @@ class MonitoredCheck:
         return len(self._spans)
 
     @property
+    def outage_spans(self) -> list[tuple[float, float | None]]:
+        """Each confirmed outage: (start, end), end None while still down."""
+        return list(self._spans)
+
+    @property
     def longest_outage_s(self) -> float:
         """Longest confirmed outage, from its first failed run to the first
         good run of the recovery (or the last run while still down)."""
@@ -130,6 +135,7 @@ class MonitorResult:
     ended: float | None = None
     checks: list[MonitoredCheck] = field(default_factory=list)
     metrics_url: str | None = None  # where --metrics served them
+    status_url: str | None = None  # where --status-page served them
 
     @property
     def down(self) -> list[str]:
