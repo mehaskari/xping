@@ -1489,6 +1489,15 @@ xping monitor --uninstall-service
   so it keeps working after `brew upgrade` or `pipx upgrade`.
 - Not available on Windows.
 
+**Changing the checks.** Monitor follows its check file: save the file and
+within two seconds new checks start, removed ones stop and the others go on
+with their numbers. No restart is needed, also in the background. A changed
+`every`, `fail_after` or `recover_after` applies at once. A check is the
+same one as long as its name, type and target stay; change one of those
+and it starts from zero as a new check. A file with a mistake is reported
+once and the running checks carry on until it is fixed. Targets given on
+the command line have no file to follow.
+
 **Status page.** With `--status-page`, monitor also serves a web page of
 its checks, with nothing else to install: the overall state, then each
 check with its state, latest value, uptime, how long the state has lasted

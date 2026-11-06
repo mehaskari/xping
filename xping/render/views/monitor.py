@@ -84,6 +84,18 @@ def _state(check) -> str:
     return c(f"{mark} DOWN", BRAND_AMBER if unsure else BRAND_ROSE, BOLD)
 
 
+def print_reload(result, added: list[str], removed: list[str], now: float) -> None:
+    """One line after the check file changed."""
+    changes = []
+    if added:
+        changes.append("added " + ", ".join(safe(name) for name in added))
+    if removed:
+        changes.append("removed " + ", ".join(safe(name) for name in removed))
+    stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
+    text = "; ".join(changes) or "settings updated"
+    print(f"  {c(stamp, DIM)}  {c('RELOADED', BRAND_INDIGO, BOLD)}  {text}", flush=True)
+
+
 def _every_text(result) -> str:
     values = sorted({k.every for k in result.checks})
     if not values:

@@ -329,3 +329,126 @@ def test_samples_given_at_construction_are_recorded():
     data = check.to_dict()
     assert data["checks"] == 2 and data["failures"] == 1 and len(data["samples"]) == 2
     assert not any(key.startswith("_") for key in data)
+
+
+def _edit(path, checks):
+    """Rewrite a check file: another size, so it counts as changed at once."""
+    path.write_text(json.dumps({"checks": checks}, indent=1))
+
+
+GW = {"name": "gw", "type": "ping", "host": "h1", "every": 10}
+DB = {"name": "db", "type": "tcp", "host": "h2", "port": 5432, "every": 10}
+
+
+def _reloading(tmp_path, first, steps, **options):
+    """monitor() on a file that *steps* ({run number: new checks}) rewrites
+    between runs. Returns the result and the checks run each time."""
+    path = tmp_path / "mon.json"
+    path.write_text(json.dumps({"checks": first}))
+    clock = Clock()
+    calls = []
+
+    def run(entries, workers):
+        calls.append([e["name"] for e in entries])
+        if len(calls) in steps:
+            change = steps[len(calls)]
+            change(path) if callable(change) else _edit(path, change)
+        return [
+            CheckOutcome(e["name"], e["type"], "h", True, "ok", 1.0, None) for e in entries
+        ]
+
+    options.setdefault("rounds", 3)
+    result = monitor_diag.monitor(
+        str(path), quiet=True, clock=clock, sleep=clock.sleep, run=run, **options
+    )
+    return result, calls
+
+
+def test_a_new_check_starts_and_the_others_keep_their_numbers(tmp_path):
+    result, calls = _reloading(tmp_path, [GW], {1: [GW, DB]})
+    assert calls[1] == ["db"]  # the new one at once, gw on its own schedule
+    assert [c.name for c in result.checks] == ["gw", "db"]
+    assert result.checks[0].checks == 3  # no restart from zero
+    assert result.checks[1].checks == 3
+
+
+def test_a_removed_check_stops(tmp_path):
+    result, calls = _reloading(tmp_path, [GW, DB], {1: [DB]})
+    assert [c.name for c in result.checks] == ["db"]
+    assert calls[1:] == [["db"], ["db"]]
+
+
+def test_the_same_name_with_another_target_is_a_new_check(tmp_path):
+    moved = {**GW, "host": "elsewhere"}
+    result, _calls = _reloading(tmp_path, [GW], {2: [moved]})
+    assert result.checks[0].target == "elsewhere"
+    assert result.checks[0].checks == 3
+
+
+def test_settings_of_a_running_check_change_in_place(tmp_path):
+    changed = {**GW, "every": 60, "fail_after": 4, "recover_after": 2}
+    result, _calls = _reloading(tmp_path, [GW], {1: [changed]})
+    check = result.checks[0]
+    assert (check.every, check.fail_after, check.recover_after) == (60.0, 4, 2)
+    assert check._filter.fail_after == 4
+    assert check.checks == 3
+
+
+def test_a_broken_file_changes_nothing_and_is_reported_once(tmp_path, monkeypatch, capsys):
+    path = tmp_path / "mon.json"
+    path.write_text(json.dumps({"checks": [GW]}))
+    clock = Clock()
+    calls = []
+
+    def run(entries, workers):
+        calls.append(1)
+        if len(calls) == 1:
+            path.write_text("{ not json")
+        return [CheckOutcome("gw", "ping", "h", True, "ok", 1.0, None)]
+
+    result = monitor_diag.monitor(
+        str(path), rounds=3, live=False, clock=clock, sleep=clock.sleep, run=run
+    )
+    assert result.checks[0].checks == 3
+    out = capsys.readouterr().out
+    assert out.count("not reloaded, the checks keep running") == 1
+
+
+def test_a_deleted_file_is_not_a_change(tmp_path):
+    result, _calls = _reloading(tmp_path, [GW], {1: lambda path: path.unlink()})
+    assert result.checks[0].checks == 3
+
+
+def test_targets_on_the_command_line_have_no_file_to_follow():
+    entries = [{"name": "gw", "type": "ping", "host": "h"}]
+    clock = Clock()
+    run = _runner({"gw": [True]})
+    result = monitor_diag.monitor(
+        None, entries=entries, rounds=1, quiet=True, clock=clock, sleep=clock.sleep, run=run
+    )
+    assert result.checks[0].checks == 1
+
+
+def test_a_long_interval_does_not_delay_a_reload(tmp_path):
+    slow = {**GW, "every": 3600}
+    path = tmp_path / "mon.json"
+    path.write_text(json.dumps({"checks": [slow]}))
+    clock = Clock()
+    calls = []
+
+    def run(entries, workers):
+        calls.append((clock(), [e["name"] for e in entries]))
+        if len(calls) == 1:
+            _edit(path, [slow, DB])
+        return [CheckOutcome(e["name"], e["type"], "h", True, "ok", 1.0, None) for e in entries]
+
+    monitor_diag.monitor(str(path), rounds=2, quiet=True, clock=clock, sleep=clock.sleep, run=run)
+    assert calls[1][1] == ["db"]
+    assert calls[1][0] - calls[0][0] <= monitor_diag.RELOAD_CHECK
+
+
+def test_reload_lines(capsys):
+    monitor_view.print_reload(None, ["new"], ["old"], 0.0)
+    assert "RELOADED" in capsys.readouterr().out
+    monitor_view.print_reload(None, [], [], 0.0)
+    assert "settings updated" in capsys.readouterr().out
