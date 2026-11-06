@@ -15,6 +15,9 @@ commands do. ``--metrics`` serves the checks to Prometheus at /metrics
 (see xping.exporters.prometheus), ``--status-page`` as a live web page (see
 xping.exporters.status_page).
 
+With ``--resume`` the checks go on from where the last monitor of the same
+source stopped (see xping.diagnostics.monitor_state).
+
 A check file is followed while monitor runs: when it changes, new checks
 start, removed ones stop and the others keep their numbers. A file that does
 not load is reported and the running checks carry on.
@@ -30,7 +33,7 @@ import time
 from collections.abc import Callable
 from types import SimpleNamespace
 
-from xping.diagnostics import history
+from xping.diagnostics import history, monitor_state
 from xping.diagnostics.check import ConfigError, display_target, load_config, run_entries
 from xping.diagnostics.notify import Notifier
 from xping.models.check import CheckOutcome
@@ -45,6 +48,7 @@ from xping.statefilter import StateFilter
 _TARGET_FIELDS = ("host", "port", "url", "domain", "target", "server", "interface")
 _DEFAULT_PORTS = {"tls": 443, "smtp": 25}
 RELOAD_CHECK = 2.0  # longest time a change of the check file goes unnoticed
+SAVE_EVERY = 60.0  # seconds between saves of the state (--resume)
 
 
 def history_target(entry: dict) -> str | None:
@@ -98,6 +102,18 @@ class _Tracker:
     def key(self) -> tuple[str, str, str]:
         """What makes a check the same one after the file changed."""
         return self.check.name, self.check.type, self.check.target
+
+    def resume(self, state: dict) -> bool:
+        """Go on from a saved state; False when it is unusable."""
+        check = self.check
+        try:
+            check.restore_state(state)
+        except (KeyError, TypeError, ValueError):
+            return False
+        self.state.state = check.up
+        if self.notifier is not None and check.up is False:
+            self.notifier.down_since = check.since  # "up again after" the whole outage
+        return True
 
     def adopt(self, other: _Tracker, now: float) -> None:
         """Take the settings of the same check from a reloaded file."""
@@ -242,6 +258,7 @@ def monitor(
     metrics: tuple[str, int] | None = None,
     status_page: tuple[str, int] | None = None,
     remind: float | None = None,
+    resume: bool = False,
 ) -> MonitorResult:
     """Run the checks in *path* (or the ready-made *entries*, e.g. built from
     command-line targets) until Ctrl-C, or *rounds* runs of each. With
@@ -276,6 +293,15 @@ def monitor(
     trackers = [track(entry, index) for index, entry in enumerate(entries, 1)]
     result.checks = [tracker.check for tracker in trackers]
     file_watch = _FileWatch(path) if path is not None else None
+    state_file = None
+    if resume:
+        state_file = monitor_state.state_path(os.path.abspath(path) if path else source)
+        saved = monitor_state.load(state_file)
+        result.resumed = sum(
+            t.resume(saved[monitor_state.key(t.check)])
+            for t in trackers
+            if monitor_state.key(t.check) in saved
+        )
 
     # a scrape (another thread) must not see a run half applied
     lock = threading.Lock()
@@ -325,10 +351,30 @@ def monitor(
         if not quiet:
             monitor_view.print_reload(result, added, [t.check.name for t in removed], clock())
 
+    saved_at = clock()
+
+    def save_state() -> None:
+        nonlocal state_file, saved_at, printed
+        if state_file is None:
+            return
+        saved_at = clock()
+        try:
+            with lock:
+                monitor_state.save(state_file, result.checks)
+        except OSError as exc:
+            if not quiet:
+                if live and printed:
+                    clear_lines(printed)
+                    printed = 0
+                warn(f"could not save the state of the checks: {exc}")
+            state_file = None  # warn once
+
     try:
         while any(pending(tracker) for tracker in trackers):
             if file_watch is not None and file_watch.changed():
                 reload(file_watch)
+            if clock() - saved_at >= SAVE_EVERY:
+                save_state()
             now = clock()
             ready = [tracker for tracker in trackers if pending(tracker) and tracker.due <= now]
             if ready:
@@ -357,6 +403,7 @@ def monitor(
         if not quiet:
             print()
     finally:
+        save_state()
         for server in servers:
             server.stop()
         for tracker in trackers:

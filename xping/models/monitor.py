@@ -23,6 +23,8 @@ class MonitorSample:
 # failures, uptime, average, outages) count every run since the start, so a
 # monitor that runs for months does not grow in memory.
 KEEP_SAMPLES = 1000
+# Runs saved per check by --resume, for the trends and the status page.
+SAVED_SAMPLES = 100
 
 
 @dataclass
@@ -59,6 +61,43 @@ class MonitoredCheck:
         """New fail_after / recover_after from here on."""
         self.fail_after = self._filter.fail_after = fail_after
         self.recover_after = self._filter.recover_after = recover_after
+
+    def export_state(self) -> dict:
+        """What --resume keeps of this check between two monitors."""
+        keep = max(SAVED_SAMPLES, self.fail_after, self.recover_after)
+        return {
+            "runs": self._runs,
+            "failures": self._failures,
+            "value_total": self._value_total,
+            "value_count": self._value_count,
+            "spans": self._spans,
+            "up": self.up,
+            "since": self.since,
+            "detail": self.detail,
+            "samples": [[s.ts, s.ok, s.value] for s in self.samples[-keep:]],
+        }
+
+    def restore_state(self, state: dict) -> None:
+        """Go on from export_state(); raises KeyError, TypeError or ValueError
+        on a state that does not make sense, leaving the check as it was."""
+        samples = [
+            MonitorSample(float(ts), bool(ok), None if value is None else float(value))
+            for ts, ok, value in state["samples"]
+        ]
+        spans = [
+            (float(start), None if end is None else float(end)) for start, end in state["spans"]
+        ]
+        up, since = state["up"], state["since"]
+        if up not in (True, False, None) or not isinstance(since, int | float | None):
+            raise ValueError("bad state")
+        runs, failures = int(state["runs"]), int(state["failures"])
+        value_total, value_count = float(state["value_total"]), int(state["value_count"])
+        self._runs, self._failures = runs, failures
+        self._value_total, self._value_count = value_total, value_count
+        self._spans, self.samples = spans, samples
+        self.up, self.since = up, since
+        self.detail = str(state["detail"])
+        self._filter.state = up  # the runs that come next start a new streak
 
     def record(self, sample: MonitorSample) -> None:
         """Add one run: totals, outages and the recent samples."""
@@ -141,6 +180,7 @@ class MonitorResult:
     checks: list[MonitoredCheck] = field(default_factory=list)
     metrics_url: str | None = None  # where --metrics served them
     status_url: str | None = None  # where --status-page served them
+    resumed: int = 0  # checks that went on from a saved state (--resume)
 
     @property
     def down(self) -> list[str]:

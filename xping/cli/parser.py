@@ -689,6 +689,12 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         help="Keep every result in ~/.xping/history (see: xping history)",
     )
     p_monitor.add_argument(
+        "--resume",
+        action="store_true",
+        help="Go on from the last monitor of the same checks: totals, uptime, "
+        "outages and state survive a restart",
+    )
+    p_monitor.add_argument(
         "--metrics",
         type=_listen_address,
         default=None,

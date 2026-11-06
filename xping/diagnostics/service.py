@@ -98,6 +98,7 @@ def monitor_arguments(args) -> list[str]:
         out += ["--workers", str(args.workers)]
     if args.save:
         out.append("--save")
+    out.append("--resume")  # a restart of the service keeps the numbers
     if args.fail_after != 1:
         out += ["--fail-after", str(args.fail_after)]
     if args.recover_after != 1:

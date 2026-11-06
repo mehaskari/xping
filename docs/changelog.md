@@ -24,6 +24,11 @@
   start, removed ones stop and the others keep their numbers, without a
   restart. A file that does not load is reported and the checks carry on.
 
+- `xping monitor --resume` keeps the runs, uptime, outages and state of each
+  check across restarts (saved every minute in `~/.xping/monitor/`). A check
+  that was down stays down without alerting again. `--install-service`
+  always uses it.
+
 ### Security
 - The file `--install-service` writes can be read only by its owner, since
   a `--webhook` URL in it can hold a secret.
