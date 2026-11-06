@@ -407,6 +407,7 @@ def cmd_monitor(args: argparse.Namespace) -> object:
             metrics=args.metrics,
             status_page=args.status_page,
             remind=args.remind,
+            resume=args.resume,
         )
     except (ConfigError, ListenError) as exc:
         raise UsageError(str(exc)) from exc

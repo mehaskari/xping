@@ -1389,7 +1389,7 @@ xping check checks.toml --markdown > status.md
 #### `xping monitor`
 
 ```
-xping monitor [FILE | TARGET...] [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL] [--remind SEC] [--metrics [HOST:]PORT] [--status-page [HOST:]PORT]
+xping monitor [FILE | TARGET...] [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL] [--remind SEC] [--resume] [--metrics [HOST:]PORT] [--status-page [HOST:]PORT]
 ```
 
 A live dashboard for a [check file](#5-batch-check-files): every check runs
@@ -1438,6 +1438,7 @@ characters), and as a last resort the Detail column is left out.
 | `--uninstall-service` | — | Stop and remove the background monitor |
 | `--service-status` | — | Show whether it runs, its command and its log (exit 1 when it does not run) |
 | `--save` | — | Keep every result in the [history](#xping-history), under the same command and target as the single command (`xping history ping 1.1.1.1`) |
+| `--resume` | — | Go on from the last monitor of the same checks (see below). Always on for `--install-service` |
 | `--notify`, `--webhook URL`, `--remind SEC` | — | [Alerts](#35-watch-mode-and-alerts) on every DOWN/UP change of any check |
 | `--metrics [HOST:]PORT` | — | Serve the checks to Prometheus at `http://HOST:PORT/metrics` (see below). Without a host only this machine can scrape: `:9101` listens on 127.0.0.1; `0.0.0.0:9101` (or `[::]:9101`) on every interface |
 | `--status-page [HOST:]PORT` | — | Serve a live web page of the checks at `http://HOST:PORT/` and the same as JSON at `/status.json` (see below). The address works like `--metrics`, and the two can share a port |
@@ -1498,6 +1499,21 @@ and it starts from zero as a new check. A file with a mistake is reported
 once and the running checks carry on until it is fixed. Targets given on
 the command line have no file to follow.
 
+**Surviving a restart.** With `--resume`, monitor goes on from where the
+last monitor of the same file (or the same targets) stopped: runs, failures,
+uptime, outages, the current state and the latest runs. The state is saved
+to `~/.xping/monitor/` every minute and at the end, readable only by you, so
+after a crash at most the last minute is lost.
+
+A check that was down when monitor stopped is still down afterwards, so
+nothing alerts again, and its UP message counts the whole outage. One that
+went down meanwhile alerts on its first failed run. The time monitor was not
+running is not counted: uptime is the share of passed runs, and an outage
+that began and ended in between is not seen. A check that changed its name,
+type or target starts from zero. A background monitor
+(`--install-service`) always resumes; reinstall one made by an older
+version to get this.
+
 **Status page.** With `--status-page`, monitor also serves a web page of
 its checks, with nothing else to install: the overall state, then each
 check with its state, latest value, uptime, how long the state has lasted
@@ -1515,7 +1531,8 @@ The same port also serves `/metrics`. `:8080` listens on 127.0.0.1 only;
 `0.0.0.0:8080` shows the page to everyone who can reach this machine, with
 each check's name, target and latest result and no password, so put a
 reverse proxy with a login in front of it if that is too much. Like the
-`--metrics` numbers, the page starts from zero when monitor restarts.
+`--metrics` numbers, the page starts from zero when monitor restarts,
+unless it runs with `--resume`.
 
 **Prometheus and Grafana.** With `--metrics`, monitor also serves its
 checks at `/metrics` in the Prometheus text format, so Prometheus (or

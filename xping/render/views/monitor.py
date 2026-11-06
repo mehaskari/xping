@@ -109,6 +109,8 @@ def print_header(result) -> None:
     print(section_header(f"MONITOR  {Path(result.source).name}", "◉"))
     print(kv("Checks", str(len(result.checks))))
     print(kv("Every", _every_text(result)))
+    if result.resumed:
+        print(kv("Resumed", f"{result.resumed} of {len(result.checks)} checks"))
     if result.metrics_url:
         print(kv("Metrics", result.metrics_url))
     if result.status_url:

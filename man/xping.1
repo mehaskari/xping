@@ -1158,6 +1158,13 @@ passing runs (defaults 1; per check:
 Alert on every DOWN / UP change of any check (see
 .BR "WATCH MODE" ).
 .TP
+.B \-\-resume
+Go on from the last monitor of the same check file or targets: runs,
+failures, uptime, outages, state and the latest runs, kept in
+.IR ~/.xping/monitor/ .
+Always on for
+.BR \-\-install\-service .
+.TP
 .BI \-\-metrics " \fR[\fPHOST\fR:]\fPPORT"
 Serve the checks to Prometheus at
 .BI http:// HOST : PORT /metrics
@@ -1870,6 +1877,10 @@ Saved target profiles (created automatically by
 .I ~/.xping/health_history.json
 Health score history per host (appended by
 .BR "xping health" ).
+.TP
+.I ~/.xping/monitor/
+The state kept by
+.BR "xping monitor \-\-resume" .
 .TP
 .I ~/.xping/completions/
 Completion scripts written by

@@ -34,12 +34,12 @@ def test_monitor_arguments_rebuild_the_command(tmp_path):
     checks = tmp_path / "c.toml"
     checks.write_text("")
     assert service.monitor_arguments(_args(targets=[str(checks)], webhook="https://h.test/x")) == [
-        "monitor", str(checks.resolve()), "--every", "30", "--save", "--fail-after", "3",
+        "monitor", str(checks.resolve()), "--every", "30", "--save", "--resume", "--fail-after", "3",
         "--webhook", "https://h.test/x",
     ]
     assert service.monitor_arguments(_args(targets=["1.1.1.1", "db:5432"], save=False,
                                            fail_after=1, every=10.0, notify=True)) == [
-        "monitor", "1.1.1.1", "db:5432", "--every", "10", "--notify",
+        "monitor", "1.1.1.1", "db:5432", "--every", "10", "--resume", "--notify",
     ]
 
 
