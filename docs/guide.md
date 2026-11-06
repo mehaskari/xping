@@ -230,6 +230,7 @@ so `--max-loss`, `--max-latency`, the exit code and `--save` apply to it.
 |--------|--------|
 | `--notify` | Desktop notification on every DOWN/UP change: Notification Center on macOS, `notify-send` on Linux, the terminal bell elsewhere |
 | `--webhook URL` | POST one event per change to URL: Slack, Discord, Telegram, ntfy or any JSON endpoint |
+| `--remind SEC` | With either of them: repeat the alert every SEC seconds while the target stays down |
 
 Rules:
 
@@ -242,6 +243,10 @@ Rules:
   row** unless you set `--fail-after`, so a single dropped packet is not
   an outage. The UP message measures the outage from its first failed
   check.
+- With `--remind`, a long outage is not one message that scrolls away:
+  `--remind 900` sends `is still DOWN after 15m00s` every 15 minutes until
+  the target is back. The event is `still_down`. A reminder goes out with
+  a run of the check, so it can be up to one interval late.
 - Webhooks are sent in the background, so a slow endpoint never delays
   checks. A failing endpoint is reported once and never stops the watch.
 
@@ -479,7 +484,7 @@ will sound choppy".
 | `-c`, `--count N` | 8 | Ping packets used for scoring |
 | `-t`, `--timeout SEC` | 2.0 | Per-packet timeout |
 | `--min-score N` | — | Exit 1 if the score is below N |
-| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL` | every: 30 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
+| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL`, `--remind SEC` | every: 30 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
 | `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
@@ -541,7 +546,7 @@ Latency colours, used everywhere in xping: **green** < 30 ms,
 | `--until-up` | — | Ping until the host answers, then exit 0 ([watch mode](#35-watch-mode-and-alerts)) |
 | `--every SEC` | 2 | Seconds between pings with `--until-up` |
 | `--fail-after N`, `--recover-after N` | 3 / 1 | Lost pings in a row before DOWN, replies in a row before UP again ([watch mode](#35-watch-mode-and-alerts)) |
-| `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) in watch mode (`--watch`: down = 3 lost pings in a row) |
+| `--notify`, `--webhook URL`, `--remind SEC` | — | [Alerts](#35-watch-mode-and-alerts) in watch mode (`--watch`: down = 3 lost pings in a row) |
 | `--max-loss PCT` | — | Exit 1 if packet loss is above PCT % |
 | `--max-latency MS` | — | Exit 1 if the average RTT is above MS |
 | `-4`, `-6` | — | Address family |
@@ -653,7 +658,7 @@ service listening, and is the firewall letting me through?".
 | `-t`, `--timeout SEC` | 2.0 | Per-attempt timeout |
 | `-i`, `--interval SEC` | 0.5 | Interval between attempts |
 | `--max-latency MS` | — | Exit 1 if the average connect time is above MS |
-| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL` | every: 2 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
+| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL`, `--remind SEC` | every: 2 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
 | `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
@@ -698,7 +703,7 @@ The request is chosen by port (`--probe auto`), or set explicitly:
 | `--probe KIND` | auto | `auto`, `dns`, `ntp`, `snmp` or `empty` |
 | `--payload HEX` | — | Send these bytes instead, e.g. `--payload "de ad be ef"` |
 | `--max-latency MS` | — | Exit 1 if the average reply time is above MS |
-| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
+| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL`, `--remind SEC` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
 | `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
@@ -1004,7 +1009,7 @@ a slow resolver.
 | `-t`, `--timeout SEC` | 8.0 | Request timeout |
 | `--expect-status CODE` | — | Exit 1 unless the final status is CODE. Without it, any status ≥ 400 fails. |
 | `--max-latency MS` | — | Exit 1 if the total request time is above MS |
-| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
+| `--watch`, `--until-up`, `--every SEC`, `--fail-after N`, `--recover-after N`, `--notify`, `--webhook URL`, `--remind SEC` | every: 5 | [Watch mode and alerts](#35-watch-mode-and-alerts) |
 | `-4`, `-6` | — | Address family |
 | `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
@@ -1384,7 +1389,7 @@ xping check checks.toml --markdown > status.md
 #### `xping monitor`
 
 ```
-xping monitor [FILE | TARGET...] [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL] [--metrics [HOST:]PORT] [--status-page [HOST:]PORT]
+xping monitor [FILE | TARGET...] [--every SEC] [-w N] [--rounds N] [--save] [--notify] [--webhook URL] [--remind SEC] [--metrics [HOST:]PORT] [--status-page [HOST:]PORT]
 ```
 
 A live dashboard for a [check file](#5-batch-check-files): every check runs
@@ -1433,7 +1438,7 @@ characters), and as a last resort the Detail column is left out.
 | `--uninstall-service` | — | Stop and remove the background monitor |
 | `--service-status` | — | Show whether it runs, its command and its log (exit 1 when it does not run) |
 | `--save` | — | Keep every result in the [history](#xping-history), under the same command and target as the single command (`xping history ping 1.1.1.1`) |
-| `--notify`, `--webhook URL` | — | [Alerts](#35-watch-mode-and-alerts) on every DOWN/UP change of any check |
+| `--notify`, `--webhook URL`, `--remind SEC` | — | [Alerts](#35-watch-mode-and-alerts) on every DOWN/UP change of any check |
 | `--metrics [HOST:]PORT` | — | Serve the checks to Prometheus at `http://HOST:PORT/metrics` (see below). Without a host only this machine can scrape: `:9101` listens on 127.0.0.1; `0.0.0.0:9101` (or `[::]:9101`) on every interface |
 | `--status-page [HOST:]PORT` | — | Serve a live web page of the checks at `http://HOST:PORT/` and the same as JSON at `/status.json` (see below). The address works like `--metrics`, and the two can share a port |
 

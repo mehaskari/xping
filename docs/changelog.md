@@ -16,6 +16,10 @@
   own), gets the body that service expects, so alerts reach a phone with
   no adapter.
 
+- `--remind SEC` repeats the alert while a target stays down (`is still
+  DOWN after 15m00s`, event `still_down`), in every watch mode and in
+  `xping monitor`; kept by `--install-service`.
+
 ### Security
 - The file `--install-service` writes can be read only by its owner, since
   a `--webhook` URL in it can hold a secret.

@@ -63,10 +63,10 @@ def _delivery(url: str, payload: dict) -> tuple[str, dict]:
     parts = urlsplit(url)
     if _is_ntfy(parts):
         scheme = "https" if parts.scheme == "ntfy" else parts.scheme
-        down = payload["event"] == "down"
+        down = payload["event"] != "up"
         return urlunsplit((scheme, parts.netloc, "/", "", "")), {
             "topic": parts.path.strip("/"),
-            "title": f"{payload['target']} is {payload['event'].upper()}",
+            "title": f"{payload['target']} is {'DOWN' if down else 'UP'}",
             "message": payload["text"],
             "priority": 4 if down else 3,
         }
@@ -140,13 +140,16 @@ class Notifier:
         desktop: bool = False,
         webhook: str | None = None,
         clock=time.time,
+        remind: float | None = None,
     ):
         self.target = target
         self.check = check
         self.desktop = desktop
         self.webhook = webhook
         self.clock = clock
+        self.remind = remind  # seconds between "still down" alerts, or None
         self.down_since: float | None = None
+        self._last_alert: float | None = None
         self.sent: list[dict] = []  # every event, for tests and summaries
         self._threads: list[threading.Thread] = []
         self._warned: set[str] = set()
@@ -182,16 +185,30 @@ class Notifier:
             return
         if ok:
             self.event("up", detail, latency)
-            self.down_since = None
+            self.down_since = self._last_alert = None
         else:
             self.down_since = start
             self.event("down", detail, latency)
+
+    def still_down(self, detail: str = "") -> None:
+        """Feed every run: while the target is down, repeat the alert each
+        *remind* seconds, so one message lost among others is not the only
+        one. Counted from the latest alert (or the start of the outage, when
+        the first check already failed and no alert was sent)."""
+        if not self.remind or self.down_since is None:
+            return
+        last = self.down_since if self._last_alert is None else self._last_alert
+        if self.clock() - last >= self.remind:
+            self.event("still_down", detail)
 
     # -- delivery ---------------------------------------------------------
 
     def message(self, kind: str, detail: str) -> str:
         if kind == "down":
             text = f"{self.target} ({self.check}) is DOWN"
+        elif kind == "still_down":
+            lasted = _duration(self.clock() - (self.down_since or self.clock()))
+            text = f"{self.target} ({self.check}) is still DOWN after {lasted}"
         else:
             text = f"{self.target} ({self.check}) is UP"
             if self.down_since is not None:
@@ -201,6 +218,7 @@ class Notifier:
     def event(self, kind: str, detail: str = "", latency=None) -> None:
         if not self.enabled:
             return
+        self._last_alert = self.clock()
         text = self.message(kind, detail)
         payload = {
             "source": "xping",
@@ -211,11 +229,11 @@ class Notifier:
             "latency_ms": round(latency, 3) if isinstance(latency, int | float) else None,
             "time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "machine": socket.gethostname(),
-            "text": f"{'🔴' if kind == 'down' else '🟢'} xping: {text}",
+            "text": f"{'🟢' if kind == 'up' else '🔴'} xping: {text}",
         }
         payload["content"] = payload["text"]
         self.sent.append(payload)
-        if self.desktop and not desktop_notify(f"xping — {kind.upper()}", text):
+        if self.desktop and not desktop_notify(f"xping — {'UP' if kind == 'up' else 'DOWN'}", text):
             print("\a", end="", flush=True)  # no notifier: at least ring the bell
             self._warn_once(
                 "desktop",

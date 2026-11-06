@@ -71,10 +71,19 @@ def _notifier(args: argparse.Namespace, target: str, check: str):
     webhook = getattr(args, "webhook", None)
     if not (desktop or webhook):
         return None
-    return Notifier(target, check, desktop=desktop, webhook=webhook)
+    remind = getattr(args, "remind", None)
+    return Notifier(target, check, desktop=desktop, webhook=webhook, remind=remind)
+
+
+def _require_alert_for_remind(args: argparse.Namespace) -> None:
+    if getattr(args, "remind", None) and not (
+        getattr(args, "notify", False) or getattr(args, "webhook", None)
+    ):
+        raise UsageError("--remind needs --notify or --webhook")
 
 
 def _require_watch_for_notify(args: argparse.Namespace) -> None:
+    _require_alert_for_remind(args)
     if (getattr(args, "notify", False) or getattr(args, "webhook", None)) and not (
         _watch_requested(args)
     ):
@@ -369,6 +378,7 @@ def cmd_monitor(args: argparse.Namespace) -> object:
     from xping.diagnostics.monitor import monitor
     from xping.exporters.prometheus import ListenError
 
+    _require_alert_for_remind(args)
     if args.install_service or args.uninstall_service or args.service_status:
         return _monitor_service(args)
     targets = args.targets
@@ -396,6 +406,7 @@ def cmd_monitor(args: argparse.Namespace) -> object:
             quiet=output_suppressed(args),
             metrics=args.metrics,
             status_page=args.status_page,
+            remind=args.remind,
         )
     except (ConfigError, ListenError) as exc:
         raise UsageError(str(exc)) from exc

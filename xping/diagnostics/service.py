@@ -106,6 +106,8 @@ def monitor_arguments(args) -> list[str]:
         out.append("--notify")
     if args.webhook:
         out += ["--webhook", args.webhook]
+    if getattr(args, "remind", None):
+        out += ["--remind", f"{args.remind:g}"]
     for option in ("metrics", "status_page"):
         address = getattr(args, option, None)
         if address:

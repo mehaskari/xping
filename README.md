@@ -576,6 +576,7 @@ xping tcp db.local 5432 --until-up -q --notify      # "it's back" and exit
 - `--fail-after N` / `--recover-after N` confirm a change only after N
   failed or passing checks in a row, so one blip alerts nobody.
   `ping --watch` defaults to `--fail-after 3`.
+- `--remind SEC` repeats the alert every SEC seconds while the target stays down.
 - `--notify` uses Notification Center on macOS and `notify-send` on Linux;
   elsewhere it rings the terminal bell.
 - `--webhook` POSTs one JSON object per event. `text` (Slack, Mattermost,

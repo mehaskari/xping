@@ -120,6 +120,9 @@ def test_watch_notifies_after_fail_after():
         def observe(self, ok, previous, detail, latency, final=False):
             events.append((ok, previous))
 
+        def still_down(self, detail):
+            pass
+
         def flush(self):
             pass
 
