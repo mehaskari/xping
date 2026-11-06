@@ -55,6 +55,11 @@ class MonitoredCheck:
         for sample in initial:
             self.record(sample)
 
+    def set_debounce(self, fail_after: int, recover_after: int) -> None:
+        """New fail_after / recover_after from here on."""
+        self.fail_after = self._filter.fail_after = fail_after
+        self.recover_after = self._filter.recover_after = recover_after
+
     def record(self, sample: MonitorSample) -> None:
         """Add one run: totals, outages and the recent samples."""
         self._runs += 1

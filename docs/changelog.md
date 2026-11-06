@@ -20,6 +20,10 @@
   DOWN after 15m00s`, event `still_down`), in every watch mode and in
   `xping monitor`; kept by `--install-service`.
 
+- `xping monitor` follows its check file: when the file changes, new checks
+  start, removed ones stop and the others keep their numbers, without a
+  restart. A file that does not load is reported and the checks carry on.
+
 ### Security
 - The file `--install-service` writes can be read only by its owner, since
   a `--webhook` URL in it can hold a secret.

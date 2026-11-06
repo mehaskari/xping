@@ -1121,6 +1121,9 @@ an existing file is never overwritten.
 .B \-\-save
 Keep the whole report in the history (one history per check file).
 .SS monitor
+A check file is followed while monitor runs: when it changes, new checks
+start, removed ones stop and the others keep their numbers.
+A file that does not load is reported and the checks carry on.
 .TP
 .BI \-\-every " SEC"
 Seconds between runs of each check, unless the check sets

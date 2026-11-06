@@ -14,11 +14,16 @@ Alerts (``--notify`` / ``--webhook``) fire on every down/up change and
 commands do. ``--metrics`` serves the checks to Prometheus at /metrics
 (see xping.exporters.prometheus), ``--status-page`` as a live web page (see
 xping.exporters.status_page).
+
+A check file is followed while monitor runs: when it changes, new checks
+start, removed ones stop and the others keep their numbers. A file that does
+not load is reported and the running checks carry on.
 """
 
 from __future__ import annotations
 
 import functools
+import os
 import sys
 import threading
 import time
@@ -31,7 +36,7 @@ from xping.diagnostics.notify import Notifier
 from xping.models.check import CheckOutcome
 from xping.models.monitor import MonitoredCheck, MonitorResult, MonitorSample
 from xping.render.errors import warn
-from xping.render.progress import line_buffered
+from xping.render.progress import clear_lines, line_buffered
 from xping.render.views import monitor as monitor_view
 from xping.statefilter import StateFilter
 
@@ -39,6 +44,7 @@ from xping.statefilter import StateFilter
 # under the same history target as e.g. `xping tls example.com --save`.
 _TARGET_FIELDS = ("host", "port", "url", "domain", "target", "server", "interface")
 _DEFAULT_PORTS = {"tls": 443, "smtp": 25}
+RELOAD_CHECK = 2.0  # longest time a change of the check file goes unnoticed
 
 
 def history_target(entry: dict) -> str | None:
@@ -85,9 +91,26 @@ class _Tracker:
         self.save = save
         self.target = history_target(entry) if save else None
         self.state = StateFilter(check.fail_after, check.recover_after)
+        self.due = 0.0  # when the next run starts
+        self.runs = 0  # runs by this monitor (the rounds of --rounds)
+
+    @property
+    def key(self) -> tuple[str, str, str]:
+        """What makes a check the same one after the file changed."""
+        return self.check.name, self.check.type, self.check.target
+
+    def adopt(self, other: _Tracker, now: float) -> None:
+        """Take the settings of the same check from a reloaded file."""
+        self.entry = other.entry
+        self.check.every = other.check.every
+        self.due = min(self.due, now + other.check.every)
+        self.check.set_debounce(other.check.fail_after, other.check.recover_after)
+        self.state.fail_after = other.check.fail_after
+        self.state.recover_after = other.check.recover_after
 
     def apply(self, outcome: CheckOutcome, ts: float, report: Callable | None) -> None:
         check = self.check
+        self.runs += 1
         value = None
         if outcome.result is not None and check.metric:
             _metric, value = history.headline(check.type, outcome.result)
@@ -113,6 +136,48 @@ class _Tracker:
             except OSError as exc:
                 warn(f"could not save {check.name} to history: {exc}")
                 self.target = None  # warn once per check
+
+
+class _FileWatch:
+    """Notices that a file changed; a missing file is not a change."""
+
+    def __init__(self, path: str):
+        self.path = path
+        self.stamp = self._stamp()
+
+    def _stamp(self) -> tuple[int, int] | None:
+        try:
+            stat = os.stat(self.path)
+        except OSError:
+            return None
+        return stat.st_mtime_ns, stat.st_size
+
+    def changed(self) -> bool:
+        stamp = self._stamp()
+        if stamp is None or stamp == self.stamp:
+            return False
+        self.stamp = stamp
+        return True
+
+
+def _merge(
+    trackers: list[_Tracker], fresh: list[_Tracker], now: float
+) -> tuple[list[_Tracker], list[str], list[_Tracker]]:
+    """The checks of a reloaded file, in its order: the ones already running
+    go on, the new ones start now. Returns them, the names of the new ones
+    and the trackers of the removed ones."""
+    running = {tracker.key: tracker for tracker in trackers}
+    merged, added = [], []
+    for tracker in fresh:
+        known = running.pop(tracker.key, None)
+        if known is None:
+            tracker.due = now
+            added.append(tracker.check.name)
+            merged.append(tracker)
+        else:
+            known.adopt(tracker, now)
+            merged.append(known)
+    return merged, added, list(running.values())
 
 
 def _serve(
@@ -188,8 +253,8 @@ def monitor(
         entries = load_config(path)
     source = path or ", ".join(str(e["name"]) for e in entries)
     result = MonitorResult(source=source, started=clock())
-    trackers = []
-    for index, entry in enumerate(entries, 1):
+
+    def track(entry: dict, index: int) -> _Tracker:
         followed = history.followed_metrics(entry["type"])
         check = MonitoredCheck(
             name=str(entry["name"]),
@@ -201,13 +266,16 @@ def monitor(
             metric=followed[0].label if followed else None,
             unit=followed[0].unit if followed else "",
         )
-        result.checks.append(check)
         notifier = (
             Notifier(check.name, check.type, notify, webhook, clock=clock, remind=remind)
             if notify or webhook
             else None
         )
-        trackers.append(_Tracker(entry, check, notifier, save))
+        return _Tracker(entry, check, notifier, save)
+
+    trackers = [track(entry, index) for index, entry in enumerate(entries, 1)]
+    result.checks = [tracker.check for tracker in trackers]
+    file_watch = _FileWatch(path) if path is not None else None
 
     # a scrape (another thread) must not see a run half applied
     lock = threading.Lock()
@@ -225,32 +293,62 @@ def monitor(
     if not quiet:
         monitor_view.print_header(result)
 
-    due = [result.started] * len(entries)
+    for tracker in trackers:
+        tracker.due = result.started
     printed = 0
 
-    def pending(i: int) -> bool:
-        return rounds is None or trackers[i].check.checks < rounds
+    def pending(tracker: _Tracker) -> bool:
+        return rounds is None or tracker.runs < rounds
+
+    def reload(watch: _FileWatch) -> None:
+        nonlocal trackers, printed, report
+        if live and printed:  # the message goes above the table
+            clear_lines(printed)
+            printed = 0
+        try:
+            loaded = load_config(watch.path)
+            fresh = [track(entry, index) for index, entry in enumerate(loaded, 1)]
+        except (ConfigError, OSError) as exc:
+            if not quiet:
+                warn(f"{watch.path} not reloaded, the checks keep running: {exc}")
+            return
+        with lock:
+            trackers, added, removed = _merge(trackers, fresh, clock())
+            result.checks = [tracker.check for tracker in trackers]
+        for tracker in removed:
+            if tracker.notifier is not None:
+                tracker.notifier.flush()
+        if report is not None:
+            report = functools.partial(
+                monitor_view.print_change, widths=monitor_view.change_widths(result)
+            )
+        if not quiet:
+            monitor_view.print_reload(result, added, [t.check.name for t in removed], clock())
 
     try:
-        while any(pending(i) for i in range(len(entries))):
+        while any(pending(tracker) for tracker in trackers):
+            if file_watch is not None and file_watch.changed():
+                reload(file_watch)
             now = clock()
-            ready = [i for i in range(len(entries)) if pending(i) and due[i] <= now]
+            ready = [tracker for tracker in trackers if pending(tracker) and tracker.due <= now]
             if ready:
-                outcomes = run([entries[i] for i in ready], workers)
+                outcomes = run([tracker.entry for tracker in ready], workers)
                 finished = clock()
                 with lock:
-                    for i, outcome in zip(ready, outcomes, strict=True):
-                        trackers[i].apply(outcome, finished, report)
+                    for tracker, outcome in zip(ready, outcomes, strict=True):
+                        tracker.apply(outcome, finished, report)
                         # the next run is due one interval after this one was;
                         # after a slow run, start from now instead of catching up
-                        due[i] = max(due[i] + trackers[i].check.every, finished)
+                        tracker.due = max(tracker.due + tracker.check.every, finished)
             if live:
                 with lock:
                     printed = monitor_view.redraw(result, clock(), printed)
-            waiting = [due[i] for i in range(len(entries)) if pending(i)]
+            waiting = [tracker.due for tracker in trackers if pending(tracker)]
             if not waiting:
                 break
             pause = min(waiting) - clock()
+            if file_watch is not None:
+                pause = min(pause, RELOAD_CHECK)
             if live:
                 pause = min(pause, 1.0)  # keep the "for" column ticking
             if pause > 0:
