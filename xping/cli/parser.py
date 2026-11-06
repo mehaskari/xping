@@ -141,6 +141,13 @@ def _add_notify(p: argparse.ArgumentParser) -> None:
         metavar="URL",
         help="POST an event to URL on every down/up change (Slack, Discord, Telegram, ntfy, …)",
     )
+    p.add_argument(
+        "--remind",
+        type=_positive_float,
+        default=None,
+        metavar="SEC",
+        help="Repeat the alert every SEC seconds while the target stays down",
+    )
 
 
 def _add_debounce(p: argparse.ArgumentParser, fail_default: int | None = 1) -> None:

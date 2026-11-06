@@ -1387,7 +1387,7 @@ POST one JSON object per DOWN / UP change to
 (http or https).
 The fields are
 .BR source ,
-.BR event " (down or up),"
+.BR event " (down, up or still_down),"
 .BR target ,
 .BR check ,
 .BR detail ,
@@ -1407,6 +1407,16 @@ or
 .BI ntfy:// HOST / TOPIC
 for a server of your own) get a body of their own, picked from the URL.
 Delivery happens in the background; a failure is reported once.
+.TP
+.BI \-\-remind " SEC"
+With
+.B \-\-notify
+or
+.BR \-\-webhook ,
+repeat the alert every
+.I SEC
+seconds while the target stays down (event
+.BR still_down ).
 .PP
 The first check only sets the baseline, except that
 .B \-\-until\-up

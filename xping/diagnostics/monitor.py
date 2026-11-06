@@ -105,6 +105,8 @@ class _Tracker:
                 self.notifier.observe(
                     bool(check.up), previous, outcome.detail, latency, since=changed_at
                 )
+        if self.notifier is not None:
+            self.notifier.still_down(outcome.detail)
         if self.target is not None and outcome.result is not None:
             try:
                 history.record(check.type, self.target, outcome.result, outcome.ok)
@@ -174,6 +176,7 @@ def monitor(
     entries: list[dict] | None = None,
     metrics: tuple[str, int] | None = None,
     status_page: tuple[str, int] | None = None,
+    remind: float | None = None,
 ) -> MonitorResult:
     """Run the checks in *path* (or the ready-made *entries*, e.g. built from
     command-line targets) until Ctrl-C, or *rounds* runs of each. With
@@ -200,7 +203,7 @@ def monitor(
         )
         result.checks.append(check)
         notifier = (
-            Notifier(check.name, check.type, notify, webhook, clock=clock)
+            Notifier(check.name, check.type, notify, webhook, clock=clock, remind=remind)
             if notify or webhook
             else None
         )

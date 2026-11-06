@@ -97,6 +97,11 @@ def test_service_file_is_private(tmp_path, kind):
     assert service.service_path(kind, tmp_path).stat().st_mode & 0o777 == 0o600
 
 
+def test_service_keeps_the_reminder():
+    args = _args(remind=900.0, webhook="https://x/y")
+    assert service.monitor_arguments(args)[-2:] == ["--remind", "900"]
+
+
 def test_failed_start_is_reported(tmp_path):
     def run(cmd):
         return subprocess.CompletedProcess(cmd, 5, "", "Bootstrap failed: 5: Input/output error")

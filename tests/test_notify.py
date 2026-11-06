@@ -160,6 +160,83 @@ def test_ping_watch_needs_three_losses(monkeypatch):
     assert "3 pings lost in a row" in n.sent[0]["text"]
 
 
+def _reminding(clock, remind=600):
+    n = Notifier("db:5432", "tcp", desktop=True, clock=clock, remind=remind)
+    n.observe(True, None)
+    return n
+
+
+def test_reminders_while_down_and_none_after_recovery():
+    clock = Clock()
+    n = _reminding(clock)
+    n.observe(False, True, "refused")
+    for _ in range(59):  # a run every 30 s for 29.5 minutes
+        clock.sleep(30)
+        n.still_down("refused")
+    events = [e["event"] for e in n.sent]
+    assert events == ["down", "still_down", "still_down"]
+    assert "still DOWN after 10m00s — refused" in n.sent[1]["text"]
+    assert n.sent[1]["text"].startswith("🔴")
+    n.observe(True, False)
+    clock.sleep(3600)
+    n.still_down()
+    assert [e["event"] for e in n.sent][-1] == "up"
+
+
+def test_no_reminder_without_the_option_or_while_up():
+    clock = Clock()
+    plain = _reminding(clock, remind=None)
+    plain.observe(False, True)
+    clock.sleep(99999)
+    plain.still_down()
+    assert [e["event"] for e in plain.sent] == ["down"]
+    n = _reminding(clock)
+    clock.sleep(99999)
+    n.still_down()
+    assert n.sent == []
+
+
+def test_down_from_the_first_check_is_reminded_from_its_start():
+    clock = Clock()
+    n = Notifier("db", "tcp", desktop=True, clock=clock, remind=60)
+    n.observe(False, None)
+    assert n.sent == []
+    clock.sleep(60)
+    n.still_down()
+    assert [e["event"] for e in n.sent] == ["still_down"]
+
+
+def test_a_new_outage_starts_its_own_reminders():
+    clock = Clock()
+    n = _reminding(clock, remind=100)
+    n.observe(False, True)
+    clock.sleep(50)
+    n.observe(True, False)
+    clock.sleep(50)
+    n.observe(False, True)
+    clock.sleep(99)
+    n.still_down()
+    assert "still_down" not in [e["event"] for e in n.sent]
+    clock.sleep(1)
+    n.still_down()
+    assert n.sent[-1]["event"] == "still_down"
+
+
+def test_ntfy_reminder_is_a_down_alert():
+    body = notify._delivery("https://ntfy.sh/t", {"event": "still_down", "target": "db", "text": "x"})[1]
+    assert (body["title"], body["priority"]) == ("db is DOWN", 4)
+
+
+def test_remind_needs_an_alert():
+    parser = build_parser()
+    args = parser.parse_args(["monitor", "example.net", "--remind", "600"])
+    with pytest.raises(UsageError, match="--remind needs"):
+        commands.cmd_monitor(args)
+    args = parser.parse_args(["tcp", "h", "80", "--watch", "--remind", "600"])
+    with pytest.raises(UsageError, match="--remind needs"):
+        commands._require_watch_for_notify(args)
+
+
 def _sent(url, event="down"):
     payload = {"event": event, "target": "db", "text": "🔴 xping: db (tcp) is DOWN"}
     seen = {}

@@ -76,6 +76,8 @@ def _loop(result, probe, every, until_up, quiet, clock, sleep, notifier, state) 
                     latency,
                     final=until_up and ok,
                 )
+            if notifier is not None:
+                notifier.still_down(detail)
             if until_up and ok and state.state:
                 if not quiet:
                     watch_view.print_up(result)
