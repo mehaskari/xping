@@ -229,7 +229,7 @@ so `--max-loss`, `--max-latency`, the exit code and `--save` apply to it.
 | Option | Effect |
 |--------|--------|
 | `--notify` | Desktop notification on every DOWN/UP change: Notification Center on macOS, `notify-send` on Linux, the terminal bell elsewhere |
-| `--webhook URL` | POST one JSON event per change to URL (http or https) |
+| `--webhook URL` | POST one event per change to URL: Slack, Discord, Telegram, ntfy or any JSON endpoint |
 
 Rules:
 
@@ -263,6 +263,23 @@ adapter. Other receivers can use the structured fields:
   "content": "🔴 xping: db.local:5432 (tcp) is DOWN — …"
 }
 ```
+
+**Telegram and ntfy** take a body of their own, and xping picks it from
+the URL, so they reach your phone with no adapter in between:
+
+| Service | URL |
+|---------|-----|
+| Telegram | `https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<CHAT>`. Make a bot with @BotFather; `<CHAT>` is your user, group or channel id, and the bot must be able to write there |
+| ntfy | `https://ntfy.sh/<TOPIC>`, or `ntfy://HOST/<TOPIC>` for a server of your own (over https). DOWN arrives with high priority |
+
+```bash
+xping monitor checks.toml --webhook https://ntfy.sh/my-long-private-topic
+```
+
+A Telegram URL holds your bot's token, and whoever knows an ntfy topic on
+a public server can read it, so treat these URLs as passwords: the command
+line is visible to other users of the machine while it runs. The file
+`--install-service` writes (which contains the URL) can be read only by you.
 
 Using `--notify` or `--webhook` outside watch mode is a usage error
 (exit 2). Export formats cannot be combined with watch mode.

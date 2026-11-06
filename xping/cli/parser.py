@@ -121,7 +121,10 @@ def _webhook_url(value: str) -> str:
     from xping.diagnostics.notify import valid_webhook
 
     if not valid_webhook(value):
-        raise argparse.ArgumentTypeError("webhook must be an http:// or https:// URL")
+        raise argparse.ArgumentTypeError(
+            "webhook must be an http:// or https:// URL, ntfy://HOST/TOPIC, or a "
+            "Telegram sendMessage URL with ?chat_id=…"
+        )
     return value
 
 
@@ -136,7 +139,7 @@ def _add_notify(p: argparse.ArgumentParser) -> None:
         type=_webhook_url,
         default=None,
         metavar="URL",
-        help="POST a JSON event to URL on every down/up change (Slack, Discord, …)",
+        help="POST an event to URL on every down/up change (Slack, Discord, Telegram, ntfy, …)",
     )
 
 

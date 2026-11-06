@@ -86,6 +86,17 @@ def test_install_status_uninstall(tmp_path, kind):
     assert not service.status(home=tmp_path, kind=kind, run=run).installed
 
 
+@pytest.mark.parametrize("kind", ["launchd", "systemd"])
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX file modes")
+def test_service_file_is_private(tmp_path, kind):
+    run = Runner()
+    service.service_path(kind, tmp_path).parent.mkdir(parents=True)
+    service.service_path(kind, tmp_path).write_text("old")  # an older, readable install
+    service.service_path(kind, tmp_path).chmod(0o644)
+    service.install(["monitor", "--webhook", "https://x/secret"], home=tmp_path, kind=kind, run=run)
+    assert service.service_path(kind, tmp_path).stat().st_mode & 0o777 == 0o600
+
+
 def test_failed_start_is_reported(tmp_path):
     def run(cmd):
         return subprocess.CompletedProcess(cmd, 5, "", "Bootstrap failed: 5: Input/output error")

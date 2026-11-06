@@ -71,7 +71,7 @@ Real runs, recorded on a GitHub runner by
 - **Connectivity doctor** — `xping doctor`: finds out *why* the internet (or a host) is not working — interface, router, internet, DNS, captive portal, HTTPS, clock — and says what to do
 - **Network overview** — `xping net`: interfaces, gateway, DNS servers, public IPv4/IPv6
 - **Watch & wait** — `--watch` / `--until-up` on `ping`, `tcp`, `udp`, `http` and `health`
-- **Alerts** — `--notify` (desktop notification) and `--webhook URL` (Slack, Discord, Mattermost, any JSON endpoint) when a watched target goes down or comes back
+- **Alerts** — `--notify` (desktop notification) and `--webhook URL` (Slack, Discord, Telegram, ntfy, Mattermost, any JSON endpoint) when a watched target goes down or comes back
 - **Exit codes & thresholds** — `--max-loss`, `--max-latency`, `--expect-status`, `--min-days`, `--min-score`, `--quiet`
 - **Compare runs** — `xping diff before.json after.json`: what got better or worse (latency, loss, the route of a trace, DNS records, check statuses); `--max-regression` for CI
 - **History** — `--save` keeps a result in `~/.xping/history`; `xping history ping example.net` shows the runs, a trend line and how the latest compares with the usual
@@ -588,8 +588,10 @@ xping tcp db.local 5432 --until-up -q --notify      # "it's back" and exit
    "text": "🔴 xping: db.local:5432 (tcp) is DOWN — …", "content": "…"}
   ```
 
-  Delivery runs in the background; a failing endpoint is reported once
-  and never stops the watch.
+  Telegram (`https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<CHAT>`)
+  and ntfy (`https://ntfy.sh/<TOPIC>`, or `ntfy://HOST/<TOPIC>` for your own
+  server) get a body of their own, picked from the URL. Delivery runs in the
+  background; a failing endpoint is reported once and never stops the watch.
 
 ### Compare runs
 
