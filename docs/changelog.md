@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-06
+
 ### Added
 - **`xping monitor --status-page [HOST:]PORT`: a live status page.** Monitor
   serves a web page that reloads itself: the overall state, each check with

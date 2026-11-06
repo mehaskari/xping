@@ -1,3 +1,42 @@
+xping (1.8.0-1) noble; urgency=medium
+
+  * xping monitor --status-page [HOST:]PORT: a live status page. Monitor
+    serves a web page that reloads itself: the overall state, each check
+    with its latest value, uptime and recent runs, and the recent
+    outages, with no Prometheus or Grafana to set up. The same state is
+    at /status.json, and the Prometheus metrics at /metrics. Standard
+    library only, no scripts and nothing fetched from the network;
+    listens on 127.0.0.1 unless a host is given; kept by
+    --install-service.
+  * --webhook speaks Telegram and ntfy: a
+    https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<CHAT> URL,
+    or https://ntfy.sh/<TOPIC> (ntfy://HOST/<TOPIC> for a server of your
+    own), gets the body that service expects, so alerts reach a phone
+    with no adapter.
+  * --remind SEC repeats the alert while a target stays down (is still
+    DOWN after 15m00s, event still_down), in every watch mode and in
+    xping monitor; kept by --install-service.
+  * xping monitor follows its check file: when the file changes, new
+    checks start, removed ones stop and the others keep their numbers,
+    without a restart. A file that does not load is reported and the
+    checks carry on.
+  * xping monitor --resume keeps the runs, uptime, outages and state of
+    each check across restarts (saved every minute in
+    ~/.xping/monitor/). A check that was down stays down without
+    alerting again. --install-service always uses it.
+  * The file --install-service writes can be read only by its owner,
+    since a --webhook URL in it can hold a secret.
+  * The snap for amd64 and arm64 is now built on GitHub Actions from
+    each release tag and uploaded to the Snap Store, so a release
+    reaches stable on those architectures within the hour even when
+    Snapcraft.io's build service starts late (1.7.0 waited 15 hours).
+    armhf, ppc64el, riscv64 and s390x still come from Snapcraft.io.
+  * scripts/release.py tries a GitHub query again (up to 4 times) after
+    a network error instead of stopping the release half way; commands
+    that change something are never repeated.
+
+ -- Mehdi Askari <iorganamis@gmail.com>  Fri, 06 Nov 2026 14:42:42 +0000
+
 xping (1.7.0-1) noble; urgency=medium
 
   * xping monitor --metrics [HOST:]PORT: Prometheus metrics. Monitor
