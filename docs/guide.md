@@ -1958,6 +1958,17 @@ xping report --since 7d -o /var/www/html/uptime.html # e.g. from cron
 xping monitor checks.toml --notify --save    # dashboard, desktop alerts, history
 ```
 
+**A status page and alerts on your phone, surviving reboots**
+
+```bash
+xping monitor checks.toml --status-page :8080 \
+  --webhook https://ntfy.sh/my-long-private-topic --remind 1800 \
+  --fail-after 2 --install-service
+```
+
+The service always resumes, so uptime and outages carry over a reboot.
+Edit `checks.toml` and the running monitor follows; no restart needed.
+
 **"The internet is down" — start here**
 
 ```bash
@@ -2088,6 +2099,10 @@ xping doctor --json > doctor.json
 | `~/.xping/monitor.log` | Output of the background monitor (`xping monitor --install-service`) |
 | `~/Library/LaunchAgents/io.github.mehaskari.xping.monitor.plist`, `~/.config/systemd/user/xping-monitor.service` | The background monitor service (macOS, Linux) |
 | `~/.xping/history/` | Results saved with `--save` (newest 500 runs per command and target) |
+| `~/.xping/monitor/` | What `xping monitor --resume` keeps between runs (readable only by you) |
+
+The service file is readable only by you, since a `--webhook` URL in it
+can hold a secret.
 
 `completion --install` also adds a marked block to your shell's rc file
 (or a file under `~/.config/fish/completions/`).
@@ -2120,6 +2135,10 @@ contact third parties, and only when you use them:
 | `dnscheck` | `1.1.1.1` (or `8.8.8.8`) for the DNSSEC check |
 | `rdns` | `8.8.8.8`, only when the system resolver has no PTR record |
 | `--webhook URL` | only the URL you give |
+
+**Listening.** xping opens a port only for `xping monitor --metrics` and
+`--status-page`. Both serve read-only pages without a password, on
+127.0.0.1 unless you give another host.
 
 xping has no telemetry and makes no update checks. TLS verification is
 always on and cannot be disabled. External tools are run with argument
@@ -2188,6 +2207,18 @@ Use a `.json` check file, which has the same keys, or upgrade Python.
 
 **Colours look wrong, or I want plain text.**
 Set `NO_COLOR=1`, or use `--markdown` / `--csv`.
+
+**The status page (or `/metrics`) opens here but not from another machine.**
+Without a host, `--status-page :8080` listens on 127.0.0.1, this machine
+only. Use `0.0.0.0:8080` (or `[::]:8080`) to listen on every interface, and
+check the firewall. Anyone who can reach the port can read the page.
+
+**I changed the check file and the monitor did not follow.**
+A file with a mistake is not loaded: the monitor says why once and keeps
+the checks it had (in the log of a background monitor:
+`xping monitor --service-status` shows where it is). Fix the file and save
+it again. Checks given on the command line instead of a file have nothing
+to follow.
 
 **Where do I report a bug?**
 At <https://github.com/mehaskari/xping/issues>. The bug report form asks

@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Documentation
+- `ARCHITECTURE.md`: how a command runs, how watch mode, alerts and
+  monitor work (threads, lock, reload, `--resume`), what is stored where,
+  and a map of every module; a test keeps the map complete.
+- `CONTRIBUTING.md` says which document to update for which change, how
+  pull requests are merged (every check green, no new CodeQL alert) and
+  how tests are written.
+- `SECURITY.md`: supported versions are 1.8.x, and it covers the ports
+  `monitor` can open and the background service.
+- The README and the guide list every file xping writes, say when xping
+  listens on the network, and have a recipe and FAQ entries for the status
+  page and phone alerts.
+
 ## [1.8.0] - 2026-11-06
 
 ### Added
