@@ -676,10 +676,14 @@ xping monitor checks.toml --webhook URL >> log    # not a terminal: one line per
 xping monitor --save --fail-after 3 --install-service   # in the background, also after a restart
 xping monitor checks.toml --metrics :9101        # also serve /metrics to Prometheus / Grafana
 xping monitor checks.toml --status-page :8080    # a live status page at http://127.0.0.1:8080/
+xping monitor checks.toml --webhook https://ntfy.sh/TOPIC --remind 900   # phone alerts, repeated every 15 min while down
+xping monitor checks.toml --resume                # go on from the last run's uptime and outages
 ```
 
-The exit code after Ctrl-C (or `--rounds N`) is 0 when every check was up
-at the end.
+Edit the check file while monitor runs and it picks up the change within
+two seconds: new checks start, removed ones stop, the rest keep their
+numbers. The exit code after Ctrl-C (or `--rounds N`) is 0 when every
+check was up at the end.
 
 ---
 
@@ -706,8 +710,16 @@ xping keeps its state under `~/.xping/`:
 | `~/.xping/completions/` | Completion scripts written by `xping completion --install` |
 | `~/.xping/config.toml` | Your personal defaults (written by you, only read by xping) |
 | `~/.xping/history/` | Results saved with `--save` (newest 500 runs per command and target) |
+| `~/.xping/checks.toml` | The default check file of `xping check` and `xping monitor` (`xping check --init`) |
+| `~/.xping/monitor/` | What `xping monitor --resume` keeps between runs (readable only by you) |
+| `~/.xping/monitor.log` | Output of the background monitor (`--install-service`) |
+| `~/Library/LaunchAgents/io.github.mehaskari.xping.monitor.plist`, `~/.config/systemd/user/xping-monitor.service` | The background monitor service (readable only by you) |
 
 `xping completion --install` also adds a clearly marked block to your shell's rc file; `--uninstall` removes it.
+
+xping listens on the network only when you ask: `xping monitor --metrics`
+and `--status-page` serve read-only pages on 127.0.0.1 unless you give
+another host.
 
 Diagnostics talk to the host you name. A few features also contact third-party services, and each is used only by the command that needs it:
 
@@ -721,7 +733,7 @@ Diagnostics talk to the host you name. A few features also contact third-party s
 | `propagation` | Google, Cloudflare, Quad9, OpenDNS, AdGuard and Control D public resolvers |
 | `whois` | IANA and registry WHOIS / RDAP servers |
 | `blocklist` | The blocklists' DNS servers (via your resolver) — they see the IP or domain you check |
-| `--webhook URL` | Only the URL you give, with the target name and check result |
+| `--webhook URL` | Only the URL you give (Slack, Discord, Telegram, ntfy, …), with the target name and check result |
 | `lookup`, `dnscheck` | `8.8.8.8` directly, only when `dig` is not installed (otherwise your resolver) |
 | `lookup --doh` | The DoH provider you choose (Cloudflare, Google, Quad9 or your URL) |
 | `dnscheck` | `1.1.1.1` (fallback `8.8.8.8`) for the DNSSEC check |
@@ -749,7 +761,7 @@ Diagnostics talk to the host you name. A few features also contact third-party s
 4. Run `pytest` and `ruff check xping/ --config ruff.toml`
 5. Open a pull request. CI runs the tests on Linux, macOS and Windows.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full checklist, including how to add a new command.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full checklist, including how to add a new command, and [ARCHITECTURE.md](ARCHITECTURE.md) for how the code is laid out.
 
 ---
 

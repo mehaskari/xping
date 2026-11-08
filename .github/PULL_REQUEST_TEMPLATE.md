@@ -7,8 +7,8 @@
 - [ ] CI / packaging
 
 ## Checklist
-- [ ] Tests pass (`pytest`)
-- [ ] Version bumped in every versioned file — see CONTRIBUTING.md (if releasing)
-- [ ] `docs/changelog.md` updated
-- [ ] `man/xping.1` updated (if new commands/flags)
-- [ ] `ruff check xping/ --config ruff.toml` passes
+- [ ] Tests pass (`pytest`) and new behaviour has tests
+- [ ] `ruff check xping/ --config ruff.toml`, `ruff format --check xping/ --line-length 100` and `mypy` pass
+- [ ] `docs/changelog.md` updated under `## [Unreleased]`
+- [ ] Docs updated for what changed (see "Documentation is part of the change" in CONTRIBUTING.md): `docs/guide.md`, `man/xping.1`, `README.md`, `ARCHITECTURE.md`, `SECURITY.md`, …
+- [ ] Every check green and no new CodeQL alert (notes included) before merging

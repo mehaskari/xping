@@ -55,3 +55,36 @@ def test_table_of_contents_links_every_command():
     for name in model().subcommands:
         if name != "rm":
             assert f"(#xping-{name})" in GUIDE, f"contents has no link to xping {name}"
+
+
+_ROOT = Path(__file__).resolve().parent.parent
+_ARCHITECTURE = _ROOT / "ARCHITECTURE.md"
+
+
+def test_every_module_is_in_the_architecture_map():
+    """A new module comes with its line in ARCHITECTURE.md. Per-command
+    models and views follow a pattern the file describes once."""
+    if not _ARCHITECTURE.exists():
+        pytest.skip("ARCHITECTURE.md is not in this source tree")
+    text = _ARCHITECTURE.read_text(encoding="utf-8")
+    package = _ROOT / "xping"
+    missing = []
+    for path in sorted(package.rglob("*.py")):
+        name = path.relative_to(package).as_posix()
+        if path.name == "__init__.py" or "__pycache__" in name:
+            continue
+        per_command = name.startswith("models/") or name.startswith("render/views/")
+        if per_command and not path.name.startswith("_"):
+            continue
+        if f"`{name}`" not in text:
+            missing.append(name)
+    assert not missing, "not in ARCHITECTURE.md: " + ", ".join(missing)
+
+
+def test_architecture_links_point_to_files_that_exist():
+    if not _ARCHITECTURE.exists():
+        pytest.skip("ARCHITECTURE.md is not in this source tree")
+    import re
+
+    for target in re.findall(r"\]\(([^)#]+)", _ARCHITECTURE.read_text(encoding="utf-8")):
+        assert (_ROOT / target).exists(), target

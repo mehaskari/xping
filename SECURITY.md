@@ -4,8 +4,8 @@
 
 | Version | Supported |
 |---------|-----------|
-| 1.4.x   | ✅ Active |
-| < 1.4   | ❌ No longer supported |
+| 1.8.x   | ✅ Active |
+| < 1.8   | ❌ No longer supported: please upgrade |
 
 ## Reporting a Vulnerability
 
@@ -26,8 +26,20 @@ Include: description, reproduction steps, potential impact.
 
 ## Security Design
 
-xping is a **read-only diagnostic tool**: no daemon, no server, no
-stored credentials, no `eval`/`exec`.
+xping is a **read-only diagnostic tool**: no stored credentials, no
+`eval`/`exec`, and nothing runs in the background or listens on the
+network unless you ask for it.
+
+- **Listening:** only `xping monitor --metrics` and `--status-page` open a
+  port. They serve read-only pages (GET and HEAD), listen on 127.0.0.1
+  unless you give a host, and have no authentication: on another address,
+  everyone who can reach it sees each check's name, target and latest
+  result. The status page has no scripts, loads nothing from the network,
+  escapes every value from a check, and is sent with `nosniff` and a
+  Content-Security-Policy that allows inline CSS only.
+- **Background:** only `xping monitor --install-service` installs
+  anything that keeps running (a launchd agent or a systemd user unit, as
+  you, never as root); `--uninstall-service` removes it.
 
 - **Privileges:** no root needed on macOS or Linux — ICMP uses
   unprivileged ping sockets where the OS allows them. Raw sockets are
@@ -38,8 +50,12 @@ stored credentials, no `eval`/`exec`.
   plus `certifi` and refuses anything older than TLS 1.2. There is no
   option to disable verification.
 - **Files written:** only under `~/.xping/` (profiles, health history,
-  completion scripts, and results saved with `--save` under
-  `~/.xping/history/` — nothing is recorded without it).
+  completion scripts, results saved with `--save` under
+  `~/.xping/history/` — nothing is recorded without it — the monitor's
+  `--resume` state under `~/.xping/monitor/` and the background monitor's
+  log), plus the service file of `--install-service`. Files that can hold
+  a secret (the service file, which contains any `--webhook` URL) or that
+  describe your checks (`~/.xping/monitor/`) are readable only by you.
   `~/.xping/config.toml` is only ever read, and its
   values go through the same validation as command-line options. `xping completion --install` additionally adds a
   clearly marked block to the shell rc file, only when asked, and
@@ -54,7 +70,8 @@ stored credentials, no `eval`/`exec`.
   "Files & privacy"; `--asn` is opt-in and `net --no-public` keeps
   everything local.
 - **Alerts:** `--webhook` sends the target name and check result only to
-  the URL you pass. `--notify` hands the text to `osascript` /
+  the URL you pass. A Telegram or ntfy URL is a secret (a bot token, a
+  topic anyone can read); the guide says to treat it as a password. `--notify` hands the text to `osascript` /
   `notify-send` as arguments, never as script source or a shell line.
 - **Subprocesses:** system tools (`ping`, `traceroute`, `dig`, `ss`,
   `netstat`, `ip`, `ifconfig`, `osascript`, `notify-send`, …) are run with argument lists, never

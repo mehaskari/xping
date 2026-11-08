@@ -34,3 +34,4 @@ xping doctor          # why is the internet not working?
 | Did it get worse? | [`xping diff`](guide.md#xping-diff), [`xping history`](guide.md#xping-history), [`xping report`](guide.md#xping-report) |
 | Many checks, one exit code | [`xping check`](guide.md#xping-check) |
 | Watch everything that matters, live | [`xping monitor`](guide.md#xping-monitor) |
+| A status page, Prometheus metrics, alerts on your phone | [`xping monitor --status-page`, `--metrics`, `--webhook`](guide.md#xping-monitor) |

@@ -10,18 +10,47 @@ pip install -e ".[dev]"
 pytest
 ```
 
+Start with [ARCHITECTURE.md](ARCHITECTURE.md): how a command runs, the
+long-running modes (watch, alerts, monitor) and what every module does.
+
 ## Workflow
 
 `main` is protected: changes land through pull requests, and a PR can
-only merge once the required CI checks pass (tests on Linux and macOS
-for Python 3.10–3.14, lint, version consistency, build). Auto-merge is
-enabled, so a PR merges by itself as soon as it is green.
+only merge once the required checks pass. They are the tests on Linux
+and macOS for Python 3.10–3.14 and on Windows (3.12), lint, type check,
+version consistency, the build, the Debian package (lintian and
+autopkgtest), the Fedora package (rpmlint and install) and CodeQL.
 
-1. Branch from `main` (`fix/…`, `feat/…`, `docs/…`).
+1. Branch from `main` (`fix/…`, `feat/…`, `docs/…`); one change per pull
+   request.
 2. Commit with a message that says what changed and why.
 3. Push and open a PR using the template.
-4. The Windows job is informational (not required); if it fails, its
-   check-run annotations name the failing tests.
+4. Before merging, wait until **every** check has finished green, not
+   only the required ones, and look at the CodeQL alerts of the PR
+   (`gh api 'repos/mehaskari/xping/code-scanning/alerts?ref=refs/pull/N/merge&state=open'`):
+   fix every alert that is new compared with `main`, notes included,
+   since a `note` does not fail the check. Then merge.
+5. A macOS job that GitHub cancels before it ran a step (no runner was
+   free) is not a failure: run it again.
+
+## Documentation is part of the change
+
+A pull request that changes behaviour updates its documentation in the
+same pull request. Which file covers what:
+
+| Change | Update |
+|--------|--------|
+| A command or option (new, changed, removed) | `docs/guide.md` (its section and option table; a test checks every long option), `man/xping.1`, `README.md` (usage and features), `docs/changelog.md` |
+| Anything users notice | `docs/changelog.md` under `## [Unreleased]` |
+| A new module, or a module's job changes | `ARCHITECTURE.md` (a test checks that every module is in its map) |
+| Files written, ports opened, hosts contacted | the "Files & privacy" tables in `README.md` and `docs/guide.md` §7, `SECURITY.md`, `man/xping.1` FILES |
+| How to develop, test or merge | `CONTRIBUTING.md` |
+| Packaging or release workflows | `PACKAGING.md`, `RELEASE.md` |
+| Supported versions (after a minor release) | `SECURITY.md` |
+| The landing page's starting points | `docs/index.md` |
+
+Docs that describe the code are wrong as soon as the code moves on; when
+you notice one, fix it in the pull request you are working on.
 
 ## Before every commit
 
@@ -110,6 +139,22 @@ linter against the result. **Never claim a fix works without running
 it.** `pytest` and `ruff check` take a few seconds; guessing costs
 hours down the line.
 
+## Writing tests
+
+- **No network and no real waiting.** Pass diagnostics a fake clock, a
+  fake `sleep` and a fake runner (see `Clock` in `tests/test_monitor.py`)
+  and mock sockets and subprocesses. A test that needs a server binds
+  127.0.0.1 on a free port and stops it in `finally`.
+- **No proxy.** Open local URLs with
+  `urllib.request.build_opener(urllib.request.ProxyHandler({}))`: Debian
+  package builds set a dead `http_proxy`.
+- **Windows runs the suite too.** Skip what is POSIX-only (file modes,
+  signals) with `pytest.mark.skipif(sys.platform == "win32", …)` rather
+  than letting it fail.
+- **Test the behaviour, not the implementation:** what the user sees,
+  what is exported, which exit code, which alert. A bug fix starts with a
+  test that fails without it.
+
 ## Code Style
 
 ```bash
@@ -122,7 +167,8 @@ Two rules are intentionally ignored (see `ruff.toml` for why):
 clauses (`except ValueError: pass`) throughout.
 
 No new external dependencies without discussion — xping is stdlib +
-`certifi` only.
+`certifi` only. Compare with how the surrounding code does it, and match
+its naming, comments and idiom.
 
 ## Adding a New Command
 
@@ -147,7 +193,9 @@ No new external dependencies without discussion — xping is stdlib +
     `TARGETS` in `xping/diagnostics/history.py` (how to name the target).
     That alone gives the command `--save` and makes `xping history` and
     `xping report` accept it.
-11. `man/xping.1` — COMMANDS entry, OPTIONS section and an example
+11. `man/xping.1` — COMMANDS entry, OPTIONS section and an example; if
+    the command writes a file, opens a port or contacts a third party,
+    the tables in "Documentation is part of the change" above
 12. `README.md` — usage section; `docs/changelog.md` — entry
 13. `docs/guide.md` — a `#### \`xping NAME\`` section with every option
     (it is also the documentation site: preview with
