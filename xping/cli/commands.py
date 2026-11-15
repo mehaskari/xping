@@ -604,7 +604,12 @@ def cmd_profile(args: argparse.Namespace) -> object:
 
 def cmd_speedtest(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
-    result = speedtest(connections=args.connections, duration=args.duration, quiet=quiet)
+    result = speedtest(
+        connections=args.connections,
+        duration=args.duration,
+        quiet=quiet,
+        bufferbloat=args.bufferbloat or args.max_bloat is not None,
+    )
     emit_export(result, args)
     return result
 

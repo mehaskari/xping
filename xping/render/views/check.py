@@ -54,7 +54,9 @@ def describe(result) -> str:
         return result.diagnosis or "ok"
     if name == "SpeedResult":
         up = f"{result.upload_mbps:.1f}" if result.upload_mbps is not None else "–"
-        return f"↓ {result.download_mbps:.1f}  ↑ {up} Mbit/s"
+        bloat = result.bufferbloat_ms
+        extra = f", bloat +{bloat:.0f} ms ({result.bufferbloat_grade})" if bloat is not None else ""
+        return f"↓ {result.download_mbps:.1f}  ↑ {up} Mbit/s{extra}"
     return "ok"
 
 

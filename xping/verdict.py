@@ -335,5 +335,16 @@ def evaluate(result, opts=None) -> list[Failure]:
                 shown = "failed" if value is None else f"{value:.1f} Mbit/s"
                 flag = "--" + name.replace("_", "-")
                 failures.append(Failure(f"{what} {shown} is below {flag} {limit:g}", True))
+        limit = _opt(opts, "max_bloat")
+        if limit is not None:
+            bloat = result.bufferbloat_ms
+            if bloat is None:
+                failures.append(Failure("bufferbloat could not be measured", True))
+            elif bloat > limit:
+                failures.append(
+                    Failure(
+                        f"latency rose {bloat:.0f} ms under load, over --max-bloat {limit:g}", True
+                    )
+                )
         return failures
     return []

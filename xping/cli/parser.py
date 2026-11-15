@@ -255,7 +255,7 @@ Commands:
   blocklist <ip|domain> Spam blocklist (DNSBL) check — IP, or a domain's mail servers
   propagation <name>   Compare answers from public resolvers (DNS propagation)
   osdetect <host>      Guess remote OS from TTL fingerprint
-  speedtest            Download/upload speed via Cloudflare
+  speedtest            Download/upload speed and bufferbloat via Cloudflare
   listen               Show locally listening TCP/UDP ports
   net                  Local network overview: interfaces, gateway, DNS, public IP
   wifi                 Wi-Fi signal, noise, channel, link rate and nearby networks
@@ -298,6 +298,7 @@ Examples:
   xping propagation example.com --type MX
   xping propagation example.com --expect 93.184.216.34
   xping speedtest --json
+  xping speedtest --bufferbloat
   xping net
   xping wifi --nearby
   xping doctor
@@ -1039,6 +1040,19 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
         default=None,
         metavar="MBPS",
         help="Exit 1 if the upload speed is below MBPS",
+    )
+    p_speed.add_argument(
+        "-b",
+        "--bufferbloat",
+        action="store_true",
+        help="Also measure how much latency rises while the link is busy (graded A+ to F)",
+    )
+    p_speed.add_argument(
+        "--max-bloat",
+        type=_non_negative_float,
+        default=None,
+        metavar="MS",
+        help="Exit 1 if latency rises by more than MS under load (implies --bufferbloat)",
     )
 
     p_completion = sub.add_parser(

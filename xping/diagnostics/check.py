@@ -303,6 +303,7 @@ def _run_speedtest(e: dict):
         connections=int(e.get("connections", 4)),
         duration=float(e.get("duration", 8.0)),
         quiet=True,
+        bufferbloat=bool(e.get("bufferbloat")) or e.get("max_bloat") is not None,
     )
 
 
@@ -347,6 +348,7 @@ THRESHOLD_KEYS = (
     "min_signal",
     "min_download",
     "min_upload",
+    "max_bloat",
 )
 
 
