@@ -99,6 +99,7 @@ METRICS: dict[str, tuple[Metric, ...]] = {
         Metric("Download", "download_mbps", HIGHER, "Mbit/s"),
         Metric("Upload", "upload_mbps", HIGHER, "Mbit/s"),
         Metric("Latency", "ping_ms"),
+        Metric("Bufferbloat", "bufferbloat_ms", noise_pct=SPREAD_NOISE),
     ),
     "ntp": (
         Metric("Clock offset (abs)", "abs:offset_ms"),
@@ -152,7 +153,7 @@ SCALARS = {
     "ntp": [("stratum", "stratum"), ("reference", "reference")],
     "wifi": [("channel", "current.channel"), ("band", "current.band")],
     "health": [("grade", "grade")],
-    "speedtest": [("grade", "grade")],
+    "speedtest": [("grade", "grade"), ("bufferbloat grade", "bufferbloat_grade")],
     "doctor": [("diagnosis", "diagnosis")],
 }
 

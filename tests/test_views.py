@@ -87,6 +87,22 @@ CASES = {
     "speedtest-slow-no-upload": lambda: speedtest_view.print_result(
         SpeedResult(download_mbps=3.2, upload_mbps=None, ping_ms=120.0, connections=1)
     ),
+    "speedtest-bufferbloat": lambda: speedtest_view.print_result(
+        SpeedResult(
+            download_mbps=95.0,
+            upload_mbps=20.0,
+            ping_ms=11.0,
+            idle_latency_ms=12.0,
+            download_latency_ms=180.0,
+            upload_latency_ms=60.0,
+        )
+    ),
+    "speedtest-bufferbloat-good": lambda: speedtest_view.print_result(
+        SpeedResult(download_mbps=95.0, idle_latency_ms=12.0, download_latency_ms=14.0)
+    ),
+    "speedtest-bufferbloat-unmeasured": lambda: speedtest_view.print_result(
+        SpeedResult(download_mbps=95.0, idle_latency_ms=12.0)
+    ),
     "speedtest-error": lambda: speedtest_view.print_result(SpeedResult(error="offline")),
     "tls": lambda: tls_view.print_result(
         TlsResult(

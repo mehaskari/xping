@@ -6,6 +6,7 @@ import socketserver
 import threading
 import time
 import urllib.error
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -137,3 +138,197 @@ def test_cli_flags():
     assert args.connections == 1 and args.duration == 3.0
     with pytest.raises(SystemExit):
         build_parser().parse_args(["speedtest", "-c", "0"])
+
+
+# ── bufferbloat ──────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "idle, down, up, bloat, grade",
+    [
+        (10.0, 12.0, 14.0, 4.0, "A+"),
+        (10.0, 35.0, 20.0, 25.0, "A"),
+        (10.0, 20.0, 65.0, 55.0, "B"),
+        (10.0, 150.0, None, 140.0, "C"),
+        (10.0, 300.0, 50.0, 290.0, "D"),
+        (10.0, 2000.0, 900.0, 1990.0, "F"),
+        (20.0, 18.0, 19.0, 0.0, "A+"),  # loaded faster than idle: no bloat
+    ],
+)
+def test_bufferbloat_grades(idle, down, up, bloat, grade):
+    from xping.models.speedtest import SpeedResult
+
+    r = SpeedResult(idle_latency_ms=idle, download_latency_ms=down, upload_latency_ms=up)
+    assert r.bufferbloat_ms == pytest.approx(bloat) and r.bufferbloat_grade == grade
+
+
+def test_bufferbloat_needs_idle_and_a_loaded_sample():
+    from xping.models.speedtest import SpeedResult
+
+    assert SpeedResult(idle_latency_ms=10.0).bufferbloat_ms is None
+    assert SpeedResult(download_latency_ms=50.0).bufferbloat_grade is None
+    d = SpeedResult(download_mbps=50.0).to_dict()
+    assert d["bufferbloat_ms"] is None and d["bufferbloat_grade"] is None
+
+
+class _Conn:
+    """Stands in for HTTPSConnection; *fail* makes request() raise."""
+
+    made = 0
+
+    def __init__(self, host, timeout, context, fail=False):
+        type(self).made += 1
+        self.fail = fail
+
+    def connect(self):
+        pass
+
+    def request(self, *args, **kwargs):
+        if self.fail:
+            raise ConnectionResetError("reset")
+
+    def getresponse(self):
+        return io.BytesIO(b"colo=FRA\n")
+
+    def close(self):
+        pass
+
+
+def test_probe_times_round_trips_on_one_connection():
+    _Conn.made = 0
+    with patch.object(st.http.client, "HTTPSConnection", _Conn):
+        probe = st._LatencyProbe()
+        assert all(0 <= probe.sample() < 100 for _ in range(3))
+    assert _Conn.made == 1  # kept alive, not reconnected per sample
+
+
+def test_probe_failure_counts_as_timeout_and_reconnects():
+    _Conn.made = 0
+    conn = lambda *a, **k: _Conn(*a, **k, fail=True)  # noqa: E731
+    with patch.object(st.http.client, "HTTPSConnection", conn):
+        probe = st._LatencyProbe(timeout=1.5)
+        assert probe.sample() == 1500.0 and probe.sample() == 1500.0
+    assert _Conn.made == 2
+
+
+def test_idle_is_the_median_and_ignores_timeouts():
+    probe = st._LatencyProbe()
+    with patch.object(probe, "sample", side_effect=[10.0, 2000.0, 14.0, 12.0]):
+        with patch.object(st.time, "sleep"):
+            assert probe.idle(probes=4) == 12.0
+    with patch.object(probe, "sample", return_value=2000.0), patch.object(st.time, "sleep"):
+        assert probe.idle(probes=3) is None
+
+
+def test_probe_samples_in_the_background_until_the_block_ends():
+    probe = st._LatencyProbe()
+    with patch.object(probe, "sample", return_value=42.0), patch.object(st, "_PROBE_GAP", 0.01):
+        with probe.running():
+            time.sleep(0.1)
+        n = len(probe.samples)
+        time.sleep(0.05)
+        assert n >= 2 and len(probe.samples) == n and probe.median == 42.0
+        with probe.running():  # a new phase starts with no samples
+            pass
+    assert len(probe.samples) <= 1
+
+
+class _FakeProbe:
+    def __init__(self):
+        self.medians = iter([80.0, 30.0])
+        self.idle_calls = 0
+
+    def idle(self):
+        self.idle_calls += 1
+        return 10.0
+
+    @contextmanager
+    def running(self):
+        yield self
+        self.median = next(self.medians)
+
+    def close(self):
+        pass
+
+
+def _run_speedtest(bufferbloat, download=(100.0, 40_000_000, None), upload=(20.0, 8_000_000)):
+    fake = _FakeProbe()
+    with (
+        patch.object(st.socket, "gethostbyname", return_value="1.2.3.4"),
+        patch.object(st, "_measure_ping", return_value=(12.0, "FRA")),
+        patch.object(st, "_LatencyProbe", return_value=fake) as cls,
+        patch.object(st, "_measure_download", return_value=download),
+        patch.object(st, "_measure_upload", return_value=upload),
+    ):
+        return st.speedtest(quiet=True, bufferbloat=bufferbloat), cls, fake
+
+
+def test_speedtest_bufferbloat_records_each_phase():
+    r, _, fake = _run_speedtest(True)
+    assert (r.idle_latency_ms, r.download_latency_ms, r.upload_latency_ms) == (10.0, 80.0, 30.0)
+    assert r.bufferbloat_ms == 70.0 and r.bufferbloat_grade == "C"
+    assert fake.idle_calls == 1
+
+
+def test_speedtest_without_bufferbloat_does_not_probe():
+    r, cls, _ = _run_speedtest(False)
+    cls.assert_not_called()
+    assert r.idle_latency_ms is None and r.bufferbloat_ms is None
+
+
+def test_failed_transfers_do_not_report_loaded_latency():
+    r, _, _ = _run_speedtest(True, download=(None, 0, "boom"), upload=(None, 0))
+    assert r.download_latency_ms is None and r.upload_latency_ms is None
+    assert r.bufferbloat_ms is None
+
+
+def test_bufferbloat_cli_flags_and_threshold():
+    from xping.cli.parser import build_parser
+    from xping.models.speedtest import SpeedResult
+    from xping.verdict import evaluate
+
+    assert build_parser().parse_args(["speedtest", "-b"]).bufferbloat
+    args = build_parser().parse_args(["speedtest", "--max-bloat", "30"])
+    assert args.max_bloat == 30.0 and not args.bufferbloat
+    bloated = SpeedResult(download_mbps=50.0, idle_latency_ms=10.0, download_latency_ms=90.0)
+    [failure] = evaluate(bloated, args)
+    assert failure.threshold and failure.message == (
+        "latency rose 80 ms under load, over --max-bloat 30"
+    )
+    [failure] = evaluate(SpeedResult(download_mbps=50.0), args)
+    assert failure.message == "bufferbloat could not be measured"
+    fine = SpeedResult(download_mbps=50.0, idle_latency_ms=10.0, download_latency_ms=25.0)
+    assert evaluate(fine, args) == []
+
+
+def test_max_bloat_turns_bufferbloat_on():
+    from xping.cli.commands import cmd_speedtest
+    from xping.cli.parser import build_parser
+    from xping.models.speedtest import SpeedResult
+
+    for argv, expected in (
+        (["speedtest", "-q"], False),
+        (["speedtest", "-q", "-b"], True),
+        (["speedtest", "-q", "--max-bloat", "50"], True),
+    ):
+        with patch("xping.cli.commands.speedtest", return_value=SpeedResult()) as run:
+            cmd_speedtest(build_parser().parse_args(argv))
+        assert run.call_args.kwargs["bufferbloat"] is expected
+
+
+def test_check_file_bufferbloat_and_max_bloat():
+    from xping.diagnostics import check
+    from xping.models.speedtest import SpeedResult
+
+    with patch("xping.diagnostics.speedtest.speedtest", return_value=SpeedResult()) as run:
+        check._run_speedtest({})
+        check._run_speedtest({"bufferbloat": True})
+        check._run_speedtest({"max_bloat": 30})
+    assert [c.kwargs["bufferbloat"] for c in run.call_args_list] == [False, True, True]
+    assert "max_bloat" in check.THRESHOLD_KEYS
+
+
+def test_diff_compares_bufferbloat():
+    from xping.diagnostics.diff import METRICS
+
+    assert any(m.path == "bufferbloat_ms" for m in METRICS["speedtest"])

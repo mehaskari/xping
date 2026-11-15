@@ -79,7 +79,7 @@ Real runs, recorded on a GitHub runner by
 - **Live monitor** — `xping monitor checks.toml`: the same checks continuously, as a live table with trend, uptime and time in state; alerts on every change, results kept in the history; edit the file and it picks up the changes without a restart; `--resume` keeps the numbers across restarts
 - **Status page** — `xping monitor checks.toml --status-page :8080`: a live web page of every check (state, value, uptime, recent runs and outages), with no other software to set up; the same as JSON at `/status.json`
 - **Prometheus metrics** — `xping monitor checks.toml --metrics :9101` serves every check at `/metrics` for Prometheus and Grafana: state, latest value, latency, runs, failures and outages; a ready [Grafana dashboard](contrib/grafana/xping-dashboard.json) and [alert rules](contrib/prometheus/xping-alerts.yml) are in `contrib/`
-- **Speed test** — Multi-connection download/upload via Cloudflare
+- **Speed test** — Multi-connection download/upload via Cloudflare; `--bufferbloat` grades (A+ to F) how much latency rises while the line is busy — the usual reason calls lag during downloads
 - **All-in-one** — Run lookup, ping, trace, and TCP checks in a single command
 - **Listening ports** — `xping listen`: local TCP/UDP listeners with process names (Linux)
 - **OS fingerprint** — `xping osdetect`: guess a remote OS from the ICMP TTL

@@ -1,17 +1,20 @@
 """
-xping.diagnostics.speedtest — Download speed measurement.
-Uses Cloudflare's public speed endpoint and icanhazip for a quick
-single-connection throughput estimate. Pure stdlib, no iperf3 needed.
+xping.diagnostics.speedtest — Download/upload speed and bufferbloat.
+Uses Cloudflare's public speed endpoints for a multi-connection throughput
+estimate and, with --bufferbloat, measures how much latency rises while the
+link is saturated. Pure stdlib, no iperf3 needed.
 """
 
 import http.client
 import socket
+import statistics
 import sys
 import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 
 from xping.diagnostics.sslctx import secure_context
@@ -31,6 +34,84 @@ _UP_URL = "https://speed.cloudflare.com/__up"
 _DOWN_LARGE, _DOWN_SMALL = 25_000_000, 10_000_000
 _UPLOAD_TOTAL = 8_000_000  # split across the connections
 _CHUNK = 65536
+# Bufferbloat probing: a small HTTPS request every _PROBE_GAP seconds over a
+# connection kept open (only the request and its answer are timed, never the
+# connect). It waits in the same queues as the transfer, so its round trip
+# shows how much latency the load adds. A TCP handshake would not do: a VPN or
+# proxy often completes it locally. A probe that fails or times out counts as
+# _PROBE_TIMEOUT: under heavy bloat that is the honest number.
+_PROBE_HOST = "speed.cloudflare.com"
+_PROBE_PATH = "/cdn-cgi/trace"
+_PROBE_GAP = 0.2
+_PROBE_TIMEOUT = 2.0
+_IDLE_PROBES = 10
+
+
+class _LatencyProbe:
+    """Round trips over one kept-alive HTTPS connection, on demand or in the
+    background (``with probe.running(): ...``) while a transfer runs."""
+
+    def __init__(self, host: str = _PROBE_HOST, timeout: float = _PROBE_TIMEOUT) -> None:
+        self.host = host
+        self.timeout = timeout
+        self.samples: list[float] = []
+        self._conn: http.client.HTTPSConnection | None = None
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def sample(self) -> float:
+        """One request/response round trip in ms (the timeout if it fails)."""
+        try:
+            if self._conn is None:
+                self._conn = http.client.HTTPSConnection(
+                    self.host, timeout=self.timeout, context=secure_context()
+                )
+                self._conn.connect()
+            t0 = time.perf_counter()
+            self._conn.request("GET", _PROBE_PATH, headers={"User-Agent": "xping/speedtest"})
+            self._conn.getresponse().read()
+            return (time.perf_counter() - t0) * 1000
+        except (OSError, http.client.HTTPException):
+            self.close()
+            return self.timeout * 1000
+
+    def idle(self, probes: int = _IDLE_PROBES) -> float | None:
+        """Median round trip with the link quiet (failed probes left out)."""
+        good = []
+        for i in range(probes):
+            if i:
+                time.sleep(_PROBE_GAP / 2)
+            ms = self.sample()
+            if ms < self.timeout * 1000:
+                good.append(ms)
+        return statistics.median(good) if good else None
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            self.samples.append(self.sample())
+            self._stop.wait(_PROBE_GAP)
+
+    @contextmanager
+    def running(self):
+        """Sample in the background for the duration of the block."""
+        self.samples = []
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        try:
+            yield self
+        finally:
+            self._stop.set()
+            self._thread.join(self.timeout * 2 + 1)
+
+    @property
+    def median(self) -> float | None:
+        return statistics.median(self.samples) if self.samples else None
+
+    def close(self) -> None:
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
 
 
 def _measure_ping(timeout: float = 5.0) -> tuple[float | None, str | None]:
@@ -172,8 +253,14 @@ def _measure_upload(connections: int = 4, timeout: float = 20.0) -> tuple[float 
     return ((sent * 8) / elapsed / 1_000_000 if elapsed > 0 else None), sent
 
 
-def speedtest(connections: int = 4, duration: float = 8.0, quiet: bool = False) -> SpeedResult:
-    """Measure download speed, upload speed, and ping via Cloudflare."""
+def speedtest(
+    connections: int = 4, duration: float = 8.0, quiet: bool = False, bufferbloat: bool = False
+) -> SpeedResult:
+    """Measure download speed, upload speed, and ping via Cloudflare.
+
+    With *bufferbloat*, also measure how much latency rises while each
+    direction saturates the link.
+    """
     result = SpeedResult(connections=connections)
 
     if not quiet:
@@ -186,6 +273,8 @@ def speedtest(connections: int = 4, duration: float = 8.0, quiet: bool = False) 
                 f"HTTPS, {connections} parallel connection{plural}, ≤{duration:g}s download",
             )
         )
+        if bufferbloat:
+            print(kv("Bufferbloat", "HTTPS round trips idle, then during each transfer"))
         print()
 
     # Connectivity check
@@ -211,11 +300,28 @@ def speedtest(connections: int = 4, duration: float = 8.0, quiet: bool = False) 
     if not quiet and result.ping_ms:
         print(kv("Ping", f"{result.ping_ms:.1f} ms"))
 
+    probe = _LatencyProbe() if bufferbloat else None
+    if probe:
+        if not quiet and sys.stdout.isatty():
+            spinner = Spinner(c("Measuring idle latency…", BRAND_TEAL))
+            spinner.start()
+        result.idle_latency_ms = probe.idle()
+        if spinner:
+            spinner.stop()
+            spinner = None
+        if not quiet and result.idle_latency_ms is not None:
+            print(kv("Idle latency", f"{result.idle_latency_ms:.1f} ms"))
+
     # Download
     if not quiet and sys.stdout.isatty():
         spinner = Spinner(c(f"Measuring download ({connections} streams)…", BRAND_TEAL))
         spinner.start()
-    dl, result.download_bytes, dl_error = _measure_download(connections, duration)
+    if probe:
+        with probe.running():
+            dl, result.download_bytes, dl_error = _measure_download(connections, duration)
+        result.download_latency_ms = probe.median if dl is not None else None
+    else:
+        dl, result.download_bytes, dl_error = _measure_download(connections, duration)
     result.download_mbps = dl
     if dl is None:
         result.error = f"Download failed: {dl_error}"
@@ -232,7 +338,13 @@ def speedtest(connections: int = 4, duration: float = 8.0, quiet: bool = False) 
     if not quiet and sys.stdout.isatty():
         spinner = Spinner(c(f"Measuring upload ({connections} streams)…", BRAND_TEAL))
         spinner.start()
-    result.upload_mbps, result.upload_bytes = _measure_upload(connections)
+    if probe:
+        with probe.running():
+            result.upload_mbps, result.upload_bytes = _measure_upload(connections)
+        result.upload_latency_ms = probe.median if result.upload_mbps is not None else None
+        probe.close()
+    else:
+        result.upload_mbps, result.upload_bytes = _measure_upload(connections)
     if spinner:
         spinner.stop()
 

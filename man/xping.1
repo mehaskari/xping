@@ -1325,6 +1325,30 @@ Mbit/s.
 Exit 1 if the upload speed is below
 .I MBPS
 Mbit/s (or the upload failed).
+.TP
+.B \-b ", " \-\-bufferbloat
+Also measure bufferbloat: the median round trip of small HTTPS requests
+over a kept\-open connection to the test server, while idle and during the
+download and upload.
+The rise under load is graded
+.B A+
+(under 5 ms),
+.B A
+(30),
+.B B
+(60),
+.B C
+(200),
+.B D
+(400) or
+.BR F .
+.TP
+.BI \-\-max\-bloat " MS"
+Exit 1 if latency rises by more than
+.I MS
+milliseconds under load, or could not be measured.
+Implies
+.BR \-\-bufferbloat .
 .SS listen
 .TP
 .BI \-\-proto " PROTO"
@@ -1828,6 +1852,9 @@ Health score with 16 ping packets and trend history.
 .TP
 .B xping speedtest
 Download/upload speed via Cloudflare with 4 parallel connections (no iperf3 needed).
+.TP
+.B xping speedtest \-\-bufferbloat
+Speed test plus how much latency rises while the line is busy, graded A+ to F.
 .TP
 .B xping net
 Interfaces, gateway, DNS servers and public IPv4/IPv6 at a glance.

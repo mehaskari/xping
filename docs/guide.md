@@ -1323,7 +1323,7 @@ xping ntp time.cloudflare.com --max-offset 100 -q || echo "clock drift"
 #### `xping speedtest`
 
 ```
-xping speedtest [-c N] [-d SEC] [--min-download MBPS] [--min-upload MBPS]
+xping speedtest [-c N] [-d SEC] [-b] [--min-download MBPS] [--min-upload MBPS] [--max-bloat MS]
 ```
 
 Measures latency, download and upload speed against Cloudflare's speed
@@ -1335,18 +1335,48 @@ and 8 MB up (25 MB down with `-c 1`).
 Grades by download speed: Excellent ≥ 100 Mbps, Good ≥ 25, Fair ≥ 10,
 Poor ≥ 1, Critical below.
 
+**Bufferbloat** (`-b`, `--bufferbloat`): latency that shoots up whenever the
+line is busy. Speed alone does not show it, yet it is why video calls and
+games stutter while someone downloads or uploads. With `-b`, xping sends a
+small HTTPS request to the test server over a connection it keeps open, and
+times the round trip: first with the line idle, then every 0.2 s during the
+download and during the upload. The request waits in the same queues as the
+transfer, so it shows the delay that the load adds. (A plain TCP handshake
+would not: a VPN or proxy often answers it locally.) The result is the
+median loaded latency of the worse direction minus the idle median.
+A probe that gets no answer within 2 s counts as 2000 ms.
+
+| Latency increase | Grade | What it means |
+|------------------|-------|---------------|
+| under 5 ms | A+ | latency barely moves under load |
+| under 30 ms | A | fine for calls and gaming while the line is busy |
+| under 60 ms | B | calls and games may stutter during big transfers |
+| under 200 ms | C | noticeable lag whenever someone downloads or uploads |
+| under 400 ms | D | calls and games break up while the line is busy |
+| 400 ms or more | F | nearly unusable while busy |
+
+The cause is almost always an oversized buffer in your router or modem. The
+fix is SQM ("Smart Queue Management", fq_codel or CAKE) on the router, with
+the speeds set a little below what you measured. The JSON output adds
+`idle_latency_ms`, `download_latency_ms`, `upload_latency_ms`,
+`bufferbloat_ms` and `bufferbloat_grade`.
+
 | Option | Default | Description |
 |--------|---------|-------------|
 | `-c`, `--connections N` | 4 | Parallel connections (1 = single stream) |
 | `-d`, `--duration SEC` | 8 | Maximum download measurement time |
 | `--min-download MBPS` | — | Exit 1 if the download speed is below MBPS |
 | `--min-upload MBPS` | — | Exit 1 if the upload speed is below MBPS (or the upload failed) |
+| `-b`, `--bufferbloat` | off | Also measure how much latency rises under load, graded A+ to F |
+| `--max-bloat MS` | — | Exit 1 if latency rises by more than MS under load, or it could not be measured (implies `--bufferbloat`) |
 | `--save` | — | Keep this result for [`xping history`](#xping-history) |
 
 ```bash
 xping speedtest
 xping speedtest -c 8 --json
 xping speedtest --min-download 50 -q || echo "slower than the plan"
+xping speedtest --bufferbloat
+xping speedtest --max-bloat 30 -q || echo "turn on SQM in the router"
 ```
 
 ---
@@ -1919,7 +1949,7 @@ max_latency = 1500
 | `mtr` | `host` | `max_hops` (30), `cycles` (5), `timeout` (2.0), `tcp` (false), `port` (TCP SYN to this port), `family` | `max_loss`, `max_latency` (at the destination) |
 | `wifi` | — | `interface` | `min_signal` (dBm) |
 | `doctor` | — | `target` (a host to test end to end), `port` (443) | — (fails on a failed step) |
-| `speedtest` | — | `connections` (4), `duration` (8.0) | `min_download`, `min_upload` (Mbit/s) |
+| `speedtest` | — | `connections` (4), `duration` (8.0), `bufferbloat` (false) | `min_download`, `min_upload` (Mbit/s), `max_bloat` (ms; implies `bufferbloat`) |
 
 Additional rules:
 
