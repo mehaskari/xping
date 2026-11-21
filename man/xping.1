@@ -387,13 +387,20 @@ and is skipped with
 .BR \-\-no\-public .
 .TP
 .B listen [\fIOPTIONS\fR]
-List locally listening TCP/UDP ports, with process names and PIDs
-where the platform reports them (Linux).
+List locally listening TCP/UDP ports, with the process and PID behind
+each one.
 Uses
 .BR ss (8)
 on Linux,
 .BR netstat (8)
-on macOS and Windows.
+and
+.BR lsof (8)
+on macOS, and
+.B netstat \-ano
+and
+.B tasklist
+on Windows.
+Without root, processes of other users are not named.
 Filter with
 .B \-\-proto tcp
 or

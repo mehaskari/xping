@@ -1,8 +1,16 @@
 """
 xping.diagnostics.listen — Show locally listening TCP/UDP ports.
-Uses ss (Linux), netstat (macOS/Linux/Windows). No external libs.
+
+Linux: ``ss`` (or GNU ``netstat``), with the owning process.
+macOS / BSD: ``netstat -an`` for every listener, and ``lsof`` for the
+process behind each one (without root, only your own processes).
+Windows: ``netstat -ano`` and ``tasklist`` for the process names.
+No external libs.
 """
 
+import csv
+import io
+import os
 import re
 import subprocess
 import sys
@@ -114,8 +122,65 @@ def _parse_netstat_unix(output: str) -> list[ListenEntry]:
     return entries
 
 
+def _parse_lsof(output: str) -> dict[tuple[str, int], list[tuple[str, int, str]]]:
+    """``lsof -F pcPn`` output → {(proto, port): [(addr, pid, command), …]}."""
+    owners: dict[tuple[str, int], list[tuple[str, int, str]]] = {}
+    pid, command, proto = None, None, None
+    for line in output.splitlines():
+        if not line:
+            continue
+        tag, value = line[0], line[1:]
+        if tag == "p":
+            pid = int(value) if value.isdigit() else None
+            command, proto = None, None
+        elif tag == "c":
+            command = value
+        elif tag == "P":
+            proto = value.lower()
+        elif tag == "n" and pid is not None and command and proto in ("tcp", "udp"):
+            if "->" in value:
+                continue  # a connection, not a listener
+            addr, sep, port_s = value.rpartition(":")
+            if not sep or not port_s.isdigit():
+                continue
+            addr = addr.strip("[]") or "*"
+            owners.setdefault((proto, int(port_s)), []).append((addr, pid, command))
+    return owners
+
+
+def _lsof_owners() -> dict[tuple[str, int], list[tuple[str, int, str]]]:
+    owners: dict[tuple[str, int], list[tuple[str, int, str]]] = {}
+    # +c 0: the whole command name, not its first 9 characters
+    for selection in (["-iTCP", "-sTCP:LISTEN"], ["-iUDP"]):
+        out = _run("lsof", "-nP", "+c", "0", "-FpcPn", *selection)
+        for key, found in _parse_lsof(out or "").items():
+            owners.setdefault(key, []).extend(found)
+    return owners
+
+
+def _fill_owners(entries: list[ListenEntry], owners: dict) -> None:
+    """Give each entry the process that owns its port (same address first)."""
+    for entry in entries:
+        if entry.process:
+            continue
+        found = owners.get((entry.proto, entry.local_port))
+        if not found:
+            continue
+        exact = [o for o in found if o[0] == entry.local_addr]
+        _addr, entry.pid, entry.process = (exact or found)[0]
+
+
+def _parse_tasklist(output: str) -> dict[int, str]:
+    """``tasklist /FO CSV /NH`` → {pid: image name}."""
+    names = {}
+    for row in csv.reader(io.StringIO(output)):
+        if len(row) >= 2 and row[1].strip().isdigit():
+            names[int(row[1])] = row[0]
+    return names
+
+
 def _parse_netstat_windows(output: str) -> list[ListenEntry]:
-    """Parse Windows `netstat -an` output."""
+    """Parse Windows `netstat -an` / `netstat -ano` output (PID last with -o)."""
     entries = []
     for line in output.splitlines():
         parts = line.split()
@@ -133,7 +198,9 @@ def _parse_netstat_windows(output: str) -> list[ListenEntry]:
         if addr_port is None:
             continue
         addr, port = addr_port
-        entries.append(ListenEntry(proto=proto, local_addr=addr, local_port=port))
+        with_pid = 5 if proto == "tcp" else 4
+        pid = int(parts[-1]) if len(parts) >= with_pid and parts[-1].isdigit() else None
+        entries.append(ListenEntry(proto=proto, local_addr=addr, local_port=port, pid=pid))
     return entries
 
 
@@ -152,9 +219,13 @@ def listen(proto_filter: str | None = None, quiet: bool = False) -> ListenResult
     platform = sys.platform
 
     if platform == "win32":
-        out = _run("netstat", "-an")
+        out = _run("netstat", "-ano") or _run("netstat", "-an")
         if out:
             entries = _parse_netstat_windows(out)
+            names = _parse_tasklist(_run("tasklist", "/FO", "CSV", "/NH") or "")
+            for entry in entries:
+                if entry.pid is not None:
+                    entry.process = names.get(entry.pid)
         else:
             result.error = "netstat not available"
     else:
@@ -169,6 +240,8 @@ def listen(proto_filter: str | None = None, quiet: bool = False) -> ListenResult
             out = _run("netstat", flags)
             if out:
                 entries = _parse_netstat_unix(out)
+                if not platform.startswith("linux"):
+                    _fill_owners(entries, _lsof_owners())
             else:
                 result.error = "Neither ss nor netstat is available"
 
@@ -193,6 +266,13 @@ def listen(proto_filter: str | None = None, quiet: bool = False) -> ListenResult
             seen.add(key)
             unique.append(e)
     result.entries = unique
+    if (
+        platform != "win32"
+        and any(e.process is None for e in unique)
+        and hasattr(os, "geteuid")
+        and os.geteuid() != 0
+    ):
+        result.note = "Ports without a process belong to other users: run with sudo to see them."
 
     if not quiet:
         listen_view.print_result(result)

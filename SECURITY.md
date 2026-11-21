@@ -81,7 +81,7 @@ network unless you ask for it.
   text to `osascript` / `notify-send` as arguments, never as script source
   or a shell line.
 - **Subprocesses:** system tools (`ping`, `traceroute`, `dig`, `ss`,
-  `netstat`, `ip`, `ifconfig`, `osascript`, `notify-send`, …) are run with argument lists, never
+  `netstat`, `lsof`, `tasklist`, `ip`, `ifconfig`, `osascript`, `notify-send`, …) are run with argument lists, never
   through a shell.
 - **Remote data:** text from servers (HTTP headers, SMTP banners, WHOIS,
   DNS records, Wi-Fi names) is stripped of terminal escape sequences and
