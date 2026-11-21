@@ -607,8 +607,9 @@ Print a tab-completion script for
 .I SHELL
 .RB ( bash ,
 .BR zsh ,
+.BR fish ,
 or
-.BR fish ),
+.BR powershell ),
 or set it up with
 .BR \-\-install .
 See
@@ -1602,6 +1603,13 @@ and adds a marked block that loads it to
 (bash on Linux) or
 .I ~/.bash_profile
 (bash on macOS, whose Terminal opens login shells).
+For PowerShell (detected on Windows, which has no
+.BR $SHELL )
+it writes
+.I ~/.xping/completions/xping.ps1
+and adds the block to the
+.B $PROFILE
+of every PowerShell installed.
 It is idempotent; re-run it after upgrading xping to pick up new commands
 and flags, and name a shell to override detection
 .RB ( "xping completion bash \-\-install" ).
@@ -1615,6 +1623,7 @@ To wire it up by hand instead:
 source <(xping completion zsh)                       # ~/.zshrc
 eval "$(xping completion bash)"                      # ~/.bashrc
 xping completion fish > ~/.config/fish/completions/xping.fish
+xping completion powershell | Out\-String | Invoke\-Expression   # $PROFILE
 .fi
 .RE
 .PP
@@ -1941,9 +1950,10 @@ Completion scripts written by
 .BR "xping completion \-\-install" ,
 which also adds a marked block to
 .IR ~/.zshrc ,
-.I ~/.bashrc
-or
-.IR ~/.bash_profile .
+.IR ~/.bashrc ,
+.I ~/.bash_profile
+or the PowerShell
+.BR $PROFILE .
 .TP
 .I ~/.xping/checks.toml
 The default check file of

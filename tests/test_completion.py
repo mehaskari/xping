@@ -119,7 +119,7 @@ def test_bash_completes_commands_options_values_profiles_and_files(fake_env, tmp
         "xping ping --max": "--max-loss --max-latency",
         "xping listen --proto ": "tcp udp",
         "xping propagation h -r ": "A AAAA CNAME MX NS TXT",
-        "xping completion ": "bash zsh fish",
+        "xping completion ": "bash zsh fish powershell",
         "xping profile show ": "prod-db staging-api",
         "xping ping pro": "prod-db",
         "xping ping -c ": "",  # option value: nothing to suggest
@@ -230,6 +230,11 @@ def test_detect_shell(monkeypatch):
     assert completion.detect_shell() == "zsh"
     monkeypatch.setenv("SHELL", "/usr/bin/tcsh")
     assert completion.detect_shell() is None
+    monkeypatch.setenv("SHELL", "/usr/local/bin/pwsh")
+    assert completion.detect_shell() == "powershell"
+    monkeypatch.delenv("SHELL")
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert completion.detect_shell() == "powershell"  # Windows sets no $SHELL
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -276,3 +281,122 @@ def test_profile_list_names(tmp_path, monkeypatch, capsys):
     profile_diag.add("a-host", "10.0.0.1", quiet=True)
     code, out = _main(["profile", "list", "--names"], monkeypatch, capsys)
     assert code == 0 and out.out.splitlines() == ["a-host", "b-host"]
+
+
+# ── PowerShell ────────────────────────────────────────────────────────────────
+
+
+def test_powershell_quoting():
+    assert completion._ps("it's") == "'it''s'"
+    assert completion._ps("smart \u2019quote") == "'smart ''quote'"  # PS ends strings at it too
+    assert completion._ps_help("", "--x") == "'--x'"  # tooltips must not be empty
+
+
+def test_powershell_script_describes_every_command():
+    script = completion.generate("powershell")
+    assert "Register-ArgumentCompleter -Native -CommandName xping, xping.exe" in script
+    root = completion.model()
+    for name in root.subcommands:
+        assert f"    '{name}' = @{{" in script
+    assert "pc = @(, @('bash', 'zsh', 'fish', 'powershell'))" in script  # not flattened
+    assert "f = @('-c', '--count')" in script
+
+
+def _ps_profiles(monkeypatch, tmp_path, found):
+    monkeypatch.setattr(completion, "_powershell_profiles", lambda home: found)
+
+
+def test_install_powershell_into_every_profile(tmp_path, monkeypatch):
+    seven = tmp_path / "Documents" / "PowerShell" / "Microsoft.PowerShell_profile.ps1"
+    five = tmp_path / "Documents" / "WindowsPowerShell" / "Microsoft.PowerShell_profile.ps1"
+    five.parent.mkdir(parents=True)
+    five.write_bytes("\ufeffSet-Alias ll Get-ChildItem\r\n# caf\xe9\n".encode("utf-8"))
+    _ps_profiles(monkeypatch, tmp_path, [seven, five])
+    actions = completion.install("powershell", home=tmp_path)
+    script = tmp_path / ".xping" / "completions" / "xping.ps1"
+    assert script.read_bytes().startswith(b"\xef\xbb\xbf")  # BOM for Windows PowerShell 5.1
+    for profile in (seven, five):
+        raw = profile.read_bytes()
+        assert raw.startswith(b"\xef\xbb\xbf") and raw.count(b">>> xping completion") == 1
+        assert f"if (Test-Path -LiteralPath '{script}')".encode() in raw
+    assert "Set-Alias ll Get-ChildItem" in five.read_text(encoding="utf-8-sig")
+    assert len(actions) == 3
+    completion.install("powershell", home=tmp_path)  # idempotent
+    assert seven.read_text(encoding="utf-8-sig").count(">>> xping completion") == 1
+    completion.uninstall("powershell", home=tmp_path)
+    assert not script.exists()
+    assert "xping" not in five.read_text(encoding="utf-8-sig")
+    assert "caf\xe9" in five.read_text(encoding="utf-8-sig")
+
+
+def test_install_powershell_keeps_a_non_utf8_profile(tmp_path, monkeypatch):
+    profile = tmp_path / "profile.ps1"
+    profile.write_bytes(b"# caf\xe9 in cp1252\n")
+    _ps_profiles(monkeypatch, tmp_path, [profile])
+    completion.install("powershell", home=tmp_path)
+    completion.uninstall("powershell", home=tmp_path)
+    assert b"caf\xe9 in cp1252" in profile.read_bytes()
+
+
+def test_powershell_profile_paths(tmp_path, monkeypatch):
+    monkeypatch.setattr(completion, "_ask_powershell_profile", lambda exe: tmp_path / f"{exe}.ps1")
+    monkeypatch.setattr(shutil, "which", lambda exe: exe if exe == "pwsh" else None)
+    assert completion._powershell_profiles(tmp_path) == [tmp_path / "pwsh.ps1"]
+    monkeypatch.setattr(shutil, "which", lambda exe: None)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert completion._powershell_profiles(tmp_path) == [
+        tmp_path / "cfg" / "powershell" / "Microsoft.PowerShell_profile.ps1"
+    ]
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert completion._powershell_profiles(tmp_path)[0].parts[-3:] == (
+        "Documents", "PowerShell", "Microsoft.PowerShell_profile.ps1"
+    )
+
+
+_PWSH = shutil.which("pwsh") or shutil.which("powershell")
+
+
+@pytest.mark.skipif(_PWSH is None, reason="PowerShell is not installed")
+def test_powershell_tab_completion(fake_env, tmp_path):
+    env, _work, base = fake_env
+    home = env["HOME"]
+    env = {**env, "USERPROFILE": home}
+    repo = Path(__file__).resolve().parents[1]
+    (base / "bin" / "xping.cmd").write_text(
+        f'@set PYTHONPATH={repo}\r\n@"{sys.executable}" -m xping %*\r\n', encoding="utf-8"
+    )
+    script = tmp_path / "xping.ps1"
+    script.write_text(completion.generate("powershell"), encoding="utf-8-sig")
+    cases = {
+        "xping pi": ["ping"],
+        "xping ping --cou": ["--count"],
+        "xping completion ": ["bash", "zsh", "fish", "powershell"],
+        "xping propagation example.com --type M": ["MX"],
+        "xping profile ": ["add", "list", "remove", "rm", "show"],
+        "xping ping ": ["prod-db", "staging-api"],
+        "xping ping -c 3 st": ["staging-api"],
+        "xping profile show p": ["prod-db"],
+    }
+    lines = json.dumps(list(cases))
+    driver = textwrap.dedent(
+        f"""
+        . '{script}'
+        $out = @{{}}
+        foreach ($line in (ConvertFrom-Json @'
+        {lines}
+        '@)) {{
+            $m = (TabExpansion2 -inputScript $line -cursorColumn $line.Length).CompletionMatches
+            $out[$line] = @($m | ForEach-Object {{ $_.CompletionText }})
+        }}
+        $out | ConvertTo-Json -Depth 3
+        """
+    )
+    proc = subprocess.run(
+        [_PWSH, "-NoProfile", "-NonInteractive", "-Command", driver],
+        capture_output=True, text=True, env=env, timeout=120,
+    )
+    assert proc.returncode == 0, proc.stderr
+    got = json.loads(proc.stdout)
+    for line, expected in cases.items():
+        assert sorted(got[line] or []) == sorted(expected), (line, got[line])

@@ -22,6 +22,11 @@
   the network operator (ASN), prefix, country and blocklist status.
   Without an argument it describes your own public address.
   `--no-blocklist` skips the blocklists; exit 1 when the address is listed.
+- **Tab completion for PowerShell.** `xping completion powershell` prints
+  a completer for commands, options (with descriptions), option values,
+  saved profiles and sub-commands; `xping completion --install` sets it up
+  in `$PROFILE` of every PowerShell installed (PowerShell 7 and Windows
+  PowerShell 5.1), and is the default on Windows, which has no `$SHELL`.
 
 ### Changed
 - Hardening: `~/.xping` and its directories are created readable only by

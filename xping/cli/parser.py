@@ -1079,8 +1079,8 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     p_completion.add_argument(
         "shell",
         nargs="?",
-        choices=["bash", "zsh", "fish"],
-        help="Shell [default with --install/--uninstall: your login shell]",
+        choices=["bash", "zsh", "fish", "powershell"],
+        help="Shell [default with --install/--uninstall: your login shell; PowerShell on Windows]",
     )
     comp_action = p_completion.add_mutually_exclusive_group()
     comp_action.add_argument(

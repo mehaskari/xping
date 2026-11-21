@@ -156,7 +156,7 @@ Per-command modules follow one pattern and are not listed one by one:
 | `cli/commands.py` | `cmd_NAME` handlers: call the diagnostic, wire watch mode and alerts, return the result |
 | `cli/export.py` | `--json` / `--csv` / `--markdown` / `--quiet` handling |
 | `cli/config.py` | `~/.xping/config.toml` as parser defaults |
-| `cli/completion.py` | bash / zsh / fish completion generated from the parser |
+| `cli/completion.py` | bash / zsh / fish / PowerShell completion generated from the parser |
 | `cli/deprecated.py` | Old option spellings rewritten (with a warning) until 2.0 |
 | `cli/errors.py` | `UsageError` (exit 2) |
 | `__main__.py` | `python -m xping` |
