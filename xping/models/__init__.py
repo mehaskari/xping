@@ -9,6 +9,7 @@ from .doctor import DoctorResult, DoctorStep
 from .health import HealthResult
 from .history import HistoryEntry, HistoryResult, HistoryRun
 from .http import HttpResult, RedirectHop, SecurityHeader
+from .ipinfo import IpInfoResult
 from .ipscan import IpProbe, IpScanResult
 from .listen import ListenEntry, ListenResult
 from .lookup import DnsResult
@@ -50,6 +51,7 @@ __all__ = [
     "BundleResult",
     "BlocklistCheck",
     "BlocklistResult",
+    "IpInfoResult",
     "CheckOutcome",
     "CheckReport",
     "RdnsResult",

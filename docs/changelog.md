@@ -25,6 +25,12 @@
   addressed to this machine. CSV exports make text that a spreadsheet would
   run as a formula literal. The release workflow grants each job only the
   permissions it needs.
+- **`xping ip [ADDRESS|HOST]`: one address in one view.** Its kind
+  (public, private, CGNAT, loopback, link-local, documentation…), reverse
+  DNS name and whether that name resolves back, and for a public address
+  the network operator (ASN), prefix, country and blocklist status.
+  Without an argument it describes your own public address.
+  `--no-blocklist` skips the blocklists; exit 1 when the address is listed.
 
 ### Documentation
 - `ARCHITECTURE.md`: how a command runs, how watch mode, alerts and

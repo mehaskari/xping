@@ -26,7 +26,7 @@ output means, and walks through common tasks.
 4. [Command reference](#4-command-reference)
    - Troubleshooting: [`doctor`](#xping-doctor) · [`net`](#xping-net) · [`health`](#xping-health) · [`all`](#xping-all)
    - Reachability and paths: [`ping`](#xping-ping) · [`trace`](#xping-trace) · [`mtr`](#xping-mtr) · [`tcp`](#xping-tcp) · [`udp`](#xping-udp) · [`mtu`](#xping-mtu)
-   - DNS and domains: [`lookup`](#xping-lookup) · [`rdns`](#xping-rdns) · [`dnscheck`](#xping-dnscheck) · [`blocklist`](#xping-blocklist) · [`propagation`](#xping-propagation) · [`whois`](#xping-whois)
+   - DNS and domains: [`lookup`](#xping-lookup) · [`rdns`](#xping-rdns) · [`ip`](#xping-ip) · [`dnscheck`](#xping-dnscheck) · [`blocklist`](#xping-blocklist) · [`propagation`](#xping-propagation) · [`whois`](#xping-whois)
    - Web, mail and TLS: [`http`](#xping-http) · [`tls`](#xping-tls) · [`smtp`](#xping-smtp)
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
    - Local machine: [`wifi`](#xping-wifi) · [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
@@ -811,6 +811,37 @@ finds no PTR record, it queries 8.8.8.8 directly.
 
 ```bash
 xping rdns 8.8.8.8
+```
+
+#### `xping ip`
+
+```
+xping ip [ADDRESS | HOST] [--no-blocklist] [-4 | -6]
+```
+
+Everything about one address in one view. Without an argument it
+describes your public address (as Cloudflare sees it):
+
+| Row | What it says |
+|-----|--------------|
+| Kind | public, private (RFC 1918 / ULA), CGNAT (100.64.0.0/10: your ISP shares the address, so nobody can connect to you directly), loopback, link-local, multicast, documentation or reserved |
+| Reverse DNS | the PTR name and whether it resolves back to the address (forward-confirmed reverse DNS, which mail servers need) |
+| Network | the AS number and operator that announce the address, with the prefix and country (Team Cymru DNS) |
+| Blocklists | listed, or clean with the number of spam blocklists that answered, as in [`xping blocklist`](#xping-blocklist) |
+
+The network and blocklist rows appear for public addresses only. A host
+name is resolved first (`-4` / `-6` pick the family). The exit code is 1
+when the address cannot be found or is on a blocklist.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--no-blocklist` | off | Skip the blocklist check, so the address is not sent to the blocklists' DNS servers |
+| `-4`, `-6` | — | Force IPv4 or IPv6 (for a host name, or for your own address) |
+
+```bash
+xping ip
+xping ip 8.8.8.8
+xping ip mail.example.net --json
 ```
 
 #### `xping dnscheck`
@@ -2172,6 +2203,7 @@ contact third parties, and only when you use them:
 | `propagation` | Google, Cloudflare, Quad9, OpenDNS, AdGuard and Control D resolvers |
 | `whois` | IANA and registry WHOIS / RDAP servers |
 | `blocklist` | the blocklists' DNS servers (via your resolver), which see the checked IP or domain |
+| `ip` | `1.1.1.1` for your own address (without an argument); Team Cymru DNS and the blocklists' DNS servers for a public address (skip the blocklists with `--no-blocklist`) |
 | `lookup`, `dnscheck` | `8.8.8.8`, only when `dig` is not installed |
 | `lookup --doh` | the DoH provider you choose (Cloudflare, Google, Quad9 or your URL) |
 | `dnscheck` | `1.1.1.1` (or `8.8.8.8`) for the DNSSEC check |
