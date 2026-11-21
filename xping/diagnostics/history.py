@@ -24,6 +24,7 @@ from typing import Any
 
 from xping.diagnostics.diff import METRICS, _get, _number
 from xping.models.history import HistoryEntry, HistoryResult, HistoryRun
+from xping.paths import private_dir
 
 HISTORY_DIR = Path.home() / ".xping" / "history"
 MAX_RUNS = 500
@@ -95,7 +96,7 @@ def record(command: str, target: str, result: object, ok: bool, base: Path | Non
     """Append one run; trim the file to the newest MAX_RUNS runs."""
     data = result_data(result)
     path = _file(command, target, base)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    private_dir(path.parent)
     line = json.dumps({"ts": time.time(), "ok": ok, "target": target, "result": data})
     with open(path, "a", encoding="utf-8") as f:
         f.write(line + "\n")

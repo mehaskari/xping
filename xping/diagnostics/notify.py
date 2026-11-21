@@ -40,6 +40,10 @@ TELEGRAM_HOST = "api.telegram.org"
 NTFY_HOST = "ntfy.sh"
 
 
+# stands in for --webhook (see xping.cli.main); keeps the URL out of `ps`
+WEBHOOK_ENV = "XPING_WEBHOOK"
+
+
 def _is_ntfy(parts) -> bool:
     return parts.scheme == "ntfy" or parts.hostname == NTFY_HOST
 
@@ -94,7 +98,7 @@ def desktop_notify(title: str, message: str) -> bool:
             message,
         ]
     elif sys.platform.startswith("linux") and shutil.which("notify-send"):
-        cmd = ["notify-send", "--app-name=xping", title, message]
+        cmd = ["notify-send", "--app-name=xping", "--", title, message]
     else:
         return False
     try:

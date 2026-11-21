@@ -64,6 +64,19 @@ def _is_bare_host(argv: list[str]) -> str | None:
     return None
 
 
+def _webhook_from_environment(parser, args) -> None:
+    """$XPING_WEBHOOK stands in for --webhook: unlike a command-line argument,
+    the environment of a process is not visible to other users (ps)."""
+    from xping.diagnostics.notify import WEBHOOK_ENV, valid_webhook
+
+    url = os.environ.get(WEBHOOK_ENV, "").strip()
+    if not url or not hasattr(args, "webhook") or args.webhook:
+        return
+    if not valid_webhook(url):
+        parser.exit(2, f"xping: ${WEBHOOK_ENV} is not a valid webhook URL\n")
+    args.webhook = url
+
+
 def main() -> None:
     raw_argv = deprecated.rewrite(sys.argv[1:])
 
@@ -104,6 +117,7 @@ def main() -> None:
 
     args = parser.parse_args(raw_argv)
     user_config.resolve_conflicts(build_parser(), args, raw_argv)
+    _webhook_from_environment(parser, args)
 
     if args.version:
         print_version()
