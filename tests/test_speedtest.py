@@ -1,5 +1,6 @@
 """Multi-connection speedtest measurement."""
 
+import functools
 import http.server
 import io
 import socketserver
@@ -204,7 +205,7 @@ def test_probe_times_round_trips_on_one_connection():
 
 def test_probe_failure_counts_as_timeout_and_reconnects():
     _Conn.made = 0
-    conn = lambda *a, **k: _Conn(*a, **k, fail=True)  # noqa: E731
+    conn = functools.partial(_Conn, fail=True)
     with patch.object(st.http.client, "HTTPSConnection", conn):
         probe = st._LatencyProbe(timeout=1.5)
         assert probe.sample() == 1500.0 and probe.sample() == 1500.0
