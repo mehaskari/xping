@@ -1328,8 +1328,10 @@ xping speedtest [-c N] [-d SEC] [-b] [--min-download MBPS] [--min-upload MBPS] [
 
 Measures latency, download and upload speed against Cloudflare's speed
 test service. By default it uses 4 parallel connections, because a single
-stream under-reports fast links. Download is timed from the first byte;
-upload is timed after the TLS handshakes. It uses up to about 40 MB down
+stream under-reports fast links. Latency is the best of five small HTTPS
+requests on one connection that is already open, so it is one round trip,
+not the handshakes. Download is timed from the first byte; upload is timed
+after the TLS handshakes. It uses up to about 40 MB down
 and 8 MB up (25 MB down with `-c 1`).
 
 Grades by download speed: Excellent ≥ 100 Mbps, Good ≥ 25, Fair ≥ 10,

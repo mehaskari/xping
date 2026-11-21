@@ -24,7 +24,6 @@ from xping.render.animations import Spinner
 from xping.render.errors import error
 from xping.render.views import speedtest as speedtest_view
 
-_PING_URL = "https://speed.cloudflare.com/cdn-cgi/trace"
 _DOWN_URL = "https://speed.cloudflare.com/__down?bytes={size}"
 _UP_URL = "https://speed.cloudflare.com/__up"
 # Per-stream download sizes. speed.cloudflare.com answers 403 for some sizes
@@ -55,6 +54,7 @@ class _LatencyProbe:
         self.host = host
         self.timeout = timeout
         self.samples: list[float] = []
+        self.last_body = ""
         self._conn: http.client.HTTPSConnection | None = None
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -69,8 +69,10 @@ class _LatencyProbe:
                 self._conn.connect()
             t0 = time.perf_counter()
             self._conn.request("GET", _PROBE_PATH, headers={"User-Agent": "xping/speedtest"})
-            self._conn.getresponse().read()
-            return (time.perf_counter() - t0) * 1000
+            body = self._conn.getresponse().read()
+            elapsed = (time.perf_counter() - t0) * 1000
+            self.last_body = body.decode("utf-8", "replace")
+            return elapsed
         except (OSError, http.client.HTTPException):
             self.close()
             return self.timeout * 1000
@@ -114,23 +116,27 @@ class _LatencyProbe:
             self._conn = None
 
 
-def _measure_ping(timeout: float = 5.0) -> tuple[float | None, str | None]:
-    """Best of 3 HTTPS round trips, plus the Cloudflare colo that answered."""
-    ctx = secure_context()
+def _measure_ping(
+    probe: _LatencyProbe | None = None, samples: int = 5
+) -> tuple[float | None, str | None]:
+    """Best HTTPS round trip over one kept-open connection, plus the
+    Cloudflare colo that answered. The connection is set up first and not
+    timed: a new TCP + TLS handshake per sample would report about three
+    round trips instead of one."""
+    probe = probe or _LatencyProbe(timeout=5.0)
     times = []
-    colo = None
-    for _ in range(3):
-        try:
-            t0 = time.perf_counter()
-            with urllib.request.urlopen(_PING_URL, context=ctx, timeout=timeout) as r:
-                body = r.read().decode("utf-8", "replace")
-            times.append((time.perf_counter() - t0) * 1000)
-            colo = colo or next(
-                (line.split("=", 1)[1] for line in body.splitlines() if line.startswith("colo=")),
-                None,
-            )
-        except Exception:
-            continue  # one failed sample is fine; the fastest successful one is reported
+    for _ in range(samples):
+        ms = probe.sample()
+        if ms < probe.timeout * 1000:
+            times.append(ms)
+    colo = next(
+        (
+            line.split("=", 1)[1]
+            for line in probe.last_body.splitlines()
+            if line.startswith("colo=")
+        ),
+        None,
+    )
     return (min(times) if times else None), colo
 
 
@@ -292,7 +298,10 @@ def speedtest(
     if not quiet and sys.stdout.isatty():
         spinner = Spinner(c("Measuring latency…", BRAND_TEAL))
         spinner.start()
-    result.ping_ms, colo = _measure_ping()
+    probe = _LatencyProbe()
+    result.ping_ms, colo = _measure_ping(probe)
+    if not bufferbloat:
+        probe.close()  # not needed again: don't hold it open during the transfers
     result.server = f"speed.cloudflare.com ({colo})" if colo else "speed.cloudflare.com"
     if spinner:
         spinner.stop()
@@ -300,8 +309,7 @@ def speedtest(
     if not quiet and result.ping_ms:
         print(kv("Ping", f"{result.ping_ms:.1f} ms"))
 
-    probe = _LatencyProbe() if bufferbloat else None
-    if probe:
+    if bufferbloat:
         if not quiet and sys.stdout.isatty():
             spinner = Spinner(c("Measuring idle latency…", BRAND_TEAL))
             spinner.start()
@@ -316,7 +324,7 @@ def speedtest(
     if not quiet and sys.stdout.isatty():
         spinner = Spinner(c(f"Measuring download ({connections} streams)…", BRAND_TEAL))
         spinner.start()
-    if probe:
+    if bufferbloat:
         with probe.running():
             dl, result.download_bytes, dl_error = _measure_download(connections, duration)
         result.download_latency_ms = probe.median if dl is not None else None
@@ -338,13 +346,13 @@ def speedtest(
     if not quiet and sys.stdout.isatty():
         spinner = Spinner(c(f"Measuring upload ({connections} streams)…", BRAND_TEAL))
         spinner.start()
-    if probe:
+    if bufferbloat:
         with probe.running():
             result.upload_mbps, result.upload_bytes = _measure_upload(connections)
         result.upload_latency_ms = probe.median if result.upload_mbps is not None else None
-        probe.close()
     else:
         result.upload_mbps, result.upload_bytes = _measure_upload(connections)
+    probe.close()
     if spinner:
         spinner.stop()
 

@@ -27,6 +27,11 @@
   listens on the network, and have a recipe and FAQ entries for the status
   page and phone alerts.
 
+### Fixed
+- `xping speedtest` reported a latency about three times too high: every
+  sample opened a new connection, so it timed the TCP and TLS handshakes
+  as well. It now times one request on a connection that is already open.
+
 ## [1.8.0] - 2026-11-06
 
 ### Added

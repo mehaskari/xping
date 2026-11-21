@@ -212,6 +212,22 @@ def test_probe_failure_counts_as_timeout_and_reconnects():
     assert _Conn.made == 2
 
 
+def test_ping_is_one_round_trip_on_a_warm_connection():
+    _Conn.made = 0
+    with patch.object(st.http.client, "HTTPSConnection", _Conn):
+        ping, colo = st._measure_ping(samples=4)
+    assert ping is not None and ping < 100 and colo == "FRA"
+    assert _Conn.made == 1  # one handshake, not one per sample
+
+
+def test_ping_ignores_failed_samples():
+    probe = st._LatencyProbe(timeout=2.0)
+    with patch.object(probe, "sample", side_effect=[2000.0, 30.0, 25.0]):
+        assert st._measure_ping(probe, samples=3) == (25.0, None)
+    with patch.object(probe, "sample", return_value=2000.0):
+        assert st._measure_ping(probe, samples=2) == (None, None)
+
+
 def test_idle_is_the_median_and_ignores_timeouts():
     probe = st._LatencyProbe()
     with patch.object(probe, "sample", side_effect=[10.0, 2000.0, 14.0, 12.0]):
@@ -272,8 +288,8 @@ def test_speedtest_bufferbloat_records_each_phase():
 
 
 def test_speedtest_without_bufferbloat_does_not_probe():
-    r, cls, _ = _run_speedtest(False)
-    cls.assert_not_called()
+    r, _, fake = _run_speedtest(False)
+    assert fake.idle_calls == 0 and next(fake.medians) == 80.0  # never ran a phase
     assert r.idle_latency_ms is None and r.bufferbloat_ms is None
 
 
