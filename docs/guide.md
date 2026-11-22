@@ -29,7 +29,7 @@ output means, and walks through common tasks.
    - DNS and domains: [`lookup`](#xping-lookup) · [`rdns`](#xping-rdns) · [`ip`](#xping-ip) · [`dnscheck`](#xping-dnscheck) · [`blocklist`](#xping-blocklist) · [`propagation`](#xping-propagation) · [`whois`](#xping-whois)
    - Web, mail and TLS: [`http`](#xping-http) · [`tls`](#xping-tls) · [`smtp`](#xping-smtp)
    - Scanning: [`portscan`](#xping-portscan) · [`sweep`](#xping-sweep) · [`ipscan`](#xping-ipscan) · [`osdetect`](#xping-osdetect)
-   - Local machine: [`wifi`](#xping-wifi) · [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
+   - Local machine: [`lan`](#xping-lan) · [`wifi`](#xping-wifi) · [`listen`](#xping-listen) · [`ntp`](#xping-ntp) · [`speedtest`](#xping-speedtest)
    - Automation: [`check`](#xping-check) · [`monitor`](#xping-monitor) · [`diff`](#xping-diff) · [`history`](#xping-history) · [`report`](#xping-report) · [`profile`](#xping-profile)
    - Utilities: [`config`](#xping-config) · [`completion`](#xping-completion) · [`deps`](#xping-deps) · [`about`](#xping-about)
 5. [Batch check files](#5-batch-check-files)
@@ -420,6 +420,57 @@ xping doctor
 xping doctor github.com
 xping doctor db.example.com --port 5432
 xping doctor --json | jq '.steps[] | select(.status != "ok")'
+```
+
+#### `xping lan`
+
+```
+xping lan [NETWORK] [--no-scan] [--no-names]
+```
+
+Which devices are on your network? No root and no extra software:
+
+1. xping sends one empty UDP datagram to every address of the subnet (to
+   the discard port, 9). To send it, the system has to find each address
+   with ARP, so every device that is there answers, whether or not it
+   answers ping.
+2. It reads the neighbour (ARP) table back: `/proc/net/arp` on Linux,
+   `arp -an` on macOS, `arp -a` on Windows.
+3. It asks each device its name over mDNS (port 5353: Apple devices, most
+   printers and many smart devices answer), then the router's DNS, which
+   often knows the names DHCP handed out.
+4. The vendor comes from the MAC prefix, read from a list already on your
+   machine: nmap's `nmap-mac-prefixes`, Wireshark's `manuf`, or the IEEE
+   `oui.txt` from `ieee-data` / `hwdata` on Linux. Without one, the vendor
+   column stays empty and xping says what to install.
+
+| Column | Meaning |
+|--------|---------|
+| IP, MAC | the device's address and hardware address |
+| Vendor | the maker of the network card (from the MAC prefix) |
+| Name | the name it gives over mDNS, or the router's DNS name for it |
+| (role) | `this machine`, `router`, `private MAC` |
+
+A **private MAC** is randomised or locally assigned: phones and laptops
+use one per network for privacy, and range extenders rewrite the MACs of
+devices behind them. Such an address names no vendor.
+
+Without `NETWORK` xping uses the private IPv4 network of this machine:
+the interface with the default gateway, or (when a full-tunnel VPN owns
+the default route) the first private non-VPN interface. A subnet larger
+than a /22 is scanned around this machine's address only; a `NETWORK`
+can be up to 4096 addresses. Nothing leaves the local network.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `NETWORK` | this LAN | IPv4 network to scan, e.g. `192.168.1.0/24` |
+| `--no-scan` | off | Only read the ARP table: devices this machine talked to recently |
+| `--no-names` | off | Skip the mDNS and router DNS name lookups |
+
+```bash
+xping lan
+xping lan 10.0.0.0/24 --csv > devices.csv
+xping lan --no-scan
 ```
 
 #### `xping net`

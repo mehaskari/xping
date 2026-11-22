@@ -71,6 +71,7 @@ Real runs, recorded on a GitHub runner by
 - **Wi-Fi** — `xping wifi`: signal and noise (dBm), SNR, channel and width, link rate, security, how many nearby networks share your channel, and what to do about it
 - **Connectivity doctor** — `xping doctor`: finds out *why* the internet (or a host) is not working — interface, router, internet, DNS, captive portal, HTTPS, clock — and says what to do
 - **Network overview** — `xping net`: interfaces, gateway, DNS servers, public IPv4/IPv6
+- **LAN devices** — `xping lan`: every device on your network with IP, MAC, vendor and name (mDNS / router DNS), marked as router, this machine or private MAC; no root, nothing leaves the network
 - **Watch & wait** — `--watch` / `--until-up` on `ping`, `tcp`, `udp`, `http` and `health`
 - **Alerts** — `--notify` (desktop notification) and `--webhook URL` (Slack, Discord, Telegram, ntfy, Mattermost, any JSON endpoint) when a watched target goes down or comes back
 - **Exit codes & thresholds** — `--max-loss`, `--max-latency`, `--expect-status`, `--min-days`, `--min-score`, `--quiet`
@@ -453,6 +454,17 @@ xping net               # interfaces, gateway, DNS servers, public IPv4/IPv6
 xping net --no-public   # skip the public-IP lookup (nothing leaves your network)
 xping net --all         # include interfaces with only link-local addresses
 ```
+
+### LAN Devices
+
+```bash
+xping lan               # every device on this network: IP, MAC, vendor, name
+xping lan 10.0.0.0/24   # another subnet (up to 4096 addresses)
+xping lan --no-scan     # only what the ARP table already knows
+```
+
+Vendors come from a MAC prefix list already on your machine (nmap,
+Wireshark, or `ieee-data` / `hwdata` on Linux).
 
 ### Speed Test
 

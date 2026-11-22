@@ -191,13 +191,14 @@ Per-command modules follow one pattern and are not listed one by one:
 | `diagnostics/ipinfo.py` | `xping ip`: one address — kind, reverse DNS, ASN, blocklists — built from `rdns`, `asn` and `blocklist` |
 
 The remaining `diagnostics/*.py` are the per-command modules: `blocklist`,
-`dnscheck`, `doctor`, `health`, `http`, `ipscan`, `listen`, `lookup`,
+`dnscheck`, `doctor`, `health`, `http`, `ipscan`, `lan`, `listen`, `lookup`,
 `mtr`, `mtu`, `net`, `ntp`, `ping`, `portscan`, `propagation`, `rdns`,
 `smtp`, `speedtest`, `sweep`, `tcp`, `tls`, `trace`, `udp`, `whois`,
 `wifi`. They are listed here so the map stays complete:
 `diagnostics/blocklist.py`, `diagnostics/dnscheck.py`,
 `diagnostics/doctor.py`, `diagnostics/health.py`, `diagnostics/http.py`,
-`diagnostics/ipscan.py`, `diagnostics/listen.py`, `diagnostics/lookup.py`,
+`diagnostics/ipscan.py`, `diagnostics/lan.py`, `diagnostics/listen.py`,
+`diagnostics/lookup.py`,
 `diagnostics/mtr.py`, `diagnostics/mtu.py`, `diagnostics/net.py`,
 `diagnostics/ntp.py`, `diagnostics/ping.py`, `diagnostics/portscan.py`,
 `diagnostics/propagation.py`, `diagnostics/rdns.py`, `diagnostics/smtp.py`,

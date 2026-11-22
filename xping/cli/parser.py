@@ -258,6 +258,7 @@ Commands:
   osdetect <host>      Guess remote OS from TTL fingerprint
   speedtest            Download/upload speed and bufferbloat via Cloudflare
   listen               Show locally listening TCP/UDP ports
+  lan    [cidr]        Devices on your network: IP, MAC, vendor, name (no root)
   net                  Local network overview: interfaces, gateway, DNS, public IP
   wifi                 Wi-Fi signal, noise, channel, link rate and nearby networks
   doctor [host]        Why is the internet not working? Step-by-step diagnosis
@@ -303,6 +304,7 @@ Examples:
   xping speedtest --json
   xping speedtest --bufferbloat
   xping net
+  xping lan
   xping wifi --nearby
   xping doctor
   xping doctor github.com --port 22
@@ -1095,6 +1097,26 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
     )
     p_listen.add_argument(
         "--proto", choices=["tcp", "udp"], default=None, help="Filter by protocol (default: both)"
+    )
+
+    p_lan = sub.add_parser(
+        "lan",
+        parents=[export_parent],
+        help="Devices on your local network: IP, MAC, vendor and name (no root)",
+    )
+    p_lan.add_argument(
+        "network",
+        nargs="?",
+        default=None,
+        help="IPv4 network, e.g. 192.168.1.0/24 [default: this machine's LAN, at most a /22]",
+    )
+    p_lan.add_argument(
+        "--no-scan",
+        action="store_true",
+        help="Only read the ARP table: devices this machine talked to recently",
+    )
+    p_lan.add_argument(
+        "--no-names", action="store_true", help="Skip the mDNS and router DNS name lookups"
     )
 
     p_osdetect = sub.add_parser(

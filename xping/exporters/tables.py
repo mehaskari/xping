@@ -227,6 +227,13 @@ def sections_for(result: Any) -> list[Section]:
     if isinstance(result, m.MtuResult):
         rows = [[p.get("size"), p.get("ok")] for p in result.probes]
         return [Section("Probes", ["payload_bytes", "ok"], rows)]
+    if isinstance(result, m.LanResult):
+        rows = [
+            [d.ip, d.mac or "", d.vendor or "", d.name or "", d.random_mac, d.is_self, d.is_gateway]
+            for d in result.devices
+        ]
+        columns = ["ip", "mac", "vendor", "name", "random_mac", "self", "gateway"]
+        return [Section("Devices", columns, rows)]
     if isinstance(result, m.ListenResult):
         rows = [
             [e.proto, e.local_addr, e.local_port, e.pid or "", e.process or ""]
