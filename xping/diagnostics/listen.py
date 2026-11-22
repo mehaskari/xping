@@ -167,7 +167,7 @@ def _fill_owners(entries: list[ListenEntry], owners: dict) -> None:
         if not found:
             continue
         exact = [o for o in found if o[0] == entry.local_addr]
-        _addr, entry.pid, entry.process = (exact or found)[0]
+        entry.pid, entry.process = (exact or found)[0][1:]
 
 
 def _parse_tasklist(output: str) -> dict[int, str]:
