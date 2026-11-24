@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+- **`xping speedtest --bufferbloat` (`-b`): how much latency rises while
+  the line is busy.** xping times small HTTPS requests over a kept-open
+  connection with the line idle and again during the download and the
+  upload (not TCP handshakes, which a VPN or proxy may answer), then grades
+  the increase from A+ (under 5 ms) to F (400 ms or more), says what that
+  means for calls and games, and suggests SQM on the router when it is
+  poor. `--max-bloat MS` exits 1 above a limit (and implies `-b`); check
+  files take `bufferbloat = true` and `max_bloat`. The JSON adds
+  `idle_latency_ms`, `download_latency_ms`, `upload_latency_ms`,
+  `bufferbloat_ms` and `bufferbloat_grade`, and `xping diff` compares them.
+
 ### Documentation
 - `ARCHITECTURE.md`: how a command runs, how watch mode, alerts and
   monitor work (threads, lock, reload, `--resume`), what is stored where,
@@ -14,6 +26,11 @@
 - The README and the guide list every file xping writes, say when xping
   listens on the network, and have a recipe and FAQ entries for the status
   page and phone alerts.
+
+### Fixed
+- `xping speedtest` reported a latency about three times too high: every
+  sample opened a new connection, so it timed the TCP and TLS handshakes
+  as well. It now times one request on a connection that is already open.
 
 ## [1.8.0] - 2026-11-06
 
