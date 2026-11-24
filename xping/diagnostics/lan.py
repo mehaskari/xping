@@ -217,7 +217,7 @@ def probe(hosts: list[str], rounds: int = 2) -> None:
                 try:
                     sock.sendto(b"", (host, _DISCARD_PORT))
                 except OSError:
-                    pass
+                    pass  # no route / no buffer space: expected for absent hosts
                 if i % 64 == 63:
                     time.sleep(0.01)  # don't overrun the ARP queue
             time.sleep(_SETTLE / rounds)
@@ -268,7 +268,7 @@ def lan(
 
     if not quiet:
         print(section_header(f"LAN DEVICES  {result.network or ''}".rstrip(), "⌂"))
-    if result.error:
+    if result.error or result.network is None:
         if not quiet:
             lan_view.print_result(result)
         return result
