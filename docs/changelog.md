@@ -16,6 +16,12 @@
 - `XPING_WEBHOOK` stands in for `--webhook`, so the URL (which can hold a
   token) is not visible in the process list. `--install-service` now puts
   the URL in the service's environment instead of its command line.
+- **`xping ip [ADDRESS|HOST]`: one address in one view.** Its kind
+  (public, private, CGNAT, loopback, link-local, documentation…), reverse
+  DNS name and whether that name resolves back, and for a public address
+  the network operator (ASN), prefix, country and blocklist status.
+  Without an argument it describes your own public address.
+  `--no-blocklist` skips the blocklists; exit 1 when the address is listed.
 
 ### Changed
 - Hardening: `~/.xping` and its directories are created readable only by
@@ -25,12 +31,11 @@
   addressed to this machine. CSV exports make text that a spreadsheet would
   run as a formula literal. The release workflow grants each job only the
   permissions it needs.
-- **`xping ip [ADDRESS|HOST]`: one address in one view.** Its kind
-  (public, private, CGNAT, loopback, link-local, documentation…), reverse
-  DNS name and whether that name resolves back, and for a public address
-  the network operator (ASN), prefix, country and blocklist status.
-  Without an argument it describes your own public address.
-  `--no-blocklist` skips the blocklists; exit 1 when the address is listed.
+
+### Fixed
+- `xping speedtest` reported a latency about three times too high: every
+  sample opened a new connection, so it timed the TCP and TLS handshakes
+  as well. It now times one request on a connection that is already open.
 
 ### Documentation
 - `ARCHITECTURE.md`: how a command runs, how watch mode, alerts and
@@ -44,11 +49,6 @@
 - The README and the guide list every file xping writes, say when xping
   listens on the network, and have a recipe and FAQ entries for the status
   page and phone alerts.
-
-### Fixed
-- `xping speedtest` reported a latency about three times too high: every
-  sample opened a new connection, so it timed the TCP and TLS handshakes
-  as well. It now times one request on a connection that is already open.
 
 ## [1.8.0] - 2026-11-06
 
