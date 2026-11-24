@@ -1692,6 +1692,15 @@ Read this config file instead of
 .IR ~/.xping/config.toml ;
 .B none
 ignores the config for this run.
+.TP
+.B XPING_WEBHOOK
+Webhook URL for watch mode and
+.B monitor
+when
+.B \-\-webhook
+is not given.
+Unlike a command\-line argument, it is not visible to other users in the
+process list.
 .
 .SH DEPRECATED OPTIONS
 A short option means the same in every command

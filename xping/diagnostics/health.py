@@ -14,6 +14,7 @@ from pathlib import Path
 from xping.diagnostics.ping import ping
 from xping.diagnostics.resolve import resolve
 from xping.models.health import HealthResult
+from xping.paths import private_dir
 from xping.render import BOLD, BRAND_INDIGO, BRAND_TEAL, c, kv, section_header
 from xping.render.errors import resolve_error
 from xping.render.views import health as health_view
@@ -40,7 +41,7 @@ def _save_history(host: str, score: int, grade: str) -> list[dict]:
 
 def _save_history_locked(host: str, score: int, grade: str) -> list[dict]:
     try:
-        _HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        private_dir(_HISTORY_FILE.parent)
         try:
             data = json.loads(_HISTORY_FILE.read_text(encoding="utf-8"))
         except Exception:

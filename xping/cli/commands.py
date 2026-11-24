@@ -364,7 +364,9 @@ def _monitor_service(args: argparse.Namespace) -> object:
             check_diag.load_config(targets[0])
         else:
             check_diag.entries_from_targets(targets)
-        state = service.install(service.monitor_arguments(args))
+        state = service.install(
+            service.monitor_arguments(args), env=service.monitor_environment(args)
+        )
     except ConfigError as exc:
         raise UsageError(str(exc)) from exc
     except service.ServiceError as exc:

@@ -106,10 +106,16 @@ check file ─┤ _FileWatch → reload → _merge (keep numbers)  │
 - **Servers.** `--metrics` and `--status-page` each name an address; equal
   addresses share one server. They listen on 127.0.0.1 unless a host is
   given. The handler answers GET and HEAD and sends `nosniff` and a strict
-  Content-Security-Policy.
+  Content-Security-Policy. A client has `REQUEST_TIMEOUT` seconds to send
+  its request and at most `MAX_CONNECTIONS` are served at once, so idle
+  connections cannot pile up threads in the monitor. On a loopback address
+  only requests whose `Host` names this machine are answered (no DNS
+  rebinding).
 - **Background service.** `diagnostics/service.py` writes a launchd agent
   or a systemd user unit (mode 600) that runs the same monitor command,
-  always with `--resume`.
+  always with `--resume`. A webhook URL goes into the service's
+  environment (`XPING_WEBHOOK`), not its command line, which any user can
+  read with `ps`.
 
 ## Storage
 
@@ -128,9 +134,11 @@ that asks for it.
 | `completions/` | `xping completion --install` | `cli/completion.py` |
 
 Files are written in one step (a temporary file, then `os.replace`) where
-a half-written file would hurt. Files that can hold a secret (a webhook
-URL in the service file) or that describe your checks (`monitor/`) are
-mode 600.
+a half-written file would hurt. `~/.xping` and the directories in it are
+created owner-only (700) by `paths.private_dir()`, which also tightens an
+existing one, because they can name internal hosts or hold a webhook URL.
+Files that can hold a secret (the service file) or that describe your
+checks (`monitor/`) are mode 600 as well.
 
 ## Module map
 
@@ -159,6 +167,7 @@ Per-command modules follow one pattern and are not listed one by one:
 |--------|------|
 | `verdict.py` | Pass / fail of every result type, thresholds, exit code 1 |
 | `statefilter.py` | Debounced up / down state, and outages in a series of runs |
+| `paths.py` | `private_dir()`: `~/.xping` and its directories, owner-only |
 | `diagnostics/resolve.py` | Host resolution with `-4` / `-6` |
 | `diagnostics/sslctx.py` | The one TLS client context (system store + certifi, TLS 1.2+) |
 | `diagnostics/icmp.py` | ICMP / ICMPv6 echo without root |

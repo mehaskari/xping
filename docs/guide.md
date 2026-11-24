@@ -282,9 +282,18 @@ xping monitor checks.toml --webhook https://ntfy.sh/my-long-private-topic
 ```
 
 A Telegram URL holds your bot's token, and whoever knows an ntfy topic on
-a public server can read it, so treat these URLs as passwords: the command
-line is visible to other users of the machine while it runs. The file
-`--install-service` writes (which contains the URL) can be read only by you.
+a public server can read it, so treat these URLs as passwords. The command
+line is visible to other users of the machine while it runs; to keep the
+URL out of it, set it in the environment instead of passing `--webhook`:
+
+```bash
+export XPING_WEBHOOK='https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<CHAT>'
+xping monitor checks.toml
+```
+
+`XPING_WEBHOOK` applies to every command in watch mode when `--webhook` is
+not given. `--install-service` always puts the URL in the service's
+environment, in a file only you can read, never on its command line.
 
 Using `--notify` or `--webhook` outside watch mode is a usage error
 (exit 2). Export formats cannot be combined with watch mode.
@@ -2134,7 +2143,8 @@ xping doctor --json > doctor.json
 | `~/.xping/monitor/` | What `xping monitor --resume` keeps between runs (readable only by you) |
 
 The service file is readable only by you, since a `--webhook` URL in it
-can hold a secret.
+can hold a secret. `~/.xping` itself is readable only by you as well: check
+files, history and the monitor log can name internal hosts.
 
 `completion --install` also adds a marked block to your shell's rc file
 (or a file under `~/.config/fish/completions/`).
@@ -2170,7 +2180,16 @@ contact third parties, and only when you use them:
 
 **Listening.** xping opens a port only for `xping monitor --metrics` and
 `--status-page`. Both serve read-only pages without a password, on
-127.0.0.1 unless you give another host.
+127.0.0.1 unless you give another host. To reach them from other machines,
+prefer an SSH tunnel or a reverse proxy that asks for a login over
+listening on `0.0.0.0`: everyone who can reach the port sees each check's
+name, target and result. On 127.0.0.1 only requests addressed to this
+machine are answered, so a web page you visit cannot read the status
+through a re-pointed domain name (DNS rebinding).
+
+**CSV.** A cell that a spreadsheet would run as a formula (text starting
+with `=`, `+`, `-`, `@`) gets a leading `'`, because DNS records, headers
+and banners in an export come from remote servers.
 
 xping has no telemetry and makes no update checks. TLS verification is
 always on and cannot be disabled. External tools are run with argument

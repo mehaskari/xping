@@ -13,6 +13,18 @@
   files take `bufferbloat = true` and `max_bloat`. The JSON adds
   `idle_latency_ms`, `download_latency_ms`, `upload_latency_ms`,
   `bufferbloat_ms` and `bufferbloat_grade`, and `xping diff` compares them.
+- `XPING_WEBHOOK` stands in for `--webhook`, so the URL (which can hold a
+  token) is not visible in the process list. `--install-service` now puts
+  the URL in the service's environment instead of its command line.
+
+### Changed
+- Hardening: `~/.xping` and its directories are created readable only by
+  you, and an existing one is tightened. The `--metrics` / `--status-page`
+  server drops connections that send nothing within 10 seconds, serves at
+  most 64 at once and, on a loopback address, answers only requests
+  addressed to this machine. CSV exports make text that a spreadsheet would
+  run as a formula literal. The release workflow grants each job only the
+  permissions it needs.
 
 ### Documentation
 - `ARCHITECTURE.md`: how a command runs, how watch mode, alerts and

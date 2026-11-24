@@ -35,8 +35,7 @@ def test_monitor_arguments_rebuild_the_command(tmp_path):
     checks.write_text("")
     assert service.monitor_arguments(_args(targets=[str(checks)], webhook="https://h.test/x")) == [
         "monitor", str(checks.resolve()), "--every", "30", "--save", "--resume", "--fail-after", "3",
-        "--webhook", "https://h.test/x",
-    ]
+    ]  # the webhook goes into the environment, not the command line
     assert service.monitor_arguments(_args(targets=["1.1.1.1", "db:5432"], save=False,
                                            fail_after=1, every=10.0, notify=True)) == [
         "monitor", "1.1.1.1", "db:5432", "--every", "10", "--resume", "--notify",
@@ -126,7 +125,7 @@ def _main(argv, capsys):
 def test_cli_install_validates_first_and_reports(tmp_path, capsys):
     calls = []
 
-    def fake_install(monitor_args):
+    def fake_install(monitor_args, env=None):
         calls.append(monitor_args)
         return service.ServiceStatus(True, True, 99, tmp_path / "s.plist",
                                      ["/x/xping", *monitor_args], tmp_path / "m.log")
@@ -151,3 +150,46 @@ def test_cli_status_and_uninstall(tmp_path, capsys):
         assert code == 0 and "was not installed" in captured.out
     code, _ = _main(["monitor", "--install-service", "--service-status"], capsys)
     assert code == 2  # one service action at a time
+
+
+# ── secrets stay out of the command line; the definition stays well-formed ──
+
+
+def test_webhook_goes_into_the_service_environment(tmp_path):
+    args = _args(webhook="https://api.telegram.org/bot1:SECRET/sendMessage?chat_id=5")
+    assert "SECRET" not in " ".join(service.monitor_arguments(args))
+    env = service.monitor_environment(args)
+    assert env == {"XPING_WEBHOOK": args.webhook}
+    assert service.monitor_environment(_args()) == {}
+
+    plist = plistlib.loads(service.launchd_plist(["/x/xping", "monitor"], tmp_path / "m.log", env))
+    assert plist["EnvironmentVariables"]["XPING_WEBHOOK"] == args.webhook
+    assert "SECRET" not in " ".join(plist["ProgramArguments"])
+
+    unit = service.systemd_unit(["/x/xping", "monitor"], tmp_path / "m.log", {"XPING_WEBHOOK": "https://h/a%b$c\"q"})
+    assert 'Environment="XPING_WEBHOOK=https://h/a%%b$c\\"q"' in unit
+    assert "SECRET" not in unit.split("ExecStart=")[1].splitlines()[0]
+
+
+@pytest.mark.parametrize("bad", ["a\nExecStartPre=/bin/sh", "x\ry"])
+def test_systemd_unit_refuses_line_breaks(tmp_path, bad):
+    with pytest.raises(service.ServiceError, match="line break"):
+        service.systemd_unit(["/x/xping", "monitor", bad], tmp_path / "m.log")
+    with pytest.raises(service.ServiceError, match="line break"):
+        service.systemd_unit(["/x/xping"], tmp_path / "m.log", {"XPING_WEBHOOK": bad})
+
+
+@pytest.mark.parametrize("kind", ["launchd", "systemd"])
+def test_install_passes_the_environment(tmp_path, kind):
+    run = Runner()
+    service.install(["monitor"], home=tmp_path, kind=kind, run=run,
+                    env={"XPING_WEBHOOK": "https://h.test/hook"})
+    assert "https://h.test/hook" in service.service_path(kind, tmp_path).read_text()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX file modes")
+def test_install_makes_the_log_directory_private(tmp_path):
+    (tmp_path / ".xping").mkdir(mode=0o755)
+    (tmp_path / ".xping").chmod(0o755)
+    service.install(["monitor"], home=tmp_path, kind="systemd", run=Runner())
+    assert (tmp_path / ".xping").stat().st_mode & 0o777 == 0o700

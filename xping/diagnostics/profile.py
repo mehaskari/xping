@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 
 from xping.models.profile import ProfileEntry, ProfileListResult
+from xping.paths import private_dir
 from xping.render import section_header
 from xping.render.errors import error
 from xping.render.views import profile as profile_view
@@ -37,7 +38,7 @@ def _load() -> dict:
 
 
 def _save(data: dict) -> None:
-    STORE_DIR.mkdir(parents=True, exist_ok=True)
+    private_dir(STORE_DIR)
     tmp = STORE_FILE.with_suffix(".tmp")
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, sort_keys=True)

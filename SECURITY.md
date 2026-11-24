@@ -36,7 +36,10 @@ network unless you ask for it.
   everyone who can reach it sees each check's name, target and latest
   result. The status page has no scripts, loads nothing from the network,
   escapes every value from a check, and is sent with `nosniff` and a
-  Content-Security-Policy that allows inline CSS only.
+  Content-Security-Policy that allows inline CSS only. Requests time out
+  after 10 seconds and at most 64 are served at once. On a loopback
+  address, requests whose `Host` header names another site are refused
+  (DNS rebinding).
 - **Background:** only `xping monitor --install-service` installs
   anything that keeps running (a launchd agent or a systemd user unit, as
   you, never as root); `--uninstall-service` removes it.
@@ -53,9 +56,11 @@ network unless you ask for it.
   completion scripts, results saved with `--save` under
   `~/.xping/history/` — nothing is recorded without it — the monitor's
   `--resume` state under `~/.xping/monitor/` and the background monitor's
-  log), plus the service file of `--install-service`. Files that can hold
-  a secret (the service file, which contains any `--webhook` URL) or that
-  describe your checks (`~/.xping/monitor/`) are readable only by you.
+  log), plus the service file of `--install-service`. `~/.xping/` and the
+  directories in it are readable only by you (an existing one is
+  tightened), as are the service file, which holds any `--webhook` URL in
+  the service's environment rather than its command line, and
+  `~/.xping/monitor/`.
   `~/.xping/config.toml` is only ever read, and its
   values go through the same validation as command-line options. `xping completion --install` additionally adds a
   clearly marked block to the shell rc file, only when asked, and
@@ -71,8 +76,10 @@ network unless you ask for it.
   everything local.
 - **Alerts:** `--webhook` sends the target name and check result only to
   the URL you pass. A Telegram or ntfy URL is a secret (a bot token, a
-  topic anyone can read); the guide says to treat it as a password. `--notify` hands the text to `osascript` /
-  `notify-send` as arguments, never as script source or a shell line.
+  topic anyone can read); the guide says to treat it as a password, and
+  `XPING_WEBHOOK` keeps it out of the process list. `--notify` hands the
+  text to `osascript` / `notify-send` as arguments, never as script source
+  or a shell line.
 - **Subprocesses:** system tools (`ping`, `traceroute`, `dig`, `ss`,
   `netstat`, `ip`, `ifconfig`, `osascript`, `notify-send`, …) are run with argument lists, never
   through a shell.
@@ -81,5 +88,7 @@ network unless you ask for it.
   control characters before it is shown or exported. DNS responses are
   parsed with bounded pointer following, raw DNS queries use random IDs on
   connected sockets, and response sizes are capped (HTTP body, WHOIS).
+  In CSV exports, text that a spreadsheet would run as a formula is made
+  literal with a leading `'`.
 - **Names as arguments:** names passed to `dig` use `-q`/`-t`, so a value
   starting with `-` can never become an option.

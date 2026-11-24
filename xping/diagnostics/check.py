@@ -32,6 +32,7 @@ from typing import Any
 
 from xping.diagnostics import profile as profile_diag
 from xping.models.check import CheckOutcome, CheckReport
+from xping.paths import private_dir
 from xping.render import BRAND_TEAL, c, kv, section_header
 from xping.render.animations import Spinner
 from xping.render.views import check as check_view
@@ -612,6 +613,6 @@ def init_file(base: Path | None = None, gateway: str | None = None) -> tuple[Pat
         path, as_json = existing, False
     except ModuleNotFoundError:
         path, as_json = existing.with_suffix(".json"), True
-    path.parent.mkdir(parents=True, exist_ok=True)
+    private_dir(path.parent)
     path.write_text(_starter(gateway, as_json), encoding="utf-8")
     return path, True

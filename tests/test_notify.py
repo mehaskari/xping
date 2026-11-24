@@ -116,7 +116,7 @@ def test_desktop_notify_passes_text_as_arguments(monkeypatch):
         assert not REAL_DESKTOP_NOTIFY("T", "msg")
     # the text is an argv item, never part of the AppleScript source or a shell line
     assert calls[0][0] == "osascript" and calls[0][-2:] == ["T", 'x" & $(rm -rf ~)']
-    assert calls[1] == ["notify-send", "--app-name=xping", "T", "msg"]
+    assert calls[1] == ["notify-send", "--app-name=xping", "--", "T", "msg"]
 
 
 def test_watch_loop_feeds_the_notifier():

@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 
 from xping.models.monitor import MonitoredCheck
+from xping.paths import private_dir
 
 STATE_DIR = Path.home() / ".xping" / "monitor"
 VERSION = 1
@@ -44,7 +45,7 @@ def load(path: Path) -> dict[str, dict]:
 
 def save(path: Path, checks: list[MonitoredCheck]) -> None:
     """Replace the file; raises OSError."""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    private_dir(path.parent)
     body = {"version": VERSION, "checks": {key(c): c.export_state() for c in checks}}
     temporary = path.with_suffix(f".{os.getpid()}.tmp")
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)

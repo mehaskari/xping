@@ -12,6 +12,7 @@ dependency is needed. It listens on 127.0.0.1 unless told otherwise.
 
 from __future__ import annotations
 
+import ipaddress
 import math
 import socket
 import sys
@@ -28,6 +29,31 @@ _SECURITY_HEADERS = (
     ("X-Content-Type-Options", "nosniff"),
     ("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'"),
 )
+
+
+# A client gets this long to send its request before the connection is
+# dropped, and at most this many are served at once: idle or slow connections
+# must not pile up threads in the process that runs the checks and alerts.
+REQUEST_TIMEOUT = 10.0
+MAX_CONNECTIONS = 64
+_LOOPBACK_NAMES = {"localhost", "localhost.localdomain"}
+
+
+def is_loopback(host: str) -> bool:
+    if host.lower() in _LOOPBACK_NAMES:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _host_header_name(value: str) -> str:
+    """The name in a Host header, without the port or IPv6 brackets."""
+    value = value.strip().lower()
+    if value.startswith("["):
+        return value[1 : value.find("]")] if "]" in value else value
+    return value.rsplit(":", 1)[0] if value.count(":") == 1 else value
 
 
 class ListenError(ValueError):
@@ -134,11 +160,26 @@ def render(result) -> str:
 
 class _Handler(BaseHTTPRequestHandler):
     server: _Server
+    timeout = REQUEST_TIMEOUT
+
+    def _host_allowed(self) -> bool:
+        """On a loopback address, answer only requests addressed to this
+        machine: a web page whose name an attacker re-points at 127.0.0.1
+        (DNS rebinding) must not be able to read the status."""
+        if not self.server.loopback:
+            return True
+        header = self.headers.get("Host")
+        if header is None:  # HTTP/1.0 without Host: not from a browser
+            return True
+        name = _host_header_name(header)
+        return is_loopback(name) or name.endswith(".localhost")
 
     def _respond(self, *, head: bool) -> None:
         path = self.path.split("?", 1)[0]
         page = self.server.pages.get(path)
-        if page is not None:
+        if not self._host_allowed():
+            body, status, kind = b"forbidden host\n", 403, "text/plain; charset=utf-8"
+        elif page is not None:
             kind, produce = page
             body, status = produce().encode(), 200
         elif path == "/":
@@ -173,10 +214,31 @@ class _Server(ThreadingHTTPServer):
     # exclusively there instead (elsewhere it only allows a quick restart)
     allow_reuse_address = sys.platform != "win32"
 
+    def __init__(self, *args, **kwargs) -> None:
+        self._slots = threading.BoundedSemaphore(MAX_CONNECTIONS)
+        self.loopback = False
+        super().__init__(*args, **kwargs)
+
     def server_bind(self) -> None:
         if sys.platform == "win32":
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
         super().server_bind()
+
+    def process_request(self, request, client_address) -> None:
+        if not self._slots.acquire(blocking=False):  # full: drop, don't queue
+            self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            self._slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address) -> None:
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._slots.release()
 
 
 class _Server6(_Server):
@@ -202,6 +264,7 @@ class MetricsServer:
                 f"cannot listen on {format_listen(host, port)}: {exc.strerror or exc}"
             ) from exc
         self._server.pages = {"/metrics": (CONTENT_TYPE, produce), **(pages or {})}
+        self._server.loopback = is_loopback(host)
         self._thread = threading.Thread(
             target=self._server.serve_forever, name="xping-metrics", daemon=True
         )

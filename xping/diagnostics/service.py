@@ -25,6 +25,9 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from xping.diagnostics.notify import WEBHOOK_ENV
+from xping.paths import private_dir
+
 LABEL = "io.github.mehaskari.xping.monitor"
 UNIT = "xping-monitor.service"
 
@@ -105,8 +108,6 @@ def monitor_arguments(args) -> list[str]:
         out += ["--recover-after", str(args.recover_after)]
     if args.notify:
         out.append("--notify")
-    if args.webhook:
-        out += ["--webhook", args.webhook]
     if getattr(args, "remind", None):
         out += ["--remind", f"{args.remind:g}"]
     for option in ("metrics", "status_page"):
@@ -118,7 +119,20 @@ def monitor_arguments(args) -> list[str]:
     return out
 
 
-def launchd_plist(command: list[str], log: Path) -> bytes:
+def monitor_environment(args) -> dict[str, str]:
+    """Settings the service passes in its environment rather than on the
+    command line: a webhook URL can hold a token, and every user of the
+    machine can read a process's arguments (ps), not its environment."""
+    return {WEBHOOK_ENV: args.webhook} if getattr(args, "webhook", None) else {}
+
+
+def _no_newlines(values) -> None:
+    for value in values:
+        if "\n" in value or "\r" in value:
+            raise ServiceError(f"a line break cannot go into a service definition: {value!r}")
+
+
+def launchd_plist(command: list[str], log: Path, env: dict[str, str] | None = None) -> bytes:
     return plistlib.dumps(
         {
             "Label": LABEL,
@@ -132,6 +146,7 @@ def launchd_plist(command: list[str], log: Path) -> bytes:
             "EnvironmentVariables": {
                 "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
                 "PYTHONUNBUFFERED": "1",
+                **(env or {}),
             },
             "ProcessType": "Background",
         }
@@ -145,7 +160,18 @@ def _systemd_quote(arg: str) -> str:
     return f'"{escaped}"'
 
 
-def systemd_unit(command: list[str], log: Path) -> str:
+def _systemd_env_quote(assignment: str) -> str:
+    """Quote one Environment= assignment ("%" is special there, "$" is not)."""
+    escaped = assignment.replace("\\", "\\\\").replace('"', '\\"').replace("%", "%%")
+    return f'"{escaped}"'
+
+
+def systemd_unit(command: list[str], log: Path, env: dict[str, str] | None = None) -> str:
+    _no_newlines([*command, str(log), *(env or {}).values()])
+    environment = "".join(
+        f"Environment={_systemd_env_quote(f'{key}={value}')}\n"
+        for key, value in (env or {}).items()
+    )
     return (
         "[Unit]\n"
         "Description=xping monitor (network checks, see: xping monitor --help)\n"
@@ -157,6 +183,7 @@ def systemd_unit(command: list[str], log: Path) -> str:
         "Restart=always\n"
         "RestartSec=30\n"
         "Environment=PYTHONUNBUFFERED=1\n"
+        f"{environment}"
         "StandardInput=null\n"
         f"StandardOutput=append:{log}\n"
         f"StandardError=append:{log}\n"
@@ -184,22 +211,24 @@ def install(
     home: Path | None = None,
     kind: str | None = None,
     run: Runner = _run,
+    env: dict[str, str] | None = None,
 ) -> ServiceStatus:
-    """Write the service, (re)start it and return its status."""
+    """Write the service, (re)start it and return its status. *env* is
+    passed to the monitor in its environment (see monitor_environment)."""
     kind = kind or platform_kind()
     path = service_path(kind, home)
     log = log_path(home)
     command = xping_command() + monitor_args
     path.parent.mkdir(parents=True, exist_ok=True)
-    log.parent.mkdir(parents=True, exist_ok=True)
+    private_dir(log.parent)
     if kind == "launchd":
         domain = _gui_domain()
         if path.exists():  # replace a running one
             run(["launchctl", "bootout", f"{domain}/{LABEL}"])
-        _write_private(path, launchd_plist(command, log))
+        _write_private(path, launchd_plist(command, log, env))
         _check(run(["launchctl", "bootstrap", domain, str(path)]), "launchctl bootstrap")
     else:
-        _write_private(path, systemd_unit(command, log).encode())
+        _write_private(path, systemd_unit(command, log, env).encode())
         _check(run(["systemctl", "--user", "daemon-reload"]), "systemctl daemon-reload")
         _check(run(["systemctl", "--user", "enable", UNIT]), "systemctl enable")
         _check(run(["systemctl", "--user", "restart", UNIT]), "systemctl restart")
