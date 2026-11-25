@@ -23,4 +23,6 @@ def print_result(result) -> None:
     print_table(["Port", "Proto", "Address", "Process", "PID"], rows)
     print()
     print(c(f"  {result.count} listening port(s) found.", BRAND_MINT))
+    if result.note:
+        print(c(f"  {result.note}", DIM))
     print()

@@ -47,9 +47,14 @@ from xping.render.views import whois as whois_view
 EVIL = "evil\x1b]0;pwned\x07\x1b[2J"  # OSC title change + clear screen
 
 
+# One instant for every certificate date: a case is rendered twice (plain and
+# in colour), and the two renders must not straddle a second boundary.
+_NOW = time.time()
+
+
 def _cert_time(offset_days: float) -> str:
     """A date in the format ssl.getpeercert() uses."""
-    stamp = formatdate(time.time() + offset_days * 86400, usegmt=True)  # 'Mon, 05 Oct 2026 …'
+    stamp = formatdate(_NOW + offset_days * 86400, usegmt=True)  # 'Mon, 05 Oct 2026 …'
     day, month, year, clock = stamp.split()[1:5]
     return f"{month} {int(day):2d} {clock} {year} GMT"
 

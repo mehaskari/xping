@@ -25,6 +25,7 @@ class ListenEntry:
 class ListenResult:
     entries: list[ListenEntry] = field(default_factory=list)
     error: str | None = None
+    note: str | None = None  # e.g. why some processes are not shown
 
     @property
     def count(self) -> int:

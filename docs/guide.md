@@ -1304,9 +1304,17 @@ xping wifi --min-signal=-67 -q || echo "move closer to the router"
 xping listen [--proto tcp|udp]
 ```
 
-Lists the TCP and UDP ports your machine is listening on. It uses `ss` on
-Linux and `netstat` on macOS and Windows. Process names and PIDs are
-shown where the platform provides them (Linux).
+Lists the TCP and UDP ports your machine is listening on, with the
+process and PID behind each one:
+
+| System | Ports from | Processes from |
+|--------|------------|----------------|
+| Linux | `ss` (or `netstat`) | the same output |
+| macOS | `netstat -an` | `lsof` |
+| Windows | `netstat -ano` | `tasklist` |
+
+On Linux and macOS, only your own processes are named unless you run it
+with `sudo`; a port owned by another user shows "—", and xping says so.
 
 | Option | Description |
 |--------|-------------|

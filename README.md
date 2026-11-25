@@ -82,7 +82,7 @@ Real runs, recorded on a GitHub runner by
 - **Prometheus metrics** — `xping monitor checks.toml --metrics :9101` serves every check at `/metrics` for Prometheus and Grafana: state, latest value, latency, runs, failures and outages; a ready [Grafana dashboard](contrib/grafana/xping-dashboard.json) and [alert rules](contrib/prometheus/xping-alerts.yml) are in `contrib/`
 - **Speed test** — Multi-connection download/upload via Cloudflare; `--bufferbloat` grades (A+ to F) how much latency rises while the line is busy — the usual reason calls lag during downloads
 - **All-in-one** — Run lookup, ping, trace, and TCP checks in a single command
-- **Listening ports** — `xping listen`: local TCP/UDP listeners with process names (Linux)
+- **Listening ports** — `xping listen`: local TCP/UDP listeners with the process and PID behind each one (Linux, macOS, Windows)
 - **OS fingerprint** — `xping osdetect`: guess a remote OS from the ICMP TTL
 - **Personal defaults** — `~/.xping/config.toml` for options you always type (`[defaults]` and per-command sections); `xping config` shows them
 - **Tab completion** — bash, zsh, fish and PowerShell, with descriptions, hostnames and saved profiles
@@ -467,7 +467,7 @@ A single stream under-reports fast links. The default uses up to ~40 MB down and
 ### Listening Ports & OS Fingerprint
 
 ```bash
-xping listen                 # local TCP/UDP listeners (process names on Linux)
+xping listen                 # local TCP/UDP listeners and the process behind each
 xping listen --proto tcp
 xping osdetect 192.168.1.1   # guess the remote OS from the ICMP TTL (a heuristic)
 ```

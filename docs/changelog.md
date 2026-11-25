@@ -27,6 +27,9 @@
   saved profiles and sub-commands; `xping completion --install` sets it up
   in `$PROFILE` of every PowerShell installed (PowerShell 7 and Windows
   PowerShell 5.1), and is the default on Windows, which has no `$SHELL`.
+- `xping listen` names the process and PID behind each port on macOS
+  (`lsof`) and Windows (`netstat -ano` and `tasklist`), not only on Linux.
+  Without root, it says when ports belong to other users' processes.
 
 ### Changed
 - Hardening: `~/.xping` and its directories are created readable only by
