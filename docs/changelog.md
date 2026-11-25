@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-25
+
 ### Added
 - **`xping speedtest --bufferbloat` (`-b`): how much latency rises while
   the line is busy.** xping times small HTTPS requests over a kept-open
@@ -60,8 +62,8 @@
 - `CONTRIBUTING.md` says which document to update for which change, how
   pull requests are merged (every check green, no new CodeQL alert) and
   how tests are written.
-- `SECURITY.md`: supported versions are 1.8.x, and it covers the ports
-  `monitor` can open and the background service.
+- `SECURITY.md` covers the ports `monitor` can open and the background
+  service.
 - The README and the guide list every file xping writes, say when xping
   listens on the network, and have a recipe and FAQ entries for the status
   page and phone alerts.
