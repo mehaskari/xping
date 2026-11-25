@@ -244,6 +244,7 @@ Commands:
   history [cmd target] Runs saved with --save: table, trend, vs. the usual
   report [cmd target]  Saved history as one HTML page: uptime, outages, charts
   rdns   <ip>          Reverse DNS (PTR) lookup
+  ip     [ip|host]     One address: kind, reverse DNS, network (ASN), country, blocklists
   tls    <host>        TLS/SSL certificate inspector
   smtp   <host>        Mail server check: greeting, STARTTLS, certificate (domain → MX)
   http   <url>         HTTP status, headers, redirects, and TTFB
@@ -295,6 +296,8 @@ Examples:
   xping mtu 8.8.8.8
   xping dnscheck github.com
   xping blocklist mail.example.net
+  xping ip
+  xping ip 8.8.8.8
   xping propagation example.com --type MX
   xping propagation example.com --expect 93.184.216.34
   xping speedtest --json
@@ -744,6 +747,21 @@ add -q for exit-code-only output. IPv6: -6 (or -4 to force IPv4).
 
     p_rdns = sub.add_parser("rdns", parents=[export_parent], help="Reverse DNS (PTR) lookup")
     p_rdns.add_argument("ip", help="IP address to resolve")
+
+    p_ip = sub.add_parser(
+        "ip",
+        parents=[export_parent],
+        help="One address in one view: kind, reverse DNS, ASN, country, blocklists",
+    )
+    p_ip.add_argument(
+        "address", nargs="?", default=None, help="IP address or host [default: your public IP]"
+    )
+    p_ip.add_argument(
+        "--no-blocklist",
+        action="store_true",
+        help="Skip the spam blocklist check (sends the address to fewer third parties)",
+    )
+    _add_family(p_ip)
 
     p_dnscheck = sub.add_parser(
         "dnscheck", parents=[export_parent], help="DNS health check — SPF, DMARC, DKIM, MX, NS"

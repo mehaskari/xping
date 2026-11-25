@@ -33,6 +33,7 @@ from xping.models import (
     HistoryResult,
     Hop,
     HttpResult,
+    IpInfoResult,
     IpScanResult,
     ListenResult,
     MonitorResult,
@@ -196,6 +197,14 @@ def _blocklist(r: BlocklistResult, _opts) -> list[Failure]:
     return []
 
 
+def _ipinfo(r: IpInfoResult, _opts) -> list[Failure]:
+    if r.error:
+        return [Failure(r.error)]
+    if r.blocklist_listed:
+        return [Failure(f"{r.ip} is listed on: " + ", ".join(r.blocklist_listed))]
+    return []
+
+
 def _diff(r: DiffResult, _opts) -> list[Failure]:
     if r.error:
         return [Failure(r.error)]
@@ -281,6 +290,7 @@ def evaluate(result, opts=None) -> list[Failure]:
         (DiffResult, _diff),
         (WifiResult, _wifi),
         (BlocklistResult, _blocklist),
+        (IpInfoResult, _ipinfo),
         (NtpResult, _ntp),
     )
     for cls, handler in handlers:

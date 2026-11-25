@@ -54,6 +54,7 @@ Real runs, recorded on a GitHub runner by
 - **Blocklist check** — `xping blocklist`: is an IP, or a domain and its mail servers, on a spam blocklist (Spamhaus, SpamCop, Barracuda, SURBL, URIBL, …)?
 - **DNS Propagation** — Compare a record across Google, Cloudflare, Quad9, OpenDNS, AdGuard, Control D and your own resolver
 - **Reverse DNS** — PTR lookup with stdlib fallback to 8.8.8.8 for flaky resolvers
+- **IP info** — `xping ip [address]`: kind (public, private, CGNAT…), reverse DNS and whether it points back, network operator (ASN), prefix, country and blocklist status in one view; your own public IP without an argument
 - **TCP Connect** — Live TCP port checks with connect timing, success rate, and timeline
 - **UDP probe** — `xping udp`: is a UDP service answering? DNS, NTP and SNMP requests are built in (or send any payload); open / closed / no response
 - **Clock check** — `xping ntp`: how far off is this machine's clock (SNTP offset, delay, stratum); `--max-offset` alarm
@@ -236,6 +237,14 @@ xping lookup github.com
 xping lookup github.com --full    # includes TXT records (SPF etc.)
 xping lookup example.com --doh cloudflare   # DNS-over-HTTPS: past resolvers that filter or rewrite
 xping dnscheck github.com         # SPF / DMARC / DKIM / DNSSEC / NS / MX health check
+```
+
+### IP Info
+
+```bash
+xping ip                 # your public address: kind, reverse DNS, ASN, country, blocklists
+xping ip 8.8.8.8         # AS15169 Google, dns.google (points back), clean
+xping ip mail.example.net --no-blocklist
 ```
 
 ### Blocklist (DNSBL) Check
@@ -733,6 +742,7 @@ Diagnostics talk to the host you name. A few features also contact third-party s
 | `propagation` | Google, Cloudflare, Quad9, OpenDNS, AdGuard and Control D public resolvers |
 | `whois` | IANA and registry WHOIS / RDAP servers |
 | `blocklist` | The blocklists' DNS servers (via your resolver) — they see the IP or domain you check |
+| `ip` | `1.1.1.1` for your own address (without an argument); Team Cymru DNS and the blocklists' DNS servers for a public address (`--no-blocklist` skips those) |
 | `--webhook URL` | Only the URL you give (Slack, Discord, Telegram, ntfy, …), with the target name and check result |
 | `lookup`, `dnscheck` | `8.8.8.8` directly, only when `dig` is not installed (otherwise your resolver) |
 | `lookup --doh` | The DoH provider you choose (Cloudflare, Google, Quad9 or your URL) |

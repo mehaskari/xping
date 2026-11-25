@@ -438,6 +438,20 @@ def cmd_rdns(args: argparse.Namespace) -> object:
     return result
 
 
+def cmd_ip(args: argparse.Namespace) -> object:
+    from xping.diagnostics.ipinfo import ipinfo
+
+    quiet = output_suppressed(args)
+    result = ipinfo(
+        target=_resolve_host(args.address) if args.address else None,
+        family=family_of(args),
+        blocklist=not args.no_blocklist,
+        quiet=quiet,
+    )
+    emit_export(result, args)
+    return result
+
+
 def cmd_blocklist(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
     result = blocklist(

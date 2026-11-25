@@ -42,6 +42,7 @@ _POSITIONAL_KINDS = {
     "host": "host",
     "domain": "host",
     "ip": "host",
+    "address": "host",  # xping ip
     "name": "host",  # propagation NAME; profile add NAME is overridden below
     "url": "url",
     "file": "file",

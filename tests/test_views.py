@@ -25,6 +25,7 @@ from xping.models.ping import PingResult
 from xping.models.profile import ProfileEntry, ProfileListResult
 from xping.models.propagation import PropagationResult, ResolverAnswer
 from xping.models.rdns import RdnsResult
+from xping.models.ipinfo import IpInfoResult
 from xping.models.speedtest import SpeedResult
 from xping.models.tls import TlsResult
 from xping.models.whois import WhoisResult
@@ -38,6 +39,7 @@ from xping.render.views import mtu as mtu_view
 from xping.render.views import profile as profile_view
 from xping.render.views import propagation as propagation_view
 from xping.render.views import rdns as rdns_view
+from xping.render.views import ipinfo as ipinfo_view
 from xping.render.views import speedtest as speedtest_view
 from xping.render.views import tls as tls_view
 from xping.render.views import whois as whois_view
@@ -103,6 +105,36 @@ CASES = {
     "speedtest-bufferbloat-unmeasured": lambda: speedtest_view.print_result(
         SpeedResult(download_mbps=95.0, idle_latency_ms=12.0)
     ),
+    "ipinfo": lambda: ipinfo_view.print_result(
+        IpInfoResult(
+            query="x",
+            ip="198.51.100.7",
+            version=4,
+            scope="public",
+            ptr=f"mail.{EVIL}.example",
+            fcrdns=False,
+            asn=64500,
+            as_name=f"EXAMPLE {EVIL}",
+            prefix="198.51.100.0/24",
+            country="ZZ",
+            blocklist_listed=["SpamCop"],
+            blocklist_checked=7,
+        )
+    ),
+    "ipinfo-cgnat": lambda: ipinfo_view.print_result(
+        IpInfoResult(query="", ip="100.64.1.2", version=4, scope="CGNAT")
+    ),
+    "ipinfo-clean-policy": lambda: ipinfo_view.print_result(
+        IpInfoResult(
+            query="x",
+            ip="203.0.113.1",
+            version=4,
+            scope="public",
+            blocklist_checked=7,
+            blocklist_policy=["Spamhaus PBL"],
+        )
+    ),
+    "ipinfo-error": lambda: ipinfo_view.print_result(IpInfoResult(query="x", error="nope")),
     "speedtest-error": lambda: speedtest_view.print_result(SpeedResult(error="offline")),
     "tls": lambda: tls_view.print_result(
         TlsResult(

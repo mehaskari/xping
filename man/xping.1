@@ -177,6 +177,14 @@ Reverse-DNS (PTR) lookup for
 Queries the system resolver first; falls back to a direct UDP query
 to 8.8.8.8 when the system resolver has no PTR support.
 .TP
+.BR ip " [\fIADDRESS\fR|\fIHOST\fR] [\fIOPTIONS\fR]"
+Everything about one address: its kind (public, private, CGNAT,
+loopback, link\-local and others), reverse DNS name and whether it resolves
+back, and for a public address the AS number and operator, prefix,
+country (Team Cymru DNS) and spam blocklist status.
+Without an argument, describes your public address.
+Exits 1 when the address cannot be found or is listed.
+.TP
 .BR tcp " \fIHOST\fR \fIPORT\fR [\fIOPTIONS\fR]"
 Open TCP connections to
 .I HOST
@@ -1064,6 +1072,13 @@ Repeat the check; see
 .BI \-\-min\-score " N"
 Exit 1 if the DNS health score (0\(en100) is below
 .IR N .
+.SS ip
+.TP
+.B \-\-no\-blocklist
+Skip the spam blocklist check.
+.TP
+.BR \-4 ", " \-6
+Force IPv4 or IPv6.
 .SS blocklist
 .TP
 .BI \-\-zone " ZONE"
@@ -1832,6 +1847,9 @@ Full DNS health check: SPF, DMARC, DKIM, NS redundancy, MX backup.
 .B xping rdns 8.8.8.8
 Reverse-DNS lookup: resolve 8.8.8.8 to dns.google.
 .TP
+.B xping ip
+Your public address: kind, reverse DNS, network operator, country, blocklists.
+.TP
 .B xping tls github.com
 TLS certificate details, chain, expiry countdown, and lifetime bar.
 .TP
@@ -1980,6 +1998,9 @@ third parties:
 (only the URL you give),
 .B blocklist
 (the blocklists' DNS servers, which see the checked address or domain),
+.B ip
+(1.1.1.1 for your own address; Team Cymru DNS and the blocklists for a
+public address),
 .B "lookup \-\-doh"
 (the chosen DoH provider),
 .B dnscheck

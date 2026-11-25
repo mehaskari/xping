@@ -188,6 +188,7 @@ Per-command modules follow one pattern and are not listed one by one:
 | `diagnostics/dnssec.py` | DNSSEC validation, used by `dnscheck` |
 | `diagnostics/tcptrace.py` | TCP SYN traceroute without root (`trace --tcp`) |
 | `diagnostics/osdetect.py` | `xping osdetect`: OS guess from TTL and TCP window |
+| `diagnostics/ipinfo.py` | `xping ip`: one address — kind, reverse DNS, ASN, blocklists — built from `rdns`, `asn` and `blocklist` |
 
 The remaining `diagnostics/*.py` are the per-command modules: `blocklist`,
 `dnscheck`, `doctor`, `health`, `http`, `ipscan`, `listen`, `lookup`,
