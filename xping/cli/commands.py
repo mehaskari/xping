@@ -636,7 +636,9 @@ def cmd_completion(args: argparse.Namespace) -> object:
     if args.install or args.uninstall:
         shell = args.shell or completion.detect_shell()
         if shell is None:
-            raise UsageError("cannot detect your shell from $SHELL — name it: bash, zsh or fish")
+            raise UsageError(
+                "cannot detect your shell from $SHELL — name it: bash, zsh, fish or powershell"
+            )
         if args.install:
             actions = completion.install(shell)
             for action in actions:
@@ -645,6 +647,8 @@ def cmd_completion(args: argparse.Namespace) -> object:
             print(c(f"  {shell} completion installed. Open a new terminal, or run:", BWHITE))
             if shell == "fish":
                 print(c("    (fish picks it up automatically)", DIM))
+            elif shell == "powershell":
+                print(c("    . $PROFILE", BRAND_TEAL))
             else:
                 home = completion.Path.home()
                 rc_file = completion._rc_file(shell, home)
@@ -657,7 +661,7 @@ def cmd_completion(args: argparse.Namespace) -> object:
                 print(c("  ✔ ", BRAND_TEAL) + action)
         return True
     if not args.shell:
-        raise UsageError("name a shell (bash, zsh, fish) or use --install")
+        raise UsageError("name a shell (bash, zsh, fish, powershell) or use --install")
     print(completion.generate(args.shell), end="")
     return True
 

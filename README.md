@@ -85,7 +85,7 @@ Real runs, recorded on a GitHub runner by
 - **Listening ports** — `xping listen`: local TCP/UDP listeners with process names (Linux)
 - **OS fingerprint** — `xping osdetect`: guess a remote OS from the ICMP TTL
 - **Personal defaults** — `~/.xping/config.toml` for options you always type (`[defaults]` and per-command sections); `xping config` shows them
-- **Tab completion** — bash, zsh and fish, with descriptions, hostnames and saved profiles
+- **Tab completion** — bash, zsh, fish and PowerShell, with descriptions, hostnames and saved profiles
 - **Dependency checker** — `xping deps` detects missing tools and shows the correct install command for your distro
 - **Machine-readable export** — `--json`, plus `--csv` / `--markdown` as real tables (one row per reply, hop, port, record…)
 - **man page included** — `man xping` works after installation
@@ -105,7 +105,7 @@ xping trace cloudflare.com
 xping deps
 ```
 
-`xping deps` shows which tools are available and how to install missing ones. Tab completion is available for bash, zsh and fish (e.g. in WSL or Git Bash); PowerShell completion is not provided yet.
+`xping deps` shows which tools are available and how to install missing ones. For tab completion in PowerShell, run `xping completion --install` once (it is detected on Windows).
 
 ## Installation
 
@@ -170,7 +170,7 @@ The PPA package sets up completion for bash, zsh and fish automatically. With pi
 xping completion --install     # detects your shell; re-run after upgrading
 ```
 
-It completes commands, options (with descriptions in zsh and fish), option values like `--proto tcp|udp`, hostnames and saved profile names, and `.toml`/`.json` files for `xping check`. To wire it up manually instead, add `source <(xping completion zsh)` to `~/.zshrc`, or `eval "$(xping completion bash)"` to `~/.bashrc` (use `eval` on macOS, whose bash 3.2 ignores `source <(…)`). For fish, run `xping completion fish > ~/.config/fish/completions/xping.fish`. `xping completion --uninstall` removes it.
+It completes commands, options (with descriptions in zsh and fish), option values like `--proto tcp|udp`, hostnames and saved profile names, and `.toml`/`.json` files for `xping check`. To wire it up manually instead, add `source <(xping completion zsh)` to `~/.zshrc`, or `eval "$(xping completion bash)"` to `~/.bashrc` (use `eval` on macOS, whose bash 3.2 ignores `source <(…)`). For fish, run `xping completion fish > ~/.config/fish/completions/xping.fish`. In PowerShell (Windows, or `pwsh` on macOS and Linux), `xping completion --install powershell` adds it to `$PROFILE`, or add `xping completion powershell | Out-String | Invoke-Expression` there yourself. `xping completion --uninstall` removes it.
 
 ### Manual page (source installs)
 
@@ -724,7 +724,7 @@ xping keeps its state under `~/.xping/`:
 | `~/.xping/monitor.log` | Output of the background monitor (`--install-service`) |
 | `~/Library/LaunchAgents/io.github.mehaskari.xping.monitor.plist`, `~/.config/systemd/user/xping-monitor.service` | The background monitor service (readable only by you) |
 
-`xping completion --install` also adds a clearly marked block to your shell's rc file; `--uninstall` removes it.
+`xping completion --install` also adds a clearly marked block to your shell's rc file (or PowerShell profile); `--uninstall` removes it.
 
 xping listens on the network only when you ask: `xping monitor --metrics`
 and `--status-page` serve read-only pages on 127.0.0.1 unless you give

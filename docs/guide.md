@@ -1875,7 +1875,7 @@ xping config
 #### `xping completion`
 
 ```
-xping completion [bash|zsh|fish]
+xping completion [bash|zsh|fish|powershell]
 xping completion [SHELL] --install
 xping completion [SHELL] --uninstall
 ```
@@ -1883,7 +1883,7 @@ xping completion [SHELL] --uninstall
 Tab completion covers:
 
 - commands and profile sub-commands;
-- every option, with descriptions in zsh and fish;
+- every option, with descriptions in zsh, fish and PowerShell;
 - option values with fixed choices (`--proto`, `--type`);
 - host names and saved profiles wherever a host is expected;
 - `.toml` / `.json` files for `check`.
@@ -1891,13 +1891,17 @@ Tab completion covers:
 `--install` detects your shell from `$SHELL` and writes the script. It
 adds a marked block to `~/.zshrc` (zsh), `~/.bashrc` (bash on Linux) or
 `~/.bash_profile` (bash on macOS). For fish it writes
-`~/.config/fish/completions/xping.fish`. Running it again is safe;
+`~/.config/fish/completions/xping.fish`. For PowerShell (the default on
+Windows, where there is no `$SHELL`) it writes
+`~/.xping/completions/xping.ps1` and adds a block that loads it to
+`$PROFILE` — in every PowerShell installed, since PowerShell 7 and Windows
+PowerShell 5.1 keep separate profiles. Running it again is safe;
 re-run after upgrading. `--uninstall` removes exactly what `--install`
 added.
 
 | Option | Description |
 |--------|-------------|
-| `SHELL` | `bash`, `zsh` or `fish`. Without `--install`/`--uninstall`, prints the script. |
+| `SHELL` | `bash`, `zsh`, `fish` or `powershell`. Without `--install`/`--uninstall`, prints the script. |
 | `--install` | Set completion up for the shell (default: your login shell) |
 | `--uninstall` | Remove it |
 
@@ -1907,6 +1911,10 @@ Manual setup instead of `--install`:
 source <(xping completion zsh)                                # in ~/.zshrc
 eval "$(xping completion bash)"                               # in ~/.bashrc or ~/.bash_profile
 xping completion fish > ~/.config/fish/completions/xping.fish
+```
+
+```powershell
+xping completion powershell | Out-String | Invoke-Expression    # in $PROFILE
 ```
 
 On macOS, use `eval` for bash: the system bash 3.2 ignores `source <(…)`.
@@ -2178,7 +2186,7 @@ can hold a secret. `~/.xping` itself is readable only by you as well: check
 files, history and the monitor log can name internal hosts.
 
 `completion --install` also adds a marked block to your shell's rc file
-(or a file under `~/.config/fish/completions/`).
+or PowerShell profile (or a file under `~/.config/fish/completions/`).
 
 **Environment variables.**
 
@@ -2255,8 +2263,9 @@ lists, never through a shell.
 - `ping` and `trace` use the built-in `ping` / `tracert`.
 - Not available: `trace --tcp`, and `mtu -6`.
 - `--notify` falls back to the terminal bell.
-- Tab completion works in bash, zsh or fish (WSL, Git Bash); PowerShell
-  completion is not provided yet.
+- Tab completion works in PowerShell: run `xping completion --install`
+  once (PowerShell is the default on Windows). It also works in bash, zsh
+  or fish under WSL or Git Bash.
 
 ---
 

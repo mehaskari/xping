@@ -63,7 +63,7 @@ network unless you ask for it.
   `~/.xping/monitor/`.
   `~/.xping/config.toml` is only ever read, and its
   values go through the same validation as command-line options. `xping completion --install` additionally adds a
-  clearly marked block to the shell rc file, only when asked, and
+  clearly marked block to the shell rc file (or the PowerShell profile), only when asked, and
   `--uninstall` removes exactly that block.
 - **Network:** diagnostics contact the host you name. Features that
   contact third parties (`pool.ntp.org` for `ntp` unless you name a server,

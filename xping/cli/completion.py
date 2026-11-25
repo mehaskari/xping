@@ -1,5 +1,5 @@
 """
-xping shell completion — bash, zsh and fish.
+xping shell completion — bash, zsh, fish and PowerShell.
 
 Everything (commands, options, help text, choices, which options take a
 value, mutually exclusive groups, what each positional argument is) is
@@ -533,6 +533,138 @@ def _fish_script() -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+# ── PowerShell ────────────────────────────────────────────────────────────────
+
+# PowerShell also ends a single-quoted string at these "smart" quotes
+_PS_QUOTES = str.maketrans({"\u2018": "'", "\u2019": "'", "\u201a": "'", "\u201b": "'"})
+
+
+def _ps(text: str) -> str:
+    """A PowerShell single-quoted string literal."""
+    return "'" + text.translate(_PS_QUOTES).replace("'", "''") + "'"
+
+
+def _ps_help(text: str, fallback: str) -> str:
+    # a CompletionResult tooltip must not be empty
+    return _ps(re.sub(r"\s+", " ", text.replace("%%", "%")).strip() or fallback)
+
+
+def _ps_node(cmd: Command, indent: str) -> list[str]:
+    """One command as a PowerShell hashtable: h help, o options (f flags,
+    h help, v takes a value, k value kind, c choices), p positional kinds,
+    pc positional choices, s subcommands."""
+    inner = indent + "  "
+    lines = [f"{indent}h = {_ps_help(cmd.help, cmd.name)}", f"{indent}o = @("]
+    for opt in cmd.options:
+        flags = ", ".join(_ps(f) for f in opt.flags)
+        choices = ", ".join(_ps(c) for c in opt.choices)
+        lines.append(
+            f"{inner}@{{ f = @({flags}); h = {_ps_help(opt.help, opt.flags[0])}; "
+            f"v = ${'true' if opt.takes_value else 'false'}; k = {_ps(opt.value_kind)}; "
+            f"c = @({choices}) }}"
+        )
+    lines.append(f"{indent})")
+    kinds = ", ".join(_ps(p.kind) for p in cmd.positionals)
+    lines.append(f"{indent}p = @({kinds})")
+    pos_choices = ", ".join(
+        "@(" + ", ".join(_ps(c) for c in p.choices) + ")" for p in cmd.positionals
+    )
+    # a lone inner array would be flattened into the outer one: "@(, @(...))"
+    lead = ", " if len(cmd.positionals) == 1 else ""
+    lines.append(f"{indent}pc = @({lead}{pos_choices})")
+    lines.append(f"{indent}s = @{{")
+    for name, sub in cmd.subcommands.items():
+        lines.append(f"{inner}{_ps(name)} = @{{")
+        lines.extend(_ps_node(sub, inner + "  "))
+        lines.append(f"{inner}}}")
+    lines.append(f"{indent}}}")
+    return lines
+
+
+_PS_COMPLETER = r"""
+function global:__XpingProfiles {
+    try { @(& xping profile list --names 2>$null) } catch { @() }
+}
+
+Register-ArgumentCompleter -Native -CommandName xping, xping.exe -ScriptBlock {
+    param($wordToComplete, $commandAst, $cursorPosition)
+
+    $words = @($commandAst.CommandElements |
+        Where-Object { $_.Extent.EndOffset -le $cursorPosition } |
+        ForEach-Object { $_.Extent.Text })
+    if ($wordToComplete -and $words.Count -gt 0 -and $words[-1] -eq $wordToComplete) {
+        $words = if ($words.Count -gt 1) { @($words[0..($words.Count - 2)]) } else { @() }
+    }
+    $rest = if ($words.Count -gt 1) { @($words[1..($words.Count - 1)]) } else { @() }
+
+    $node = $global:__XpingTree
+    $pos = 0
+    $pending = $null
+    foreach ($w in $rest) {
+        if ($pending) { $pending = $null; continue }
+        if ($w.StartsWith('-')) {
+            $flag = $w.Split('=')[0]
+            $opt = $node.o | Where-Object { $_.f -ccontains $flag } | Select-Object -First 1
+            if ($opt -and $opt.v -and -not $w.Contains('=')) { $pending = $opt }
+            continue
+        }
+        if ($pos -eq 0 -and $node.s.Count -gt 0 -and $node.s.ContainsKey($w)) {
+            $node = $node.s[$w]
+            continue
+        }
+        $pos++
+    }
+
+    function Item($text, $tip) { [pscustomobject]@{ Text = [string]$text; Tip = [string]$tip } }
+    function Emit($items, $type) {
+        foreach ($item in @($items)) {
+            if ($item -and $item.Text.StartsWith($wordToComplete, [System.StringComparison]::Ordinal)) {
+                [System.Management.Automation.CompletionResult]::new($item.Text, $item.Text, $type, $item.Tip)
+            }
+        }
+    }
+    function Profiles { __XpingProfiles | ForEach-Object { Item $_ 'saved profile' } }
+
+    if ($pending) {
+        switch ($pending.k) {
+            'choices' { Emit ($pending.c | ForEach-Object { Item $_ $_ }) 'ParameterValue' }
+            'host' { Emit (Profiles) 'ParameterValue' }
+        }
+        return
+    }
+    if ($wordToComplete.StartsWith('-')) {
+        $flags = foreach ($o in $node.o) { foreach ($f in $o.f) { Item $f $o.h } }
+        Emit $flags 'ParameterName'
+        return
+    }
+    if ($pos -eq 0 -and $node.s.Count -gt 0) {
+        Emit ($node.s.Keys | Sort-Object | ForEach-Object { Item $_ $node.s[$_].h }) 'Command'
+        return
+    }
+    if ($node.p.Count -eq 0) { return }
+    $i = [Math]::Min($pos, $node.p.Count - 1)
+    switch ($node.p[$i]) {
+        'choices' { Emit ($node.pc[$i] | ForEach-Object { Item $_ $_ }) 'ParameterValue' }
+        { $_ -in 'host', 'profile' } { Emit (Profiles) 'ParameterValue' }
+    }
+    # nothing returned: PowerShell completes file and directory names
+}
+"""
+
+
+def _powershell_script() -> str:
+    lines = [
+        f"# xping {__version__} PowerShell completion — generated by: xping completion powershell",
+        "# Install: xping completion --install powershell",
+        "#   (or add to $PROFILE: xping completion powershell | Out-String | Invoke-Expression)",
+        "",
+        "$global:__XpingTree = @{",
+        *_ps_node(model(), "  "),
+        "}",
+    ]
+    return "\n".join(lines) + "\n" + _PS_COMPLETER
+
+
 def generate(shell: str) -> str:
     if shell == "bash":
         return _bash_script()
@@ -540,7 +672,9 @@ def generate(shell: str) -> str:
         return _zsh_script()
     if shell == "fish":
         return _fish_script()
-    raise ValueError(f"Unknown shell '{shell}'. Choose: bash, zsh, fish")
+    if shell == "powershell":
+        return _powershell_script()
+    raise ValueError(f"Unknown shell '{shell}'. Choose: bash, zsh, fish, powershell")
 
 
 # ── install / uninstall ───────────────────────────────────────────────────────
@@ -551,10 +685,60 @@ _END = "# <<< xping completion <<<"
 
 def detect_shell() -> str | None:
     name = Path(os.environ.get("SHELL", "")).name
-    return name if name in ("bash", "zsh", "fish") else None
+    if name in ("bash", "zsh", "fish"):
+        return name
+    if name in ("pwsh", "powershell") or (not name and sys.platform == "win32"):
+        return "powershell"  # Windows sets no $SHELL; PowerShell is its shell
+    return None
+
+
+def _ask_powershell_profile(exe: str) -> Path | None:
+    """$PROFILE of one PowerShell (it knows a redirected Documents folder)."""
+    import subprocess
+
+    try:
+        proc = subprocess.run(
+            [exe, "-NoProfile", "-NonInteractive", "-Command", "$PROFILE.CurrentUserCurrentHost"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    out = proc.stdout.strip().splitlines()
+    return Path(out[-1]) if proc.returncode == 0 and out and out[-1].strip() else None
+
+
+def _powershell_profiles(home: Path) -> list[Path]:
+    """The profile of every PowerShell installed (PowerShell 7 and Windows
+    PowerShell 5.1 keep separate ones), or PowerShell 7's default path."""
+    import shutil
+
+    found = []
+    for exe in ("pwsh", "powershell"):
+        if shutil.which(exe):
+            profile = _ask_powershell_profile(exe)
+            if profile is not None and profile not in found:
+                found.append(profile)
+    if found:
+        return found
+    if sys.platform == "win32":
+        return [home / "Documents" / "PowerShell" / "Microsoft.PowerShell_profile.ps1"]
+    config = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
+    return [config / "powershell" / "Microsoft.PowerShell_profile.ps1"]
+
+
+def _rc_files(shell: str, home: Path) -> list[Path]:
+    if shell == "powershell":
+        return _powershell_profiles(home)
+    rc = _rc_file(shell, home)
+    return [rc] if rc is not None else []
 
 
 def _rc_file(shell: str, home: Path) -> Path | None:
+    if shell == "powershell":
+        return _powershell_profiles(home)[0]
     if shell == "zsh":
         return Path(os.environ.get("ZDOTDIR", home)) / ".zshrc"
     if shell == "bash":
@@ -567,7 +751,8 @@ def _script_path(shell: str, home: Path) -> Path:
     if shell == "fish":
         config = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
         return config / "fish" / "completions" / "xping.fish"
-    return home / ".xping" / "completions" / ("_xping" if shell == "zsh" else "xping.bash")
+    name = {"zsh": "_xping", "powershell": "xping.ps1"}.get(shell, "xping.bash")
+    return home / ".xping" / "completions" / name
 
 
 def _tilde(path: Path, home: Path) -> str:
@@ -581,6 +766,18 @@ def _strip_block(text: str) -> str:
     return re.sub(rf"\n?{re.escape(_BEGIN)}.*?{re.escape(_END)}\n?", "\n", text, flags=re.S)
 
 
+def _read_rc(rc: Path) -> str:
+    # surrogateescape: bytes that are not UTF-8 (an ANSI-encoded PowerShell
+    # profile) are written back exactly as they were
+    return rc.read_text(encoding="utf-8-sig", errors="surrogateescape") if rc.exists() else ""
+
+
+def _write_rc(shell: str, rc: Path, text: str) -> None:
+    # Windows PowerShell 5.1 needs the BOM to read a profile as UTF-8
+    encoding = "utf-8-sig" if shell == "powershell" else "utf-8"
+    rc.write_text(text, encoding=encoding, errors="surrogateescape")
+
+
 def install(shell: str, home: Path | None = None) -> list[str]:
     """Write the completion script and hook it into the shell's rc file.
     Idempotent: re-running replaces the script and the rc block. Returns a
@@ -589,16 +786,21 @@ def install(shell: str, home: Path | None = None) -> list[str]:
     actions = []
     script = _script_path(shell, home)
     script.parent.mkdir(parents=True, exist_ok=True)
-    script.write_text(generate(shell), encoding="utf-8")
+    # Windows PowerShell 5.1 reads a .ps1 without a BOM in the ANSI code page
+    script.write_text(generate(shell), encoding="utf-8-sig" if shell == "powershell" else "utf-8")
     actions.append(f"wrote {_tilde(script, home)}")
-    rc = _rc_file(shell, home)
-    if rc is not None:
-        path = shlex.quote(str(script))  # a home directory with $ or " must stay literal
-        source = f"source {path}" if shell == "zsh" else f"[ -f {path} ] && . {path}"
+    for rc in _rc_files(shell, home):
+        if shell == "powershell":
+            path = _ps(str(script))
+            source = f"if (Test-Path -LiteralPath {path}) {{ . {path} }}"
+        else:
+            path = shlex.quote(str(script))  # a home directory with $ or " must stay literal
+            source = f"source {path}" if shell == "zsh" else f"[ -f {path} ] && . {path}"
         block = f"{_BEGIN}\n{source}\n{_END}\n"
-        existing = rc.read_text(encoding="utf-8") if rc.exists() else ""
+        rc.parent.mkdir(parents=True, exist_ok=True)
+        existing = _read_rc(rc)
         cleaned = _strip_block(existing).rstrip("\n")
-        rc.write_text((cleaned + "\n\n" if cleaned else "") + block, encoding="utf-8")
+        _write_rc(shell, rc, (cleaned + "\n\n" if cleaned else "") + block)
         verb = "updated" if _BEGIN in existing else "added a block to"
         actions.append(f"{verb} {_tilde(rc, home)}")
     return actions
@@ -611,10 +813,11 @@ def uninstall(shell: str, home: Path | None = None) -> list[str]:
     if script.exists():
         script.unlink()
         actions.append(f"removed {_tilde(script, home)}")
-    rc = _rc_file(shell, home)
-    if rc is not None and rc.exists():
-        text = rc.read_text(encoding="utf-8")
+    for rc in _rc_files(shell, home):
+        if not rc.exists():
+            continue
+        text = _read_rc(rc)
         if _BEGIN in text:
-            rc.write_text(_strip_block(text).rstrip("\n") + "\n", encoding="utf-8")
+            _write_rc(shell, rc, _strip_block(text).rstrip("\n") + "\n")
             actions.append(f"removed the xping block from {_tilde(rc, home)}")
     return actions
