@@ -386,6 +386,22 @@ The public-address lookup is the only outbound request
 and is skipped with
 .BR \-\-no\-public .
 .TP
+.BR lan " [\fINETWORK\fR] [\fIOPTIONS\fR]"
+List the devices on the local network with IP, MAC, vendor and name,
+without root: an empty UDP datagram to every address makes the system
+resolve it with ARP, and the neighbour table is read back.
+Names come from mDNS (asking each device) and the router's DNS; vendors
+from a MAC prefix list already installed (nmap, Wireshark, or the IEEE
+.I oui.txt
+of ieee\-data / hwdata).
+Without
+.IR NETWORK ,
+uses this machine's private IPv4 network (at most a /22 around its
+address); a
+.I NETWORK
+may have up to 4096 addresses.
+Nothing leaves the local network.
+.TP
 .B listen [\fIOPTIONS\fR]
 List locally listening TCP/UDP ports, with the process and PID behind
 each one.
@@ -1372,6 +1388,13 @@ Exit 1 if latency rises by more than
 milliseconds under load, or could not be measured.
 Implies
 .BR \-\-bufferbloat .
+.SS lan
+.TP
+.B \-\-no\-scan
+Only read the ARP table (devices this machine talked to recently).
+.TP
+.B \-\-no\-names
+Skip the mDNS and router DNS name lookups.
 .SS listen
 .TP
 .BI \-\-proto " PROTO"
@@ -1898,6 +1921,9 @@ Download/upload speed via Cloudflare with 4 parallel connections (no iperf3 need
 .TP
 .B xping speedtest \-\-bufferbloat
 Speed test plus how much latency rises while the line is busy, graded A+ to F.
+.TP
+.B xping lan
+Every device on this network: IP, MAC, vendor and name.
 .TP
 .B xping net
 Interfaces, gateway, DNS servers and public IPv4/IPv6 at a glance.

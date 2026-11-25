@@ -74,6 +74,9 @@ network unless you ask for it.
   DNSSEC check, the chosen provider for `lookup --doh`) are listed in the README under
   "Files & privacy"; `--asn` is opt-in and `net --no-public` keeps
   everything local.
+- **Local network:** `xping lan` sends one empty UDP datagram to each
+  address of your subnet (port 9) and asks local devices and the router
+  for names (mDNS, DNS). It never sends anything beyond the local network.
 - **Alerts:** `--webhook` sends the target name and check result only to
   the URL you pass. A Telegram or ntfy URL is a secret (a bot token, a
   topic anyone can read); the guide says to treat it as a password, and
@@ -81,7 +84,7 @@ network unless you ask for it.
   text to `osascript` / `notify-send` as arguments, never as script source
   or a shell line.
 - **Subprocesses:** system tools (`ping`, `traceroute`, `dig`, `ss`,
-  `netstat`, `lsof`, `tasklist`, `ip`, `ifconfig`, `osascript`, `notify-send`, …) are run with argument lists, never
+  `netstat`, `lsof`, `tasklist`, `arp`, `ip`, `ifconfig`, `osascript`, `notify-send`, …) are run with argument lists, never
   through a shell.
 - **Remote data:** text from servers (HTTP headers, SMTP banners, WHOIS,
   DNS records, Wi-Fi names) is stripped of terminal escape sequences and

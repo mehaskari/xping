@@ -710,6 +710,20 @@ def cmd_config(args: argparse.Namespace) -> object:
     return True
 
 
+def cmd_lan(args: argparse.Namespace) -> object:
+    from xping.diagnostics.lan import lan
+
+    quiet = output_suppressed(args)
+    result = lan(
+        network=args.network,
+        scan=not args.no_scan,
+        names=not args.no_names,
+        quiet=quiet,
+    )
+    emit_export(result, args)
+    return result
+
+
 def cmd_listen(args: argparse.Namespace) -> object:
     quiet = output_suppressed(args)
     result = listen(proto_filter=getattr(args, "proto", None), quiet=quiet)

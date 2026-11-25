@@ -35,6 +35,7 @@ from xping.models import (
     HttpResult,
     IpInfoResult,
     IpScanResult,
+    LanResult,
     ListenResult,
     MonitorResult,
     MtrResult,
@@ -205,6 +206,10 @@ def _ipinfo(r: IpInfoResult, _opts) -> list[Failure]:
     return []
 
 
+def _lan(r: LanResult, _opts) -> list[Failure]:
+    return [Failure(r.error)] if r.error else []
+
+
 def _diff(r: DiffResult, _opts) -> list[Failure]:
     if r.error:
         return [Failure(r.error)]
@@ -291,6 +296,7 @@ def evaluate(result, opts=None) -> list[Failure]:
         (WifiResult, _wifi),
         (BlocklistResult, _blocklist),
         (IpInfoResult, _ipinfo),
+        (LanResult, _lan),
         (NtpResult, _ntp),
     )
     for cls, handler in handlers:

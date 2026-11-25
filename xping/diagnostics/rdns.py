@@ -115,15 +115,24 @@ def _parse_ptr_response(data: bytes) -> list[str]:
 
 def _fallback_ptr(ip: str) -> str | None:
     """Direct UDP DNS PTR query to 8.8.8.8 as fallback."""
+    return query_ptr(ip, _DNS_FALLBACK)
+
+
+def query_ptr(
+    ip: str, server: str, port: int = _DNS_PORT, timeout: float = _DNS_TIMEOUT
+) -> str | None:
+    """PTR name of *ip* from one DNS server (or an mDNS responder on port
+    5353, which answers a unicast query in kind), or None."""
     ptr_name = _ptr_name(ip)
     txid = int.from_bytes(os.urandom(2), "big")  # random ID + connected socket: hard to spoof
     packet = _dns_query_bytes(ptr_name, txid=txid)
+    family = socket.AF_INET6 if ":" in server else socket.AF_INET
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.settimeout(_DNS_TIMEOUT)
-            sock.connect((_DNS_FALLBACK, _DNS_PORT))
+        with socket.socket(family, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(timeout)
+            sock.connect((server, port))
             sock.send(packet)
-            resp = sock.recv(512)
+            resp = sock.recv(4096)  # mDNS answers can carry extra records
         if len(resp) < 2 or struct.unpack("!H", resp[:2])[0] != txid:
             return None
         names = _parse_ptr_response(resp)

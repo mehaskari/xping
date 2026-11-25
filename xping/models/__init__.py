@@ -11,6 +11,7 @@ from .history import HistoryEntry, HistoryResult, HistoryRun
 from .http import HttpResult, RedirectHop, SecurityHeader
 from .ipinfo import IpInfoResult
 from .ipscan import IpProbe, IpScanResult
+from .lan import LanDevice, LanResult
 from .listen import ListenEntry, ListenResult
 from .lookup import DnsResult
 from .monitor import MonitoredCheck, MonitorResult, MonitorSample
@@ -52,6 +53,8 @@ __all__ = [
     "BlocklistCheck",
     "BlocklistResult",
     "IpInfoResult",
+    "LanDevice",
+    "LanResult",
     "CheckOutcome",
     "CheckReport",
     "RdnsResult",

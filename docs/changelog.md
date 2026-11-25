@@ -30,6 +30,14 @@
 - `xping listen` names the process and PID behind each port on macOS
   (`lsof`) and Windows (`netstat -ano` and `tasklist`), not only on Linux.
   Without root, it says when ports belong to other users' processes.
+- **`xping lan [NETWORK]`: the devices on your network.** IP, MAC, vendor
+  and name for each, with the router, this machine and private
+  (randomised) MACs marked. No root: an empty UDP datagram to every
+  address fills the ARP table, which is read back. Names come from mDNS
+  and the router's DNS, vendors from a MAC prefix list already installed
+  (nmap, Wireshark, ieee-data / hwdata). Works on Linux, macOS and
+  Windows, also under a full-tunnel VPN. `--no-scan` only reads the ARP
+  table; `--no-names` skips the names. Nothing leaves the local network.
 
 ### Changed
 - Hardening: `~/.xping` and its directories are created readable only by
