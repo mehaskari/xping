@@ -96,3 +96,5 @@ debian/*.log
 *.rej
 *.bak
 site/
+# local slide decks (self-contained HTML), not part of the project
+presentation/
